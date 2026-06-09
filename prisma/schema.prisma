@@ -1,0 +1,99 @@
+// PortTrack veritabani semasi
+// Yerel gelistirmede SQLite kullanilir. Dagitimda provider "postgresql" yapilip
+// Neon baglanti dizesi DATABASE_URL'e verilir; modeller ayni kalir.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Her alis/satis islemi (kendi para biriminde saklanir)
+model Transaction {
+  id        String   @id @default(cuid())
+  date      DateTime
+  assetType String // BIST | TEFAS | FOREIGN | FX | METAL | CRYPTO | BES
+  symbol    String
+  side      String // BUY | SELL
+  unitPrice Float
+  quantity  Float
+  total     Float
+  currency  String // TRY | USD | EUR ...
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([symbol])
+  @@index([date])
+}
+
+/// Sembol -> fiyat kaynagi haritasi
+model Instrument {
+  symbol      String   @id
+  assetType   String
+  name        String?
+  yahooSymbol String?
+  currency    String   @default("TRY")
+  priceSource String   @default("yahoo") // yahoo | tefas | manual
+  manualPrice Float?
+  updatedAt   DateTime @updatedAt
+}
+
+/// Gunluk kapanis fiyat onbellegi (gecmis grafikler icin)
+/// close = TL cinsinden birim fiyat; native = kendi para birimindeki fiyat
+model PriceSnapshot {
+  id             String   @id @default(cuid())
+  symbol         String
+  date           DateTime
+  close          Float
+  native         Float?
+  nativeCurrency String?
+  currency       String
+  source         String?
+
+  @@unique([symbol, date])
+  @@index([symbol])
+}
+
+/// USDTRY vb. kur gecmisi
+model FxRate {
+  id   String   @id @default(cuid())
+  date DateTime
+  pair String // ornek: USDTRY
+  rate Float
+
+  @@unique([pair, date])
+  @@index([pair])
+}
+
+/// Gunluk toplam portfoy degeri (aylik gelisim icin), her iki para biriminde
+model PortfolioSnapshot {
+  id            String   @id @default(cuid())
+  date          DateTime @unique
+  totalValueTRY Float
+  totalCostTRY  Float
+  totalValueUSD Float
+  totalCostUSD  Float
+}
+
+/// Manuel ay sonu bakiyeleri (backlog.xlsx ve BES guncellemeleri)
+model PortfolioMonthSnapshot {
+  id         String   @id @default(cuid())
+  month      DateTime @unique // ayin 1'i (YYYY-MM-01)
+  besTRY     Float    @default(0)
+  bistTRY    Float    @default(0)
+  tefasTRY   Float    @default(0)
+  foreignTRY Float    @default(0)
+  fxTRY      Float    @default(0)
+  metalTRY   Float    @default(0)
+  cryptoTRY  Float    @default(0)
+  totalTRY   Float    @default(0)
+  totalUSD   Float?
+  usdTryRate Float?
+  source     String   @default("backlog") // backlog | manual
+
+  @@index([month])
+}

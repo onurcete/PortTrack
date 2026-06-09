@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PortTrack — Yatırım Takip Platformu
 
-## Getting Started
+BIST, TEFAS fonları, yabancı borsalar (S&P 500 / NASDAQ / Avrupa), döviz, kıymetli
+maden ve kripto yatırımlarını **tek yerden**, **TL ve USD** bazında takip eden,
+masaüstü tarayıcı için tasarlanmış kişisel bir platform.
 
-First, run the development server:
+## Özellikler
+
+- **Genel Bakış**: toplam değer, açık/gerçekleşen kâr-zarar, varlık dağılımı (donut), açık pozisyonlar.
+- **İşlemler**: alış/satış ekle-düzenle-sil, filtre/arama, CSV içe aktarma.
+- **Portföy Gelişimi**: ay-ay toplam değer ve maliyet grafiği (TL & USD).
+- **Ürün Performansı**: hâlâ tutulan ürünlerin ay-ay getiri ısı tablosu.
+- **Çift para birimi**: tüm değerler tek tıkla ₺ TL ⇄ $ USD (geçmiş USD/TRY kuruyla).
+- **Otomatik fiyat**: Yahoo Finance (chart API) + yeni TEFAS resmi JSON API + çapraz kur (SEK/EUR…).
+- **Tek kullanıcı** şifre korumalı giriş.
+
+## Teknoloji
+
+Next.js 16 (App Router) · TypeScript · Tailwind CSS · Recharts · Prisma · Neon (Postgres) / SQLite
+
+## Yerel Kurulum
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env          # değerleri düzenleyin
+npx prisma db push            # şemayı oluştur
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env` değişkenleri:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Değişken       | Açıklama                                              |
+| -------------- | ----------------------------------------------------- |
+| `DATABASE_URL` | Yerelde `file:./dev.db` (SQLite)                      |
+| `APP_PASSWORD` | Giriş şifresi                                         |
+| `AUTH_SECRET`  | Oturum çerezi imzalama anahtarı (uzun rastgele dize)  |
+| `CRON_SECRET`  | Günlük otomatik güncelleme için gizli anahtar         |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### İlk veri
 
-## Learn More
+1. Giriş yapın, **İşlemler → CSV İçe Aktar** ile `transactions.csv` dosyanızı yükleyin.
+2. Sağ üstten **Fiyatları Güncelle** ile güncel fiyatları çekin.
+3. **Portföy Gelişimi → Geçmişi Oluştur** ile geçmiş aylık fiyatları doldurun
+   (TEFAS hız sınırı nedeniyle birkaç dakika sürebilir; ilerleme gösterilir).
 
-To learn more about Next.js, take a look at the following resources:
+## Dağıtım (Vercel + Neon — ücretsiz)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Neon** (https://neon.tech) üzerinde ücretsiz bir Postgres veritabanı oluşturun,
+   bağlantı dizesini kopyalayın.
+2. `prisma/schema.prisma` içinde `datasource` sağlayıcısını Postgres'e çevirin:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```prisma
+   datasource db {
+     provider = "postgresql"
+     url      = env("DATABASE_URL")
+   }
+   ```
 
-## Deploy on Vercel
+3. Projeyi GitHub'a gönderip **Vercel**'e bağlayın. Ortam değişkenlerini ekleyin:
+   `DATABASE_URL` (Neon), `APP_PASSWORD`, `AUTH_SECRET`, `CRON_SECRET`.
+4. Şemayı uygulayın: `npx prisma db push` (yerelden Neon URL'iyle) veya build adımında.
+5. Vercel otomatik olarak `vercel.json`'daki **Cron**'u (her gün 18:00 UTC `/api/cron`)
+   çalıştırır; `CRON_SECRET` ile yetkilendirir. İlk dağıtımdan sonra giriş yapıp
+   geçmişi bir kez oluşturun.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> Not: TEFAS API'si dakikada ~6 istekle sınırlıdır; bu yüzden geçmiş oluşturma
+> arka planda parça parça (resumable) çalışır.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Mimari Notları
+
+- `src/lib/prices.ts` — Yahoo & TEFAS fiyat çekimi, TEFAS hız sınırlayıcı, çapraz kur.
+- `src/lib/portfolio.ts` — pozisyon/maliyet/K-Z hesapları (TL & USD).
+- `src/lib/history.ts` — geçmiş fiyat backfill, aylık gelişim ve ürün performansı.
+- `src/lib/refresh.ts` — güncel fiyat ve USD/TRY kur güncellemesi.
+- `src/middleware.ts` — şifre korumalı erişim.
