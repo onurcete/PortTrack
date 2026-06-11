@@ -100,6 +100,10 @@ export interface PeriodReturnsDTO {
   ytdUSD: number | null;
   ytdAmtTRY: number | null;
   ytdAmtUSD: number | null;
+  allTimeTRY: number | null;
+  allTimeUSD: number | null;
+  allTimeAmtTRY: number | null;
+  allTimeAmtUSD: number | null;
 }
 
 export interface DashboardDTO {
@@ -195,28 +199,28 @@ function CombinedReturnCell({
   const negative = pct < 0;
 
   return (
-    <div className={cn("p-5 flex flex-col justify-between", borderClasses)}>
-      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+    <div className={cn("p-5 flex flex-col justify-between bg-[var(--color-surface-muted)]/20", borderClasses)}>
+      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
         {label}
       </span>
       <div className="mt-2.5">
         <span
           className={cn(
             "text-2xl sm:text-3xl font-black tracking-tight tabular-nums block",
-            positive ? "text-emerald-400" : negative ? "text-rose-400" : "text-slate-400",
+            positive ? "text-[var(--color-profit)]" : negative ? "text-[var(--color-loss)]" : "text-[var(--color-muted)]",
           )}
         >
           {formatPercent(pct)}
         </span>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 font-semibold">
-          <span className={cn(positive ? "text-emerald-400/80" : negative ? "text-rose-400/80" : "text-slate-400")}>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-muted)] font-semibold">
+          <span className={cn(positive ? "text-[var(--color-profit)]/90" : negative ? "text-[var(--color-loss)]/90" : "text-[var(--color-muted)]")}>
             {positive ? "+" : ""}
             {formatMoney(amt, currency)}
           </span>
           {benchmarkText && (
             <>
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-500 font-medium">{benchmarkText}</span>
+              <span className="text-[var(--color-border)]">•</span>
+              <span className="text-[var(--color-muted)]/70 font-medium">{benchmarkText}</span>
             </>
           )}
         </div>
@@ -276,6 +280,9 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
   const ytdPct = isTRY ? data.periodReturns?.ytdTRY : data.periodReturns?.ytdUSD;
   const ytdAmt = isTRY ? data.periodReturns?.ytdAmtTRY : data.periodReturns?.ytdAmtUSD;
 
+  const allTimePct = isTRY ? data.periodReturns?.allTimeTRY : data.periodReturns?.allTimeUSD;
+  const allTimeAmt = isTRY ? data.periodReturns?.allTimeAmtTRY : data.periodReturns?.allTimeAmtUSD;
+
   const prevCloseVal = totalValue - (dailyChangeAmt ?? 0);
   const ytdCloseVal = totalValue - (ytdAmt ?? 0);
 
@@ -312,18 +319,18 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
       </div>
 
       {/* Kombine Portföy Değeri & Getiriler Kartı */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 border border-slate-800 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white shadow-md">
+      <div className="grid grid-cols-1 lg:grid-cols-5 card overflow-hidden">
         {/* Sol Kısım: Toplam Portföy Değeri ve Günlük Getiri */}
-        <div className="lg:col-span-2 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/80">
+        <div className="lg:col-span-2 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--color-border)]/70 bg-[var(--color-surface)]">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
               TOPLAM PORTFÖY
             </span>
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-white mt-2 tabular-nums">
+            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[var(--color-foreground)] mt-2 tabular-nums">
               {formatMoney(totalValue, currency)}
             </h2>
             <div className="mt-1">
-              <span className="text-xs font-bold text-slate-400 tabular-nums">
+              <span className="text-xs font-bold text-[var(--color-muted)] tabular-nums">
                 {isTRY ? formatMoney(data.totals.valueUSD, "USD") : formatMoney(data.totals.valueTRY, "TRY")}
               </span>
             </div>
@@ -335,8 +342,8 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
                   className={cn(
                     "px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 border tabular-nums",
                     dailyChangePct >= 0
-                      ? "bg-emerald-950/45 text-emerald-400 border-emerald-800/40"
-                      : "bg-rose-950/45 text-rose-400 border-rose-800/40"
+                      ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/15"
+                      : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/15"
                   )}
                 >
                   BUGÜN
@@ -347,43 +354,43 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             )}
           </div>
 
-          <div className="text-[11px] font-semibold text-slate-400 mt-6 pt-4 border-t border-slate-800/50 space-y-1.5">
+          <div className="text-[11px] font-semibold text-[var(--color-muted)] mt-6 pt-4 border-t border-[var(--color-border)]/50 space-y-1.5">
             <div>
-              <span className="text-slate-500">Maliyet (Yatırım):</span>{" "}
-              <strong className="text-slate-300 tabular-nums">{formatMoney(totalCost, currency)}</strong>
+              <span className="text-[var(--color-muted)]/70">Maliyet (Yatırım):</span>{" "}
+              <strong className="text-[var(--color-foreground)]/90 tabular-nums">{formatMoney(totalCost, currency)}</strong>
             </div>
             {ytdAmt !== null && ytdAmt !== undefined && (
               <div>
-                <span className="text-slate-500">2025 Kapanış:</span>{" "}
-                <strong className="text-slate-300 tabular-nums">{formatMoney(ytdCloseVal, currency)}</strong>
+                <span className="text-[var(--color-muted)]/70">2025 Kapanış:</span>{" "}
+                <strong className="text-[var(--color-foreground)]/90 tabular-nums">{formatMoney(ytdCloseVal, currency)}</strong>
               </div>
             )}
             {dailyChangeAmt !== null && dailyChangeAmt !== undefined && (
               <div>
-                <span className="text-slate-500">Önceki Kapanış:</span>{" "}
-                <strong className="text-slate-300 tabular-nums">{formatMoney(prevCloseVal, currency)}</strong>
+                <span className="text-[var(--color-muted)]/70">Önceki Kapanış:</span>{" "}
+                <strong className="text-[var(--color-foreground)]/90 tabular-nums">{formatMoney(prevCloseVal, currency)}</strong>
               </div>
             )}
           </div>
         </div>
 
         {/* Sağ Kısım: 2x2 Dönemsel Getiri Gridi */}
-        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 bg-slate-900/10">
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 bg-[var(--color-surface-muted)]/10">
           <CombinedReturnCell
             label="HAFTA (SON 5 İŞLEM GÜNÜ)"
             pct={weeklyPct ?? null}
             amt={weeklyAmt ?? null}
             currency={currency}
             benchmarkText={getBenchmarkText("1W", isTRY, data.benchmarkData)}
-            borderClasses="sm:border-r sm:border-b border-slate-800/80"
+            borderClasses="sm:border-r sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
-            label="MTD - HAZİRAN"
+            label="MTD - CARİ AY"
             pct={monthlyPct ?? null}
             amt={monthlyAmt ?? null}
             currency={currency}
             benchmarkText={getBenchmarkText("1M", isTRY, data.benchmarkData)}
-            borderClasses="sm:border-b border-slate-800/80"
+            borderClasses="sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
             label="YTD - YIL BAŞINDAN BERİ"
@@ -391,12 +398,12 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             amt={ytdAmt ?? null}
             currency={currency}
             benchmarkText={getBenchmarkText("YTD", isTRY, data.benchmarkData)}
-            borderClasses="sm:border-r border-slate-800/80 sm:border-b-0 border-b"
+            borderClasses="sm:border-r border-[var(--color-border)]/70 sm:border-b-0 border-b"
           />
           <CombinedReturnCell
             label="ALL TIME - TÜM ZAMANLAR"
-            pct={unrealizedPct ?? null}
-            amt={unrealized ?? null}
+            pct={allTimePct ?? null}
+            amt={allTimeAmt ?? null}
             currency={currency}
             borderClasses=""
           />

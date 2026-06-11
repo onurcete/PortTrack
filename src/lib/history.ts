@@ -494,6 +494,10 @@ export interface PeriodReturnsDTO {
   ytdUSD: number | null;
   ytdAmtTRY: number | null;
   ytdAmtUSD: number | null;
+  allTimeTRY: number | null;
+  allTimeUSD: number | null;
+  allTimeAmtTRY: number | null;
+  allTimeAmtUSD: number | null;
 }
 
 export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
@@ -511,6 +515,7 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
       mtdTRY: null, mtdUSD: null, mtdAmtTRY: null, mtdAmtUSD: null,
       monthlyTRY: null, monthlyUSD: null, monthlyAmtTRY: null, monthlyAmtUSD: null,
       ytdTRY: null, ytdUSD: null, ytdAmtTRY: null, ytdAmtUSD: null,
+      allTimeTRY: null, allTimeUSD: null, allTimeAmtTRY: null, allTimeAmtUSD: null,
     };
   }
 
@@ -592,6 +597,9 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
     return cur - prev;
   }
 
+  const series = await getGrowthSeries();
+  const firstPoint = series.length > 0 ? series[0] : null;
+
   return {
     dailyTRY: calcPct(t0.valueTRY, t1.valueTRY),
     dailyUSD: calcPct(t0.valueUSD, t1.valueUSD),
@@ -613,6 +621,10 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
     ytdUSD: calcPct(t0.valueUSD, tYtd.valueUSD),
     ytdAmtTRY: calcAmt(t0.valueTRY, tYtd.valueTRY),
     ytdAmtUSD: calcAmt(t0.valueUSD, tYtd.valueUSD),
+    allTimeTRY: firstPoint ? calcPct(t0.valueTRY, firstPoint.valueTRY) : null,
+    allTimeUSD: firstPoint ? calcPct(t0.valueUSD, firstPoint.valueUSD) : null,
+    allTimeAmtTRY: firstPoint ? calcAmt(t0.valueTRY, firstPoint.valueTRY) : null,
+    allTimeAmtUSD: firstPoint ? calcAmt(t0.valueUSD, firstPoint.valueUSD) : null,
   };
 }
 
