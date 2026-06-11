@@ -155,8 +155,6 @@ function ProfitValue({
   );
 }
 
-}
-
 function getBenchmarkText(
   period: "1W" | "1M" | "YTD",
   isTRY: boolean,
