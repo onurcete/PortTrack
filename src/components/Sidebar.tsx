@@ -9,6 +9,7 @@ import {
   LineChart,
   Wallet,
   LogOut,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const NAV = [
   { href: "/transactions", label: "İşlemler", icon: ArrowLeftRight },
   { href: "/growth", label: "Portföy Gelişimi", icon: TrendingUp },
   { href: "/performance", label: "Ürün Performansı", icon: LineChart },
+  { href: "/analysis", label: "Analiz", icon: Brain },
 ];
 
 export function Sidebar() {

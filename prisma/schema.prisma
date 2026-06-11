@@ -97,3 +97,32 @@ model PortfolioMonthSnapshot {
 
   @@index([month])
 }
+
+/// Günlük teknik analiz sonuçları (cron veya manuel tetik ile hesaplanır)
+model TechnicalAnalysis {
+  id          String   @id @default(cuid())
+  symbol      String
+  assetType   String
+  date        DateTime @default(now())
+
+  /// Ham göstergeler (JSON)
+  indicators  Json
+
+  /// Hesaplanmış skor (0-100)
+  score       Int
+
+  /// Üretilen yorum metni
+  commentary  String
+
+  /// Sinyal bayrakları (filtreleme için)
+  trendSignal String   // STRONG_UP | UP | DOWN | STRONG_DOWN
+  macdSignal  String   // POSITIVE | NEGATIVE | BUY_CROSS | SELL_CROSS
+  rsiZone     String   // OVERSOLD | NEUTRAL | OVERBOUGHT
+
+  /// Uyarılar (JSON dizi)
+  alerts      Json     @default("[]")
+
+  @@unique([symbol, date])
+  @@index([symbol])
+  @@index([date])
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refreshPrices, backfillFxHistory } from "@/lib/refresh";
 import { backfillYahoo, backfillTefas } from "@/lib/history";
+import { runTechnicalAnalysis } from "@/app/api/analysis/run/route";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,7 +24,9 @@ export async function GET(req: NextRequest) {
     const yahoo = await backfillYahoo();
     // Bekleyen TEFAS gecmis aylari varsa bir parca isle
     const tefas = await backfillTefas(30000);
-    return NextResponse.json({ ok: true, refresh, yahoo, tefas });
+    // Teknik analiz hesapla (fiyatlar güncellendikten sonra)
+    const analysis = await runTechnicalAnalysis();
+    return NextResponse.json({ ok: true, refresh, yahoo, tefas, analysis });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: (err as Error).message },
@@ -31,3 +34,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

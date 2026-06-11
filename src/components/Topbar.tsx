@@ -11,6 +11,7 @@ import {
   ArrowLeftRight,
   TrendingUp,
   LineChart,
+  Brain,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ const NAV = [
   { href: "/transactions", label: "İşlemler", icon: ArrowLeftRight },
   { href: "/growth", label: "Portföy Gelişimi", icon: TrendingUp },
   { href: "/performance", label: "Ürün Performansı", icon: LineChart },
+  { href: "/analysis", label: "Analiz", icon: Brain },
 ];
 
 export function Topbar() {
