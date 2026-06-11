@@ -14,6 +14,7 @@ import {
   Brain,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -106,6 +107,7 @@ export function Topbar() {
           </button>
           
           <CurrencyToggle />
+          <ThemeToggle />
 
           <button
             onClick={logout}

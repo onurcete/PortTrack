@@ -126,3 +126,28 @@ body {
     color: var(--color-muted);
   }
 }
+
+.dark {
+  --color-bg: #090d16;
+  --color-surface: #111726;
+  --color-surface-muted: #1b2234;
+  --color-border: #242d42;
+  --color-foreground: #f8fafc;
+  --color-muted: #94a3b8;
+
+  --color-brand-strong: #818cf8;
+  --color-brand-soft: rgba(99, 102, 241, 0.15);
+
+  --color-profit: #22c55e;
+  --color-profit-soft: rgba(34, 197, 94, 0.12);
+  --color-loss: #f43f5e;
+  --color-loss-soft: rgba(244, 63, 94, 0.12);
+}
+
+.dark * {
+  scrollbar-color: #374151 transparent;
+}
+.dark *::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
