@@ -484,10 +484,10 @@ export function generateDailySummary(items: DailySummaryItem[]): DailySummary {
   const downCount = withChange.filter((i) => i.dailyChangePct < -0.01).length;
   const unchangedCount = withChange.length - upCount - downCount;
 
-  // En çok yükselen/düşen top 3
+  // En çok yükselen/düşen top 4
   const sorted = [...withChange].sort((a, b) => b.dailyChangePct - a.dailyChangePct);
-  const topGainers = sorted.slice(0, 3);
-  const topLosers = sorted.slice(-3).reverse();
+  const topGainers = sorted.slice(0, 4);
+  const topLosers = sorted.slice(-4).reverse();
 
   // Streak uyarıları
   const streakAlerts: string[] = [];
