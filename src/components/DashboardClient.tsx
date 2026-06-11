@@ -922,7 +922,7 @@ function PositionsTable({
                       />
                       <SortHeader
                         field="dailyChange"
-                        label="Günlük K/Z %"
+                        label="Günlük Değişim"
                         activeField={sortField}
                         order={sortOrder}
                         onSort={handleSort}
