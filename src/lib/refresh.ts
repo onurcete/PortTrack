@@ -9,9 +9,12 @@ import {
 import type { AssetType } from "./assets";
 
 function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+  const tzOffset = 3 * 60 * 60 * 1000;
+  const trDate = new Date(d.getTime() + tzOffset);
+  const y = trDate.getUTCFullYear();
+  const m = trDate.getUTCMonth();
+  const day = trDate.getUTCDate();
+  return new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
 }
 
 /** Sinirli es zamanlilik ile calistir. */
