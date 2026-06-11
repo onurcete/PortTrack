@@ -7,10 +7,32 @@ export default async function AnalysisPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // En son analiz sonuçlarını çek (bugün veya en yakın tarih)
+  // 1. Tüm işlemleri çekip aktif (açık) pozisyonu olan sembolleri bul
+  const transactions = await prisma.transaction.findMany({
+    select: { symbol: true, quantity: true, side: true }
+  });
+
+  const quantities = new Map<string, number>();
+  for (const tx of transactions) {
+    const current = quantities.get(tx.symbol) || 0;
+    if (tx.side === "BUY") {
+      quantities.set(tx.symbol, current + tx.quantity);
+    } else {
+      quantities.set(tx.symbol, current - tx.quantity);
+    }
+  }
+
+  const openSymbols = Array.from(quantities.entries())
+    .filter(([_, qty]) => qty > 0.0001)
+    .map(([symbol]) => symbol);
+
+  // En son analiz sonuçlarını çek (sadece açık pozisyonu olanlar)
   const analyses = await prisma.technicalAnalysis.findMany({
     where: {
-      symbol: { not: "__DAILY_SUMMARY__" },
+      symbol: {
+        in: openSymbols,
+        not: "__DAILY_SUMMARY__",
+      },
     },
     orderBy: { date: "desc" },
     distinct: ["symbol"],

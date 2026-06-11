@@ -23,8 +23,32 @@ export async function POST(req: NextRequest) {
 
 /** Tüm aktif pozisyonlar için teknik analiz hesaplar. */
 export async function runTechnicalAnalysis() {
-  // 1. Aktif enstrümanları çek
-  const instruments = await prisma.instrument.findMany();
+  // 1. Tüm işlemleri çekip aktif (açık) pozisyonu olan sembolleri bul
+  const transactions = await prisma.transaction.findMany({
+    select: { symbol: true, quantity: true, side: true }
+  });
+
+  const quantities = new Map<string, number>();
+  for (const tx of transactions) {
+    const current = quantities.get(tx.symbol) || 0;
+    if (tx.side === "BUY") {
+      quantities.set(tx.symbol, current + tx.quantity);
+    } else {
+      quantities.set(tx.symbol, current - tx.quantity);
+    }
+  }
+
+  const openSymbols = Array.from(quantities.entries())
+    .filter(([_, qty]) => qty > 0.0001)
+    .map(([symbol]) => symbol);
+
+  // Sadece açık pozisyonların enstrüman detaylarını çek
+  const instruments = await prisma.instrument.findMany({
+    where: {
+      symbol: { in: openSymbols }
+    }
+  });
+
   if (instruments.length === 0) return { analyzed: 0, skipped: 0 };
 
   const today = new Date();
