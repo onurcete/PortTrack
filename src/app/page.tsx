@@ -1,13 +1,14 @@
 import { getPortfolio } from "@/lib/data";
-import { getBenchmarkComparisonData } from "@/lib/history";
+import { getBenchmarkComparisonData, getPeriodReturns } from "@/lib/history";
 import { DashboardClient, type DashboardDTO } from "@/components/DashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [p, benchmarkData] = await Promise.all([
+  const [p, benchmarkData, periodReturns] = await Promise.all([
     getPortfolio(),
     getBenchmarkComparisonData(),
+    getPeriodReturns(),
   ]);
 
   const data: DashboardDTO = {
@@ -44,6 +45,7 @@ export default async function DashboardPage() {
     lastUpdated: p.lastUpdated ? p.lastUpdated.toISOString() : null,
     transactionCount: p.transactionCount,
     benchmarkData,
+    periodReturns,
   };
 
   return <DashboardClient data={data} />;

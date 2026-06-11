@@ -476,14 +476,24 @@ export async function getGrowthSeries(): Promise<GrowthPoint[]> {
 export interface PeriodReturnsDTO {
   dailyTRY: number | null;
   dailyUSD: number | null;
+  dailyAmtTRY: number | null;
+  dailyAmtUSD: number | null;
   weeklyTRY: number | null;
   weeklyUSD: number | null;
+  weeklyAmtTRY: number | null;
+  weeklyAmtUSD: number | null;
   mtdTRY: number | null;
   mtdUSD: number | null;
+  mtdAmtTRY: number | null;
+  mtdAmtUSD: number | null;
   monthlyTRY: number | null;
   monthlyUSD: number | null;
+  monthlyAmtTRY: number | null;
+  monthlyAmtUSD: number | null;
   ytdTRY: number | null;
   ytdUSD: number | null;
+  ytdAmtTRY: number | null;
+  ytdAmtUSD: number | null;
 }
 
 export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
@@ -496,11 +506,11 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
 
   if (txRows.length === 0 && manualSnaps.size === 0) {
     return {
-      dailyTRY: null, dailyUSD: null,
-      weeklyTRY: null, weeklyUSD: null,
-      mtdTRY: null, mtdUSD: null,
-      monthlyTRY: null, monthlyUSD: null,
-      ytdTRY: null, ytdUSD: null,
+      dailyTRY: null, dailyUSD: null, dailyAmtTRY: null, dailyAmtUSD: null,
+      weeklyTRY: null, weeklyUSD: null, weeklyAmtTRY: null, weeklyAmtUSD: null,
+      mtdTRY: null, mtdUSD: null, mtdAmtTRY: null, mtdAmtUSD: null,
+      monthlyTRY: null, monthlyUSD: null, monthlyAmtTRY: null, monthlyAmtUSD: null,
+      ytdTRY: null, ytdUSD: null, ytdAmtTRY: null, ytdAmtUSD: null,
     };
   }
 
@@ -573,21 +583,36 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
   const tYtd = getValAt(new Date(today.getFullYear() - 1, 11, 31, 23, 59, 59));
 
   function calcPct(cur: number, prev: number) {
-    if (!cur || !prev || prev <= 0) return null;
+    if (cur == null || prev == null || prev <= 0) return null;
     return ((cur / prev) - 1) * 100;
+  }
+
+  function calcAmt(cur: number, prev: number) {
+    if (cur == null || prev == null) return null;
+    return cur - prev;
   }
 
   return {
     dailyTRY: calcPct(t0.valueTRY, t1.valueTRY),
     dailyUSD: calcPct(t0.valueUSD, t1.valueUSD),
+    dailyAmtTRY: calcAmt(t0.valueTRY, t1.valueTRY),
+    dailyAmtUSD: calcAmt(t0.valueUSD, t1.valueUSD),
     weeklyTRY: calcPct(t0.valueTRY, t7.valueTRY),
     weeklyUSD: calcPct(t0.valueUSD, t7.valueUSD),
+    weeklyAmtTRY: calcAmt(t0.valueTRY, t7.valueTRY),
+    weeklyAmtUSD: calcAmt(t0.valueUSD, t7.valueUSD),
     mtdTRY: calcPct(t0.valueTRY, tMtd.valueTRY),
     mtdUSD: calcPct(t0.valueUSD, tMtd.valueUSD),
+    mtdAmtTRY: calcAmt(t0.valueTRY, tMtd.valueTRY),
+    mtdAmtUSD: calcAmt(t0.valueUSD, tMtd.valueUSD),
     monthlyTRY: calcPct(t0.valueTRY, t30.valueTRY),
     monthlyUSD: calcPct(t0.valueUSD, t30.valueUSD),
+    monthlyAmtTRY: calcAmt(t0.valueTRY, t30.valueTRY),
+    monthlyAmtUSD: calcAmt(t0.valueUSD, t30.valueUSD),
     ytdTRY: calcPct(t0.valueTRY, tYtd.valueTRY),
     ytdUSD: calcPct(t0.valueUSD, tYtd.valueUSD),
+    ytdAmtTRY: calcAmt(t0.valueTRY, tYtd.valueTRY),
+    ytdAmtUSD: calcAmt(t0.valueUSD, tYtd.valueUSD),
   };
 }
 

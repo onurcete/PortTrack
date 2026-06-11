@@ -79,6 +79,29 @@ export interface BenchmarkComparisonData {
   usd: Record<"1W" | "1M" | "3M" | "YTD" | "1Y", BenchmarkComparisonDTO>;
 }
 
+export interface PeriodReturnsDTO {
+  dailyTRY: number | null;
+  dailyUSD: number | null;
+  dailyAmtTRY: number | null;
+  dailyAmtUSD: number | null;
+  weeklyTRY: number | null;
+  weeklyUSD: number | null;
+  weeklyAmtTRY: number | null;
+  weeklyAmtUSD: number | null;
+  mtdTRY: number | null;
+  mtdUSD: number | null;
+  mtdAmtTRY: number | null;
+  mtdAmtUSD: number | null;
+  monthlyTRY: number | null;
+  monthlyUSD: number | null;
+  monthlyAmtTRY: number | null;
+  monthlyAmtUSD: number | null;
+  ytdTRY: number | null;
+  ytdUSD: number | null;
+  ytdAmtTRY: number | null;
+  ytdAmtUSD: number | null;
+}
+
 export interface DashboardDTO {
   positions: PositionDTO[];
   totals: {
@@ -103,6 +126,7 @@ export interface DashboardDTO {
   lastUpdated: string | null;
   transactionCount: number;
   benchmarkData?: BenchmarkComparisonData;
+  periodReturns?: PeriodReturnsDTO;
 }
 
 function ProfitValue({
@@ -128,6 +152,49 @@ function ProfitValue({
         <span className="ml-1 text-xs opacity-80">({formatPercent(pct)})</span>
       )}
     </span>
+  );
+}
+
+function PeriodReturnCard({
+  label,
+  pct,
+  amt,
+  currency,
+}: {
+  label: string;
+  pct: number | null;
+  amt: number | null;
+  currency: "TRY" | "USD";
+}) {
+  if (pct === null || amt === null) return null;
+  const positive = pct > 0;
+  const negative = pct < 0;
+
+  return (
+    <div className="card p-3.5 flex flex-col justify-between hover:shadow-xs border border-[var(--color-border)]/45 transition-all bg-[var(--color-surface)]">
+      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+        {label}
+      </span>
+      <div className="mt-2 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 flex-wrap">
+        <span
+          className={cn(
+            "text-sm sm:text-base font-bold tabular-nums",
+            positive ? "text-[var(--color-profit)]" : negative ? "text-[var(--color-loss)]" : "text-[var(--color-muted)]",
+          )}
+        >
+          {formatPercent(pct)}
+        </span>
+        <span
+          className={cn(
+            "text-xs font-semibold tabular-nums",
+            positive ? "text-[var(--color-profit)]/85" : negative ? "text-[var(--color-loss)]/85" : "text-[var(--color-muted)]",
+          )}
+        >
+          {positive ? "+" : ""}
+          {formatMoney(amt, currency)}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -201,6 +268,42 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
           1 USD = {formatNumber(data.currentUsdTry, 2)} ₺
         </Badge>
       </div>
+
+      {/* Günlük / Haftalık / Aylık Getiriler */}
+      {data.periodReturns && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <PeriodReturnCard
+            label="1 Günlük (1D)"
+            pct={isTRY ? data.periodReturns.dailyTRY : data.periodReturns.dailyUSD}
+            amt={isTRY ? data.periodReturns.dailyAmtTRY : data.periodReturns.dailyAmtUSD}
+            currency={currency}
+          />
+          <PeriodReturnCard
+            label="1 Haftalık (1W)"
+            pct={isTRY ? data.periodReturns.weeklyTRY : data.periodReturns.weeklyUSD}
+            amt={isTRY ? data.periodReturns.weeklyAmtTRY : data.periodReturns.weeklyAmtUSD}
+            currency={currency}
+          />
+          <PeriodReturnCard
+            label="Ay Başından (MTD)"
+            pct={isTRY ? data.periodReturns.mtdTRY : data.periodReturns.mtdUSD}
+            amt={isTRY ? data.periodReturns.mtdAmtTRY : data.periodReturns.mtdAmtUSD}
+            currency={currency}
+          />
+          <PeriodReturnCard
+            label="1 Aylık (1M)"
+            pct={isTRY ? data.periodReturns.monthlyTRY : data.periodReturns.monthlyUSD}
+            amt={isTRY ? data.periodReturns.monthlyAmtTRY : data.periodReturns.monthlyAmtUSD}
+            currency={currency}
+          />
+          <PeriodReturnCard
+            label="Yıl Başından (YTD)"
+            pct={isTRY ? data.periodReturns.ytdTRY : data.periodReturns.ytdUSD}
+            amt={isTRY ? data.periodReturns.ytdAmtTRY : data.periodReturns.ytdAmtUSD}
+            currency={currency}
+          />
+        </div>
+      )}
 
       {/* Özet kartları */}
       <Card className="p-6 text-center flex flex-col items-center justify-center border border-[var(--color-border)]/55 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-muted)]/10 shadow-sm">

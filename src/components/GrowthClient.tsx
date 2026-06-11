@@ -728,41 +728,6 @@ export function GrowthClient({
         </Card>
       ) : (
         <>
-          {periodReturns && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <Card className="p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">1 Günlük (1D)</span>
-                <span className={cn("text-xl font-bold tabular-nums mt-1", (isTRY ? periodReturns.dailyTRY : periodReturns.dailyUSD) != null && (isTRY ? periodReturns.dailyTRY : periodReturns.dailyUSD)! >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
-                  {formatPercent((isTRY ? periodReturns.dailyTRY : periodReturns.dailyUSD) ?? 0)}
-                </span>
-              </Card>
-              <Card className="p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">1 Haftalık (1W)</span>
-                <span className={cn("text-xl font-bold tabular-nums mt-1", (isTRY ? periodReturns.weeklyTRY : periodReturns.weeklyUSD) != null && (isTRY ? periodReturns.weeklyTRY : periodReturns.weeklyUSD)! >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
-                  {formatPercent((isTRY ? periodReturns.weeklyTRY : periodReturns.weeklyUSD) ?? 0)}
-                </span>
-              </Card>
-              <Card className="p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">Ay Başından Beri (MTD)</span>
-                <span className={cn("text-xl font-bold tabular-nums mt-1", (isTRY ? periodReturns.mtdTRY : periodReturns.mtdUSD) != null && (isTRY ? periodReturns.mtdTRY : periodReturns.mtdUSD)! >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
-                  {formatPercent((isTRY ? periodReturns.mtdTRY : periodReturns.mtdUSD) ?? 0)}
-                </span>
-              </Card>
-              <Card className="p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">1 Aylık (1M)</span>
-                <span className={cn("text-xl font-bold tabular-nums mt-1", (isTRY ? periodReturns.monthlyTRY : periodReturns.monthlyUSD) != null && (isTRY ? periodReturns.monthlyTRY : periodReturns.monthlyUSD)! >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
-                  {formatPercent((isTRY ? periodReturns.monthlyTRY : periodReturns.monthlyUSD) ?? 0)}
-                </span>
-              </Card>
-              <Card className="p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">Yıl Başından Beri (YTD)</span>
-                <span className={cn("text-xl font-bold tabular-nums mt-1", (isTRY ? periodReturns.ytdTRY : periodReturns.ytdUSD) != null && (isTRY ? periodReturns.ytdTRY : periodReturns.ytdUSD)! >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
-                  {formatPercent((isTRY ? periodReturns.ytdTRY : periodReturns.ytdUSD) ?? 0)}
-                </span>
-              </Card>
-            </div>
-          )}
-
           <Card className="p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <h2 className="font-semibold text-sm">{chartTitle}</h2>
