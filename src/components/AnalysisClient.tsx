@@ -251,19 +251,19 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
   const unchangedPct = total > 0 ? (summary.unchangedCount / total) * 100 : 0;
 
   return (
-    <div className="card p-6 bg-gradient-to-br from-indigo-50/40 via-purple-50/20 to-slate-50/40 border border-indigo-100/60 shadow-xs space-y-6">
+    <div className="card p-6 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-transparent border border-[var(--color-border)] shadow-xs space-y-6">
       {/* Başlık */}
-      <div className="flex items-center justify-between border-b border-indigo-100/50 pb-4">
+      <div className="flex items-center justify-between border-b border-[var(--color-border)]/50 pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 shadow-inner">
-            <Zap size={20} className="fill-indigo-600/10" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shadow-inner">
+            <Zap size={20} className="fill-[var(--color-brand-strong)]/10" />
           </div>
           <div>
             <h2 className="font-bold text-base text-[var(--color-foreground)]">Günün Özeti</h2>
             <p className="text-xs text-[var(--color-muted)]">Portföyünüzün teknik nabzı ve hareketleri</p>
           </div>
         </div>
-        <div className="text-xs font-semibold px-2.5 py-1 bg-white border border-indigo-100 shadow-xs text-indigo-700 rounded-lg">
+        <div className="text-xs font-bold px-2.5 py-1 bg-[var(--color-brand-soft)] border border-[var(--color-brand)]/10 shadow-xs text-[var(--color-brand-strong)] rounded-lg">
           Genel Durum
         </div>
       </div>
@@ -275,21 +275,21 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
           <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
             Enstrüman Dağılımı
           </p>
-          <div className="space-y-3 bg-white/60 p-4 rounded-2xl border border-slate-100 shadow-inner">
+          <div className="space-y-3 bg-[var(--color-surface-muted)]/40 p-4 rounded-2xl border border-[var(--color-border)]/50 shadow-xs">
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-slate-800">{summary.totalCount}</span>
+              <span className="text-2xl font-black text-[var(--color-foreground)]">{summary.totalCount}</span>
               <span className="text-xs text-[var(--color-muted)] font-medium">Toplam Varlık</span>
             </div>
             
             {/* Yükselen / Düşen Çubuğu */}
-            <div className="h-3 w-full rounded-full bg-slate-200/50 overflow-hidden flex">
+            <div className="h-3 w-full rounded-full bg-slate-200/50 dark:bg-slate-800/50 overflow-hidden flex">
               <div 
                 className="h-full bg-[var(--color-profit)] transition-all" 
                 style={{ width: `${upPct}%` }}
                 title={`Yükselen: ${summary.upCount}`}
               />
               <div 
-                className="h-full bg-slate-400 transition-all" 
+                className="h-full bg-slate-400 dark:bg-slate-600 transition-all" 
                 style={{ width: `${unchangedPct}%` }}
                 title={`Değişmeyen: ${summary.unchangedCount}`}
               />
@@ -306,8 +306,8 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
                 <span>{summary.upCount} Yükselen</span>
               </div>
               {summary.unchangedCount > 0 && (
-                <div className="flex items-center gap-1.5 text-slate-500">
-                  <span className="h-2 w-2 rounded-full bg-slate-400" />
+                <div className="flex items-center gap-1.5 text-[var(--color-muted)]">
+                  <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-600" />
                   <span>{summary.unchangedCount} Stabil</span>
                 </div>
               )}
@@ -333,7 +333,7 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
                 </p>
                 {summary.topGainers.map((g) => (
                   <div key={g.symbol} className="flex items-center justify-between text-xs font-medium">
-                    <span className="font-semibold text-slate-800">{g.symbol}</span>
+                    <span className="font-semibold text-[var(--color-foreground)]">{g.symbol}</span>
                     <span className="font-bold text-[var(--color-profit)] tabular-nums">
                       +%{g.dailyChangePct.toFixed(1)}
                     </span>
@@ -349,7 +349,7 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
                 </p>
                 {summary.topLosers.map((l) => (
                   <div key={l.symbol} className="flex items-center justify-between text-xs font-medium">
-                    <span className="font-semibold text-slate-800">{l.symbol}</span>
+                    <span className="font-semibold text-[var(--color-foreground)]">{l.symbol}</span>
                     <span className="font-bold text-[var(--color-loss)] tabular-nums">
                       -%{Math.abs(l.dailyChangePct).toFixed(1)}
                     </span>
@@ -365,7 +365,7 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
           <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
             Önemli Sinyaller ve Trendler
           </p>
-          <div className="bg-white/60 p-4 rounded-2xl border border-slate-100 shadow-inner space-y-2 max-h-[160px] overflow-y-auto">
+          <div className="bg-[var(--color-surface-muted)]/40 p-4 rounded-2xl border border-[var(--color-border)]/50 shadow-xs space-y-2 max-h-[160px] overflow-y-auto">
             {summary.streakAlerts.length === 0 && summary.bigMoveAlerts.length === 0 ? (
               <p className="text-xs text-[var(--color-muted)] italic py-4 text-center">
                 Bugün olağan dışı hareket veya seriye bağlayan varlık bulunmuyor.
@@ -373,20 +373,20 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
             ) : (
               [...summary.bigMoveAlerts, ...summary.streakAlerts].map((alert, i) => {
                 let icon = "📢";
-                let cls = "border-l-2 border-slate-400 bg-slate-50/50";
+                let cls = "border-l-2 border-slate-400 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-900/50";
                 
                 if (alert.includes("yükseldi") || alert.includes("yükseliyor")) {
                   icon = "📈";
-                  cls = "border-l-2 border-green-500 bg-green-50/20 text-green-900";
+                  cls = "border-l-2 border-[var(--color-profit)] bg-[var(--color-profit-soft)] text-[var(--color-profit)]";
                 } else if (alert.includes("düştü") || alert.includes("düşüyor")) {
                   icon = "📉";
-                  cls = "border-l-2 border-red-500 bg-red-50/20 text-red-900";
+                  cls = "border-l-2 border-[var(--color-loss)] bg-[var(--color-loss-soft)] text-[var(--color-loss)]";
                 } else if (alert.includes("olağandışı")) {
                   icon = "🚀";
-                  cls = "border-l-2 border-indigo-500 bg-indigo-50/20 text-indigo-900";
+                  cls = "border-l-2 border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]";
                 } else if (alert.includes("sert satış")) {
                   icon = "💥";
-                  cls = "border-l-2 border-rose-500 bg-rose-50/20 text-rose-900";
+                  cls = "border-l-2 border-[var(--color-loss)] bg-[var(--color-loss-soft)] text-[var(--color-loss)]";
                 }
 
                 return (
