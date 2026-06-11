@@ -353,25 +353,6 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
               </div>
             )}
           </div>
-
-          <div className="text-[11px] font-semibold text-[var(--color-muted)] mt-6 pt-4 border-t border-[var(--color-border)]/50 space-y-1.5">
-            <div>
-              <span className="text-[var(--color-muted)]/70">Maliyet (Yatırım):</span>{" "}
-              <strong className="text-[var(--color-foreground)]/90 tabular-nums">{formatMoney(totalCost, currency)}</strong>
-            </div>
-            {ytdAmt !== null && ytdAmt !== undefined && (
-              <div>
-                <span className="text-[var(--color-muted)]/70">2025 Kapanış:</span>{" "}
-                <strong className="text-[var(--color-foreground)]/90 tabular-nums">{formatMoney(ytdCloseVal, currency)}</strong>
-              </div>
-            )}
-            {dailyChangeAmt !== null && dailyChangeAmt !== undefined && (
-              <div>
-                <span className="text-[var(--color-muted)]/70">Önceki Kapanış:</span>{" "}
-                <strong className="text-[var(--color-foreground)]/90 tabular-nums">{formatMoney(prevCloseVal, currency)}</strong>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Sağ Kısım: 2x2 Dönemsel Getiri Gridi */}
@@ -381,7 +362,6 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={weeklyPct ?? null}
             amt={weeklyAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("1W", isTRY, data.benchmarkData)}
             borderClasses="sm:border-r sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -389,7 +369,6 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={monthlyPct ?? null}
             amt={monthlyAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("1M", isTRY, data.benchmarkData)}
             borderClasses="sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -397,7 +376,6 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={ytdPct ?? null}
             amt={ytdAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("YTD", isTRY, data.benchmarkData)}
             borderClasses="sm:border-r border-[var(--color-border)]/70 sm:border-b-0 border-b"
           />
           <CombinedReturnCell
