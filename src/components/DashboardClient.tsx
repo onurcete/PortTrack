@@ -286,6 +286,46 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
   const prevCloseVal = totalValue - (dailyChangeAmt ?? 0);
   const ytdCloseVal = totalValue - (ytdAmt ?? 0);
 
+  const assetDailyChanges = useMemo(() => {
+    const types: Record<string, { label: string; color: string; value: number; changeAmt: number }> = {
+      TEFAS: { label: "TEFAS Fon", color: "#7c3aed", value: 0, changeAmt: 0 },
+      FOREIGN: { label: "Yabancı Borsa", color: "#0891b2", value: 0, changeAmt: 0 },
+      METAL: { label: "Kıymetli Maden", color: "#d97706", value: 0, changeAmt: 0 },
+      CRYPTO: { label: "Kripto", color: "#db2777", value: 0, changeAmt: 0 },
+    };
+
+    for (const p of openPositions) {
+      const type = p.assetType;
+      if (types[type]) {
+        const val = isTRY ? p.valueTRY : p.valueUSD;
+        types[type].value += val;
+
+        if (p.dailyChangePct !== null && p.dailyChangePct !== undefined) {
+          const d = p.dailyChangePct;
+          const prevVal = Math.abs(d + 100) > 1e-5 ? val / (1 + d / 100) : val;
+          const change = val - prevVal;
+          types[type].changeAmt += change;
+        }
+      }
+    }
+
+    return Object.entries(types)
+      .map(([key, item]) => {
+        const pct = (item.value - item.changeAmt) > 0 
+          ? (item.changeAmt / (item.value - item.changeAmt)) * 100 
+          : 0;
+        return {
+          key,
+          label: item.label,
+          color: item.color,
+          value: item.value,
+          changeAmt: item.changeAmt,
+          pct,
+        };
+      })
+      .filter((item) => item.value > 0);
+  }, [openPositions, isTRY]);
+
   if (data.transactionCount === 0) {
     return (
       <div>
@@ -335,7 +375,6 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
               </span>
             </div>
 
-            {/* Günlük Değişim Badgesi */}
             {dailyChangePct !== undefined && dailyChangePct !== null && dailyChangeAmt !== undefined && dailyChangeAmt !== null && (
               <div className="mt-4">
                 <span
@@ -350,6 +389,33 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
                   <span>{dailyChangeAmt >= 0 ? "+" : ""}{formatMoney(dailyChangeAmt, currency)}</span>
                   <span>({formatPercent(dailyChangePct)})</span>
                 </span>
+              </div>
+            )}
+
+            {/* Varlık Sınıfı Günlük Değişimleri */}
+            {assetDailyChanges.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-[var(--color-border)]/40 space-y-2.5 max-w-sm">
+                <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                  GÜNLÜK VARLIK DEĞİŞİMLERİ
+                </p>
+                <div className="flex flex-col gap-2">
+                  {assetDailyChanges.map((item) => {
+                    const positive = item.changeAmt >= 0;
+                    return (
+                      <div key={item.key} className="flex items-center justify-between text-xs font-semibold">
+                        <div className="flex items-center gap-2 text-[var(--color-muted)] font-medium">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                          <span>{item.label}</span>
+                        </div>
+                        <div className={cn("tabular-nums font-bold", positive ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
+                          {positive ? "+" : ""}
+                          {formatMoney(item.changeAmt, currency)}
+                          <span className="ml-1 text-[10px] opacity-80">({formatPercent(item.pct)})</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
