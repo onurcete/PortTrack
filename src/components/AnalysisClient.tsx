@@ -5,10 +5,7 @@ import {
   Brain,
   TrendingUp,
   TrendingDown,
-  BarChart3,
   RefreshCw,
-  ChevronDown,
-  ChevronUp,
   AlertTriangle,
   Zap,
   Target,
@@ -17,7 +14,6 @@ import {
   Flame,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCurrency } from "@/context/currency";
 import { Card } from "@/components/ui";
 import { ASSET_META, type AssetType } from "@/lib/assets";
 import { cn, formatNumber, formatPercent } from "@/lib/utils";
@@ -70,23 +66,25 @@ export function AnalysisClient({
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("FOREIGN");
-  const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"score" | "daily" | "symbol">("score");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
-  // Filtreleme
+  // Filtreleme ve Sıralama
   const filtered = useMemo(() => {
     const tab = TABS.find((t) => t.key === activeTab)!;
     return analyses
       .filter((a) => tab.types.includes(a.assetType))
       .sort((a, b) => {
         let cmp = 0;
-        if (sortBy === "score") cmp = a.score - b.score;
-        else if (sortBy === "daily")
+        if (sortBy === "score") {
+          cmp = a.score - b.score;
+        } else if (sortBy === "daily") {
           cmp =
             (a.indicators?.dailyChangePct ?? 0) -
             (b.indicators?.dailyChangePct ?? 0);
-        else cmp = a.symbol.localeCompare(b.symbol);
+        } else {
+          cmp = a.symbol.localeCompare(b.symbol);
+        }
         return sortDir === "desc" ? -cmp : cmp;
       });
   }, [analyses, activeTab, sortBy, sortDir]);
@@ -133,7 +131,7 @@ export function AnalysisClient({
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="btn btn-outline py-1.5 px-4 text-xs h-9 flex items-center gap-2"
+          className="btn btn-outline py-1.5 px-4 text-xs h-9 flex items-center gap-2 cursor-pointer"
           title="Tüm enstrümanlar için teknik analizi yeniden hesapla"
         >
           <RefreshCw size={14} className={cn(refreshing && "animate-spin")} />
@@ -155,7 +153,7 @@ export function AnalysisClient({
       {/* Günün Özeti */}
       {dailySummary && <DailySummaryCard summary={dailySummary} />}
 
-      {/* Sekmeler */}
+      {/* Sekmeler ve Listeleme */}
       {!noData && (
         <>
           <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-0">
@@ -165,12 +163,9 @@ export function AnalysisClient({
               return (
                 <button
                   key={tab.key}
-                  onClick={() => {
-                    setActiveTab(tab.key);
-                    setExpandedSymbol(null);
-                  }}
+                  onClick={() => setActiveTab(tab.key)}
                   className={cn(
-                    "pb-2 px-3 border-b-2 font-bold text-sm transition-all outline-none",
+                    "pb-2 px-3 border-b-2 font-bold text-sm transition-all outline-none cursor-pointer",
                     activeTab === tab.key
                       ? "border-[var(--color-brand-strong)] text-[var(--color-brand-strong)]"
                       : "border-transparent text-[var(--color-muted)] hover:text-[var(--color-text)]",
@@ -182,62 +177,65 @@ export function AnalysisClient({
             })}
           </div>
 
-          {/* Analiz Tablosu */}
-          <Card className="overflow-hidden">
-            {/* Tablo başlıkları */}
-            <div className="grid grid-cols-[minmax(100px,1.5fr)_80px_80px_80px_80px_80px_60px] gap-2 px-6 py-3 bg-[var(--color-surface-muted)]/40 border-b border-[var(--color-border)]/50">
-              <SortButton
-                label="Sembol"
-                field="symbol"
-                active={sortBy}
-                dir={sortDir}
-                onSort={handleSort}
-                align="left"
-              />
-              <SortButton
-                label="Günlük"
-                field="daily"
-                active={sortBy}
-                dir={sortDir}
-                onSort={handleSort}
-              />
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] text-center">
-                Trend
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] text-center">
-                MACD
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] text-center">
-                RSI
-              </span>
-              <SortButton
-                label="Skor"
-                field="score"
-                active={sortBy}
-                dir={sortDir}
-                onSort={handleSort}
-              />
-              <span />
+          <div className="space-y-4">
+            {/* Sıralama ve Kontroller */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--color-surface)] border border-[var(--color-border)] px-4 py-3 rounded-2xl shadow-xs">
+              <div className="flex items-center gap-2 text-xs text-[var(--color-muted)] font-bold">
+                <span>SIRALA:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => handleSort("score")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg transition-all font-bold flex items-center gap-1 cursor-pointer",
+                      sortBy === "score"
+                        ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]"
+                        : "hover:bg-[var(--color-surface-muted)] text-[var(--color-foreground)]"
+                    )}
+                  >
+                    Teknik Skor {sortBy === "score" && (sortDir === "asc" ? "▲" : "▼")}
+                  </button>
+                  <button
+                    onClick={() => handleSort("daily")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg transition-all font-bold flex items-center gap-1 cursor-pointer",
+                      sortBy === "daily"
+                        ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]"
+                        : "hover:bg-[var(--color-surface-muted)] text-[var(--color-foreground)]"
+                    )}
+                  >
+                    Günlük Değişim {sortBy === "daily" && (sortDir === "asc" ? "▲" : "▼")}
+                  </button>
+                  <button
+                    onClick={() => handleSort("symbol")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg transition-all font-bold flex items-center gap-1 cursor-pointer",
+                      sortBy === "symbol"
+                        ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]"
+                        : "hover:bg-[var(--color-surface-muted)] text-[var(--color-foreground)]"
+                    )}
+                  >
+                    Sembol {sortBy === "symbol" && (sortDir === "asc" ? "▲" : "▼")}
+                  </button>
+                </div>
+              </div>
+              <div className="text-xs text-[var(--color-muted)] font-semibold">
+                Toplam <strong className="text-[var(--color-foreground)]">{filtered.length}</strong> varlık listeleniyor
+              </div>
             </div>
 
-            {/* Satırlar */}
+            {/* Varlık Grid */}
             {filtered.length === 0 ? (
-              <p className="px-6 py-10 text-center text-sm text-[var(--color-muted)]">
+              <p className="px-6 py-10 text-center text-sm text-[var(--color-muted)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl">
                 Bu kategoride analiz verisi yok.
               </p>
             ) : (
-              filtered.map((a) => (
-                <AnalysisRow
-                  key={a.symbol}
-                  analysis={a}
-                  expanded={expandedSymbol === a.symbol}
-                  onToggle={() =>
-                    setExpandedSymbol(expandedSymbol === a.symbol ? null : a.symbol)
-                  }
-                />
-              ))
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filtered.map((a) => (
+                  <AnalysisCard key={a.symbol} analysis={a} />
+                ))}
+              </div>
             )}
-          </Card>
+          </div>
         </>
       )}
     </div>
@@ -247,107 +245,192 @@ export function AnalysisClient({
 // ────────── Günün Özeti Kartı ──────────
 
 function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
+  const total = summary.upCount + summary.downCount + summary.unchangedCount;
+  const upPct = total > 0 ? (summary.upCount / total) * 100 : 0;
+  const downPct = total > 0 ? (summary.downCount / total) * 100 : 0;
+  const unchangedPct = total > 0 ? (summary.unchangedCount / total) * 100 : 0;
+
   return (
-    <Card className="p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
-          <Zap size={18} />
+    <div className="card p-6 bg-gradient-to-br from-indigo-50/40 via-purple-50/20 to-slate-50/40 border border-indigo-100/60 shadow-xs space-y-6">
+      {/* Başlık */}
+      <div className="flex items-center justify-between border-b border-indigo-100/50 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 shadow-inner">
+            <Zap size={20} className="fill-indigo-600/10" />
+          </div>
+          <div>
+            <h2 className="font-bold text-base text-[var(--color-foreground)]">Günün Özeti</h2>
+            <p className="text-xs text-[var(--color-muted)]">Portföyünüzün teknik nabzı ve hareketleri</p>
+          </div>
         </div>
-        <h2 className="font-bold text-sm">Günün Özeti</h2>
+        <div className="text-xs font-semibold px-2.5 py-1 bg-white border border-indigo-100 shadow-xs text-indigo-700 rounded-lg">
+          Genel Durum
+        </div>
       </div>
 
-      {/* Genel durum */}
-      <p className="text-sm text-[var(--color-foreground)]">
-        Portföyündeki <strong>{summary.totalCount}</strong> enstrümandan{" "}
-        <span className="text-[var(--color-profit)] font-bold">{summary.upCount}</span> tanesi yükseldi,{" "}
-        <span className="text-[var(--color-loss)] font-bold">{summary.downCount}</span> tanesi düştü
-        {summary.unchangedCount > 0 && (
-          <>, <span className="text-[var(--color-muted)] font-bold">{summary.unchangedCount}</span> tanesi değişmedi</>
-        )}
-        .
-      </p>
+      {/* 3 Sütunlu Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sol Sütun: Portföy Oranı */}
+        <div className="space-y-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
+            Enstrüman Dağılımı
+          </p>
+          <div className="space-y-3 bg-white/60 p-4 rounded-2xl border border-slate-100 shadow-inner">
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-black text-slate-800">{summary.totalCount}</span>
+              <span className="text-xs text-[var(--color-muted)] font-medium">Toplam Varlık</span>
+            </div>
+            
+            {/* Yükselen / Düşen Çubuğu */}
+            <div className="h-3 w-full rounded-full bg-slate-200/50 overflow-hidden flex">
+              <div 
+                className="h-full bg-[var(--color-profit)] transition-all" 
+                style={{ width: `${upPct}%` }}
+                title={`Yükselen: ${summary.upCount}`}
+              />
+              <div 
+                className="h-full bg-slate-400 transition-all" 
+                style={{ width: `${unchangedPct}%` }}
+                title={`Değişmeyen: ${summary.unchangedCount}`}
+              />
+              <div 
+                className="h-full bg-[var(--color-loss)] transition-all" 
+                style={{ width: `${downPct}%` }}
+                title={`Düşen: ${summary.downCount}`}
+              />
+            </div>
 
-      {/* Top kazanan/kaybeden */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {summary.topGainers.length > 0 && (
-          <div className="rounded-xl bg-[var(--color-profit-soft)] p-3 space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-profit)] flex items-center gap-1">
-              <Trophy size={12} /> En Çok Yükselen
-            </p>
-            {summary.topGainers.map((g) => (
-              <div key={g.symbol} className="flex items-center justify-between text-xs">
-                <span className="font-semibold">{g.symbol}</span>
-                <span className="font-bold text-[var(--color-profit)] tabular-nums">
-                  +%{g.dailyChangePct.toFixed(1)}
-                </span>
+            <div className="flex justify-between items-center text-xs mt-2 font-semibold">
+              <div className="flex items-center gap-1.5 text-[var(--color-profit)]">
+                <span className="h-2 w-2 rounded-full bg-[var(--color-profit)]" />
+                <span>{summary.upCount} Yükselen</span>
               </div>
-            ))}
-          </div>
-        )}
-        {summary.topLosers.length > 0 && (
-          <div className="rounded-xl bg-[var(--color-loss-soft)] p-3 space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-loss)] flex items-center gap-1">
-              <Flame size={12} /> En Çok Düşen
-            </p>
-            {summary.topLosers.map((l) => (
-              <div key={l.symbol} className="flex items-center justify-between text-xs">
-                <span className="font-semibold">{l.symbol}</span>
-                <span className="font-bold text-[var(--color-loss)] tabular-nums">
-                  %{l.dailyChangePct.toFixed(1)}
-                </span>
+              {summary.unchangedCount > 0 && (
+                <div className="flex items-center gap-1.5 text-slate-500">
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
+                  <span>{summary.unchangedCount} Stabil</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 text-[var(--color-loss)]">
+                <span className="h-2 w-2 rounded-full bg-[var(--color-loss)]" />
+                <span>{summary.downCount} Düşen</span>
               </div>
-            ))}
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Uyarılar */}
-      {(summary.streakAlerts.length > 0 || summary.bigMoveAlerts.length > 0) && (
-        <div className="space-y-1">
-          {[...summary.bigMoveAlerts, ...summary.streakAlerts].map((alert, i) => (
-            <p key={i} className="text-xs font-medium text-[var(--color-foreground)]">
-              {alert}
-            </p>
-          ))}
         </div>
-      )}
-    </Card>
+
+        {/* Orta Sütun: En Çok Yükselen / Düşen */}
+        <div className="space-y-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
+            En Çok Hareket Edenler
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+            {summary.topGainers.length > 0 && (
+              <div className="rounded-xl bg-[var(--color-profit-soft)] border border-[var(--color-profit)]/10 p-3 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-profit)] flex items-center gap-1">
+                  <Trophy size={12} className="fill-[var(--color-profit)]/10" />
+                  En Çok Yükselenler
+                </p>
+                {summary.topGainers.map((g) => (
+                  <div key={g.symbol} className="flex items-center justify-between text-xs font-medium">
+                    <span className="font-semibold text-slate-800">{g.symbol}</span>
+                    <span className="font-bold text-[var(--color-profit)] tabular-nums">
+                      +%{g.dailyChangePct.toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {summary.topLosers.length > 0 && (
+              <div className="rounded-xl bg-[var(--color-loss-soft)] border border-[var(--color-loss)]/10 p-3 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-loss)] flex items-center gap-1">
+                  <Flame size={12} className="fill-[var(--color-loss)]/10" />
+                  En Çok Düşenler
+                </p>
+                {summary.topLosers.map((l) => (
+                  <div key={l.symbol} className="flex items-center justify-between text-xs font-medium">
+                    <span className="font-semibold text-slate-800">{l.symbol}</span>
+                    <span className="font-bold text-[var(--color-loss)] tabular-nums">
+                      -%{Math.abs(l.dailyChangePct).toFixed(1)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sağ Sütun: Önemli Gelişmeler & Trendler */}
+        <div className="space-y-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
+            Önemli Sinyaller ve Trendler
+          </p>
+          <div className="bg-white/60 p-4 rounded-2xl border border-slate-100 shadow-inner space-y-2 max-h-[160px] overflow-y-auto">
+            {summary.streakAlerts.length === 0 && summary.bigMoveAlerts.length === 0 ? (
+              <p className="text-xs text-[var(--color-muted)] italic py-4 text-center">
+                Bugün olağan dışı hareket veya seriye bağlayan varlık bulunmuyor.
+              </p>
+            ) : (
+              [...summary.bigMoveAlerts, ...summary.streakAlerts].map((alert, i) => {
+                let icon = "📢";
+                let cls = "border-l-2 border-slate-400 bg-slate-50/50";
+                
+                if (alert.includes("yükseldi") || alert.includes("yükseliyor")) {
+                  icon = "📈";
+                  cls = "border-l-2 border-green-500 bg-green-50/20 text-green-900";
+                } else if (alert.includes("düştü") || alert.includes("düşüyor")) {
+                  icon = "📉";
+                  cls = "border-l-2 border-red-500 bg-red-50/20 text-red-900";
+                } else if (alert.includes("olağandışı")) {
+                  icon = "🚀";
+                  cls = "border-l-2 border-indigo-500 bg-indigo-50/20 text-indigo-900";
+                } else if (alert.includes("sert satış")) {
+                  icon = "💥";
+                  cls = "border-l-2 border-rose-500 bg-rose-50/20 text-rose-900";
+                }
+
+                return (
+                  <div key={i} className={cn("text-xs font-semibold p-2 rounded-lg flex items-start gap-2", cls)}>
+                    <span className="shrink-0 text-sm leading-none">{icon}</span>
+                    <span className="leading-tight">{alert.replace(/^[📈📉🚀💥📢]\s*/, "")}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ────────── Analiz Satırı ──────────
+// ────────── Varlık Kartı Bileşeni ──────────
 
-function AnalysisRow({
-  analysis,
-  expanded,
-  onToggle,
-}: {
-  analysis: AnalysisDTO;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
+function AnalysisCard({ analysis }: { analysis: AnalysisDTO }) {
   const a = analysis;
   const meta = ASSET_META[a.assetType as AssetType] ?? { label: a.assetType, color: "#94a3b8" };
   const dailyChange = a.indicators?.dailyChangePct ?? null;
   const rsiVal = a.indicators?.rsi14 !== null ? Math.round(a.indicators.rsi14) : null;
 
   return (
-    <div className="border-b border-[var(--color-border)]/30 last:border-0">
-      <button
-        onClick={onToggle}
-        className="w-full grid grid-cols-[minmax(100px,1.5fr)_80px_80px_80px_80px_80px_60px] gap-2 items-center px-6 py-3 text-left hover:bg-[var(--color-surface-muted)]/30 transition-colors"
-      >
-        {/* Sembol */}
-        <div className="flex items-center gap-2.5 min-w-0">
+    <div className="card p-5 space-y-4 hover:shadow-md hover:border-[var(--color-brand)]/30 transition-all">
+      {/* Üst Kısım: Başlık, Skor ve Fiyat */}
+      <div className="flex items-start justify-between gap-3 border-b border-[var(--color-border)]/40 pb-3">
+        <div className="flex items-center gap-3">
           <span
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold shrink-0"
             style={{ backgroundColor: `${meta.color}15`, color: meta.color }}
           >
-            {a.symbol.slice(0, 3)}
+            {a.symbol.slice(0, 4)}
           </span>
-          <div className="min-w-0">
-            <p className="font-semibold text-xs truncate">{a.symbol}</p>
-            <p className="text-[10px] text-[var(--color-muted)]">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-bold text-sm text-[var(--color-foreground)]">{a.symbol}</h3>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)] text-[var(--color-muted)] font-bold">
+                {meta.label}
+              </span>
+            </div>
+            <p className="text-xs font-medium text-[var(--color-muted)] mt-0.5">
               {a.indicators?.currentPrice !== undefined
                 ? `$${formatNumber(a.indicators.currentPrice, 2)}`
                 : ""}
@@ -355,12 +438,12 @@ function AnalysisRow({
           </div>
         </div>
 
-        {/* Günlük */}
-        <div className="flex justify-center">
-          {dailyChange !== null ? (
+        <div className="flex items-center gap-3">
+          {/* Günlük Değişim */}
+          {dailyChange !== null && (
             <span
               className={cn(
-                "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[52px]",
+                "rounded-lg px-2.5 py-1 text-xs font-bold tabular-nums text-center",
                 dailyChange >= 0
                   ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
                   : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
@@ -368,132 +451,49 @@ function AnalysisRow({
             >
               {formatPercent(dailyChange)}
             </span>
-          ) : (
-            <span className="text-xs text-[var(--color-muted)]">—</span>
           )}
-        </div>
 
-        {/* Trend */}
-        <div className="flex justify-center">
-          <TrendBadge signal={a.trendSignal} />
-        </div>
-
-        {/* MACD */}
-        <div className="flex justify-center">
-          <MacdBadge signal={a.macdSignal} />
-        </div>
-
-        {/* RSI */}
-        <div className="flex justify-center">
-          <RsiBadge value={rsiVal} zone={a.rsiZone} />
-        </div>
-
-        {/* Skor */}
-        <div className="flex justify-center">
-          <ScoreBadge score={a.score} />
-        </div>
-
-        {/* Expand */}
-        <div className="flex justify-center text-[var(--color-muted)]">
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </div>
-      </button>
-
-      {/* Detay Alanı */}
-      {expanded && (
-        <div className="px-6 pb-5 space-y-4 bg-[var(--color-surface-muted)]/15">
-          {/* Yorum */}
-          <div className="rounded-xl border border-[var(--color-border)]/40 p-4 bg-[var(--color-surface)]">
-            <p className="text-sm leading-relaxed text-[var(--color-foreground)]">
-              {a.commentary}
-            </p>
+          {/* Skor */}
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] text-[var(--color-muted)] font-bold uppercase tracking-wider mb-0.5">Skor</span>
+            <ScoreBadge score={a.score} />
           </div>
+        </div>
+      </div>
 
-          {/* Gösterge Detayları */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            <IndicatorCard
-              label="SMA20"
-              value={a.indicators?.sma20}
-              status={
-                a.indicators?.currentPrice > a.indicators?.sma20
-                  ? "above"
-                  : "below"
-              }
-            />
-            <IndicatorCard
-              label="SMA50"
-              value={a.indicators?.sma50}
-              status={
-                a.indicators?.currentPrice > a.indicators?.sma50
-                  ? "above"
-                  : "below"
-              }
-            />
-            <IndicatorCard
-              label="SMA200"
-              value={a.indicators?.sma200}
-              status={
-                a.indicators?.currentPrice > a.indicators?.sma200
-                  ? "above"
-                  : "below"
-              }
-            />
-            <IndicatorCard
-              label="RSI (14)"
-              value={rsiVal}
-              suffix=""
-              status={
-                a.rsiZone === "OVERSOLD"
-                  ? "below"
-                  : a.rsiZone === "OVERBOUGHT"
-                    ? "above"
-                    : "neutral"
-              }
-            />
-            <IndicatorCard
-              label="MACD"
-              value={a.indicators?.macd}
-              decimals={3}
-              status={
-                a.indicators?.macd > a.indicators?.macdSignal
-                  ? "above"
-                  : "below"
-              }
-            />
-            <IndicatorCard
-              label="Signal"
-              value={a.indicators?.macdSignal}
-              decimals={3}
-              status="neutral"
-            />
-            <IndicatorCard
-              label="Bollinger Üst"
-              value={a.indicators?.bollingerUpper}
-              status="neutral"
-            />
-            <IndicatorCard
-              label="Bollinger Alt"
-              value={a.indicators?.bollingerLower}
-              status="neutral"
-            />
+      {/* Badgeler: Trend, MACD, RSI */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        <TrendTextBadge signal={a.trendSignal} />
+        <MacdTextBadge signal={a.macdSignal} />
+        {rsiVal !== null && <RsiTextBadge value={rsiVal} zone={a.rsiZone} />}
+      </div>
+
+      {/* Yorum (Commentary) */}
+      <div className="text-xs text-[var(--color-foreground)] leading-relaxed bg-gradient-to-r from-[var(--color-brand-soft)]/20 to-transparent p-3 rounded-xl border border-[var(--color-brand-soft)]/50">
+        <div className="flex items-center gap-1.5 mb-1.5 text-[var(--color-brand-strong)] font-bold">
+          <Brain size={14} />
+          <span>Yapay Zekâ Analiz Yorumu</span>
+        </div>
+        <p className="opacity-90">{a.commentary}</p>
+      </div>
+
+      {/* Sinyaller & Uyarılar */}
+      {a.alerts.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">
+            <AlertTriangle size={12} className="text-amber-500" />
+            <span>Sinyaller & Uyarılar</span>
           </div>
-
-          {/* Uyarılar */}
-          {a.alerts.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)] flex items-center gap-1">
-                <AlertTriangle size={12} /> Sinyaller & Uyarılar
-              </p>
-              {a.alerts.map((alert, i) => (
-                <p
-                  key={i}
-                  className="text-xs font-medium text-[var(--color-foreground)] bg-[var(--color-surface-muted)]/40 rounded-lg px-3 py-2"
-                >
-                  {alert}
-                </p>
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 gap-1.5">
+            {a.alerts.map((alert, i) => (
+              <div
+                key={i}
+                className="text-xs font-semibold text-[var(--color-foreground)] bg-[var(--color-surface-muted)]/40 rounded-lg px-3 py-1.5 border-l-2 border-amber-500"
+              >
+                {alert}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -502,52 +502,108 @@ function AnalysisRow({
 
 // ────────── Yardımcı Badge Bileşenleri ──────────
 
-function TrendBadge({ signal }: { signal: string }) {
-  const config: Record<string, { label: string; cls: string }> = {
-    STRONG_UP: { label: "↑↑", cls: "bg-[var(--color-profit-soft)] text-[var(--color-profit)]" },
-    UP: { label: "↑", cls: "bg-[var(--color-profit-soft)] text-[var(--color-profit)]" },
-    DOWN: { label: "↓", cls: "bg-[var(--color-loss-soft)] text-[var(--color-loss)]" },
-    STRONG_DOWN: { label: "↓↓", cls: "bg-[var(--color-loss-soft)] text-[var(--color-loss)]" },
+function TrendTextBadge({ signal }: { signal: string }) {
+  const config: Record<string, { label: string; cls: string; icon: any }> = {
+    STRONG_UP: {
+      label: "Güçlü Yükseliş",
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      icon: TrendingUp
+    },
+    UP: {
+      label: "Yükseliş",
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      icon: TrendingUp
+    },
+    DOWN: {
+      label: "Düşüş",
+      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      icon: TrendingDown
+    },
+    STRONG_DOWN: {
+      label: "Güçlü Düşüş",
+      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      icon: TrendingDown
+    },
   };
-  const c = config[signal] ?? config.UP;
+  const c = config[signal] ?? {
+    label: "Nötr",
+    cls: "bg-slate-50 text-slate-700 border-slate-200/60 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
+    icon: Activity
+  };
+  const Icon = c.icon;
   return (
-    <span className={cn("rounded-lg px-2 py-0.5 text-[11px] font-bold min-w-[36px] text-center", c.cls)}>
-      {c.label}
+    <span className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold border", c.cls)}>
+      <Icon size={12} />
+      <span>{c.label}</span>
     </span>
   );
 }
 
-function MacdBadge({ signal }: { signal: string }) {
-  const isPositive = signal === "POSITIVE" || signal === "BUY_CROSS";
-  const label = signal === "BUY_CROSS" ? "✦ +" : signal === "SELL_CROSS" ? "✦ −" : isPositive ? "+" : "−";
+function MacdTextBadge({ signal }: { signal: string }) {
+  const config: Record<string, { label: string; cls: string; icon: any }> = {
+    BUY_CROSS: {
+      label: "Yeni Alış Sinyali",
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      icon: Zap
+    },
+    SELL_CROSS: {
+      label: "Yeni Satış Sinyali",
+      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      icon: AlertTriangle
+    },
+    POSITIVE: {
+      label: "Pozitif Momentum",
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      icon: TrendingUp
+    },
+    NEGATIVE: {
+      label: "Negatif Momentum",
+      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      icon: TrendingDown
+    },
+  };
+  const c = config[signal] ?? {
+    label: "Nötr",
+    cls: "bg-slate-50 text-slate-700 border-slate-200/60 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
+    icon: Activity
+  };
+  const Icon = c.icon;
   return (
-    <span
-      className={cn(
-        "rounded-lg px-2 py-0.5 text-[11px] font-bold min-w-[36px] text-center",
-        isPositive
-          ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
-          : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
-      )}
-    >
-      {label}
+    <span className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold border", c.cls)}>
+      <Icon size={12} />
+      <span>{c.label}</span>
     </span>
   );
 }
 
-function RsiBadge({ value, zone }: { value: number | null; zone: string }) {
+function RsiTextBadge({ value, zone }: { value: number | null; zone: string }) {
   if (value === null) return <span className="text-xs text-[var(--color-muted)]">—</span>;
+  let label = `Nötr (${value})`;
+  let cls = "bg-slate-50 text-slate-700 border-slate-200/60 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30";
+  let Icon = Activity;
+
+  if (zone === "OVERSOLD") {
+    label = `Aşırı Satım / Ucuz (${value})`;
+    cls = "bg-orange-50 text-orange-700 border-orange-200/60 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30";
+    Icon = Target;
+  } else if (zone === "OVERBOUGHT") {
+    label = `Aşırı Alım / Pahalı (${value})`;
+    cls = "bg-red-50 text-red-700 border-red-200/60 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30";
+    Icon = AlertTriangle;
+  } else if (value >= 60) {
+    label = `Güçlü Alıcılar (${value})`;
+    cls = "bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900/30";
+    Icon = TrendingUp;
+  } else if (value <= 40) {
+    label = `Zayıf Seyir (${value})`;
+    cls = "bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30";
+    Icon = TrendingDown;
+  }
+
   return (
-    <span
-      className={cn(
-        "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums min-w-[36px] text-center",
-        zone === "OVERSOLD"
-          ? "bg-orange-500/15 text-orange-500"
-          : zone === "OVERBOUGHT"
-            ? "bg-red-500/15 text-red-500"
-            : "bg-[var(--color-surface-muted)] text-[var(--color-muted)]",
-      )}
-    >
-      {value}
+    <span className={cn("inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold border", cls)}>
+      <Icon size={12} />
+      <span>{label}</span>
     </span>
   );
 }
@@ -555,84 +611,13 @@ function RsiBadge({ value, zone }: { value: number | null; zone: string }) {
 function ScoreBadge({ score }: { score: number }) {
   const cls =
     score >= 70
-      ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
+      ? "bg-emerald-500 text-white"
       : score >= 40
-        ? "bg-amber-500/15 text-amber-600"
-        : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]";
+        ? "bg-amber-500 text-white"
+        : "bg-rose-500 text-white";
   return (
-    <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums min-w-[36px] text-center", cls)}>
+    <span className={cn("inline-flex items-center justify-center rounded-full text-xs font-black h-8 w-8 shadow-sm tracking-tighter shrink-0", cls)}>
       {score}
     </span>
-  );
-}
-
-function IndicatorCard({
-  label,
-  value,
-  status,
-  suffix = "",
-  decimals = 2,
-}: {
-  label: string;
-  value: number | null | undefined;
-  status: "above" | "below" | "neutral";
-  suffix?: string;
-  decimals?: number;
-}) {
-  if (value === null || value === undefined) return null;
-  return (
-    <div className="rounded-xl bg-[var(--color-surface-muted)]/30 p-3 border border-[var(--color-border)]/30">
-      <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">{label}</p>
-      <div className="flex items-center gap-1.5 mt-0.5">
-        <p className="text-sm font-bold tabular-nums">{formatNumber(value, decimals)}{suffix}</p>
-        {status !== "neutral" && (
-          <span
-            className={cn(
-              "text-[10px] font-bold",
-              status === "above" ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]",
-            )}
-          >
-            {status === "above" ? "🟢" : "🔴"}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SortButton({
-  label,
-  field,
-  active,
-  dir,
-  onSort,
-  align = "center",
-}: {
-  label: string;
-  field: "score" | "daily" | "symbol";
-  active: string;
-  dir: string;
-  onSort: (f: "score" | "daily" | "symbol") => void;
-  align?: "left" | "center";
-}) {
-  const isActive = active === field;
-  return (
-    <button
-      onClick={() => onSort(field)}
-      className={cn(
-        "text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-text)] flex items-center gap-1 transition-colors outline-none",
-        align === "left" ? "justify-start" : "justify-center",
-      )}
-    >
-      <span>{label}</span>
-      <span
-        className={cn(
-          "text-[10px] transition-opacity font-normal shrink-0",
-          isActive ? "opacity-100 text-[var(--color-brand-strong)]" : "opacity-35",
-        )}
-      >
-        {isActive ? (dir === "asc" ? "▲" : "▼") : "↕"}
-      </span>
-    </button>
   );
 }
