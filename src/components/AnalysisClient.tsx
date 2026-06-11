@@ -365,7 +365,7 @@ function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
           <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
             Önemli Sinyaller ve Trendler
           </p>
-          <div className="bg-[var(--color-surface-muted)]/40 p-4 rounded-2xl border border-[var(--color-border)]/50 shadow-xs space-y-2 max-h-[160px] overflow-y-auto">
+          <div className="bg-[var(--color-surface-muted)]/40 p-4 rounded-2xl border border-[var(--color-border)]/50 shadow-xs space-y-2 max-h-[290px] overflow-y-auto">
             {summary.streakAlerts.length === 0 && summary.bigMoveAlerts.length === 0 ? (
               <p className="text-xs text-[var(--color-muted)] italic py-4 text-center">
                 Bugün olağan dışı hareket veya seriye bağlayan varlık bulunmuyor.
