@@ -1,4 +1,4 @@
-import "server-only";
+// import "server-only";
 import { readFile } from "fs/promises";
 import path from "path";
 import * as XLSX from "xlsx";
@@ -53,7 +53,8 @@ function parseTrDate(raw: unknown): Date | null {
 }
 
 function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return `${trDate.getUTCFullYear()}-${String(trDate.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function colIndex(headers: string[], ...names: string[]): number {

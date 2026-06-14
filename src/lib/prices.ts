@@ -1,4 +1,4 @@
-import "server-only";
+// import "server-only";
 import { resolvePriceMapping, type AssetType } from "./assets";
 
 export interface PricePoint {

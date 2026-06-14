@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useCurrency } from "@/context/currency";
 import { Card } from "@/components/ui";
 import { ASSET_META, type AssetType } from "@/lib/assets";
@@ -21,26 +21,46 @@ export interface ProductPerformanceDTO {
   rows: ProductPerfRowDTO[];
 }
 
-function getCellStyle(v: number | null): React.CSSProperties {
+export function getCellStyle(v: number | null, isDark: boolean): React.CSSProperties {
   if (v == null) return {};
   
   const abs = Math.abs(v);
   const intensity = Math.min(abs / 20, 1); // %20 ve üstü getirilerde tam renk yoğunluğuna ulaşır
   
-  if (v > 0) {
-    const bgLightness = 96 - intensity * 50;
-    const textColor = intensity > 0.45 ? "#ffffff" : "hsl(142, 80%, 25%)";
-    return {
-      backgroundColor: `hsl(142, 70%, ${bgLightness}%)`,
-      color: textColor,
-    };
-  } else if (v < 0) {
-    const bgLightness = 96 - intensity * 46;
-    const textColor = intensity > 0.45 ? "#ffffff" : "hsl(347, 80%, 30%)";
-    return {
-      backgroundColor: `hsl(347, 80%, ${bgLightness}%)`,
-      color: textColor,
-    };
+  if (isDark) {
+    if (v > 0) {
+      const bgOpacity = 0.08 + intensity * 0.35;
+      const textLightness = 85 - intensity * 15;
+      const textColor = intensity > 0.5 ? "#ffffff" : `hsl(142, 85%, ${textLightness}%)`;
+      return {
+        backgroundColor: `rgba(34, 197, 94, ${bgOpacity})`,
+        color: textColor,
+      };
+    } else if (v < 0) {
+      const bgOpacity = 0.08 + intensity * 0.35;
+      const textLightness = 85 - intensity * 15;
+      const textColor = intensity > 0.5 ? "#ffffff" : `hsl(347, 85%, ${textLightness}%)`;
+      return {
+        backgroundColor: `rgba(244, 63, 94, ${bgOpacity})`,
+        color: textColor,
+      };
+    }
+  } else {
+    if (v > 0) {
+      const bgLightness = 96 - intensity * 50;
+      const textColor = intensity > 0.45 ? "#ffffff" : "hsl(142, 80%, 25%)";
+      return {
+        backgroundColor: `hsl(142, 70%, ${bgLightness}%)`,
+        color: textColor,
+      };
+    } else if (v < 0) {
+      const bgLightness = 96 - intensity * 46;
+      const textColor = intensity > 0.45 ? "#ffffff" : "hsl(347, 80%, 30%)";
+      return {
+        backgroundColor: `hsl(347, 80%, ${bgLightness}%)`,
+        color: textColor,
+      };
+    }
   }
   
   return {
@@ -51,6 +71,17 @@ function getCellStyle(v: number | null): React.CSSProperties {
 
 export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
   const { currency } = useCurrency();
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const checkDark = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    checkDark();
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
   const isTRY = currency === "TRY";
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -226,7 +257,7 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
                           "px-3 py-2.5 text-right text-xs font-semibold tabular-nums border-[0.5px] border-[var(--color-border)]/30 transition-colors",
                           v == null ? "text-[var(--color-muted)]/30 bg-transparent" : ""
                         )}
-                        style={getCellStyle(v)}
+                        style={getCellStyle(v, isDark)}
                       >
                         {v == null ? "–" : formatPercent(v)}
                       </td>

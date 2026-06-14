@@ -12,7 +12,8 @@ import { useCurrency } from "@/context/currency";
 import { Card, Badge } from "@/components/ui";
 import { ASSET_META, type AssetType } from "@/lib/assets";
 import { Modal } from "@/components/Modal";
-import { formatMoney, formatPercent, formatNumber, formatDate, cn } from "@/lib/utils";
+import { formatMoney, formatPercent, formatNumber, formatDate, monthLabel, cn } from "@/lib/utils";
+import { getCellStyle } from "@/components/PerformanceClient";
 import {
   BarChart,
   Bar,
@@ -274,8 +275,8 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
   const weeklyPct = isTRY ? data.periodReturns?.weeklyTRY : data.periodReturns?.weeklyUSD;
   const weeklyAmt = isTRY ? data.periodReturns?.weeklyAmtTRY : data.periodReturns?.weeklyAmtUSD;
 
-  const monthlyPct = isTRY ? data.periodReturns?.monthlyTRY : data.periodReturns?.monthlyUSD;
-  const monthlyAmt = isTRY ? data.periodReturns?.monthlyAmtTRY : data.periodReturns?.monthlyAmtUSD;
+  const monthlyPct = isTRY ? data.periodReturns?.mtdTRY : data.periodReturns?.mtdUSD;
+  const monthlyAmt = isTRY ? data.periodReturns?.mtdAmtTRY : data.periodReturns?.mtdAmtUSD;
 
   const ytdPct = isTRY ? data.periodReturns?.ytdTRY : data.periodReturns?.ytdUSD;
   const ytdAmt = isTRY ? data.periodReturns?.ytdAmtTRY : data.periodReturns?.ytdAmtUSD;
@@ -1616,6 +1617,81 @@ function PositionDetailModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const checkDark = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    checkDark();
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const monthlyPerformances = useMemo(() => {
+    // 1. Generate keys for the last 12 calendar months (ending in the current month)
+    const months = [];
+    const now = new Date();
+    // Turkey timezone shift to be consistent
+    const trNow = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+    let y = trNow.getUTCFullYear();
+    let m = trNow.getUTCMonth(); // 0-11
+    
+    for (let i = 0; i < 12; i++) {
+      const monthKey = `${y}-${String(m + 1).padStart(2, "0")}`;
+      months.unshift(monthKey); // order ascending: oldest first
+      m--;
+      if (m < 0) {
+        m = 11;
+        y--;
+      }
+    }
+
+    if (!data?.history || data.history.length === 0) {
+      return months.map(monthKey => ({ monthKey, pct: null }));
+    }
+    
+    // 2. Group snapshots by YYYY-MM
+    const byMonth = new Map<string, any>();
+    for (const p of data.history) {
+      const dateStr = p.date;
+      const mKey = dateStr.slice(0, 7);
+      const existing = byMonth.get(mKey);
+      if (!existing || dateStr > existing.date) {
+        byMonth.set(mKey, p);
+      }
+    }
+    
+    // 3. For each target month, calculate return from the previous month
+    return months.map((mCurr) => {
+      // Find previous month key
+      const [yearNum, monthNum] = mCurr.split("-").map(Number);
+      let prevMonthNum = monthNum - 1;
+      let prevYearNum = yearNum;
+      if (prevMonthNum < 1) {
+        prevMonthNum = 12;
+        prevYearNum--;
+      }
+      const mPrev = `${prevYearNum}-${String(prevMonthNum).padStart(2, "0")}`;
+      
+      const pPrev = byMonth.get(mPrev);
+      const pCurr = byMonth.get(mCurr);
+      
+      const valPrev = pPrev ? (isTRY ? pPrev.closeTRY : pPrev.closeUSD) : null;
+      const valCurr = pCurr ? (isTRY ? pCurr.closeTRY : pCurr.closeUSD) : null;
+      
+      let pct: number | null = null;
+      if (valPrev && valCurr && valPrev > 0) {
+        pct = ((valCurr / valPrev) - 1) * 100;
+      }
+      
+      return {
+        monthKey: mCurr,
+        pct,
+      };
+    });
+  }, [data, isTRY]);
 
   useEffect(() => {
     let active = true;
@@ -1851,6 +1927,29 @@ function PositionDetailModal({
             </div>
           )}
         </div>
+
+        {/* Aylık Performans */}
+        {!loading && !error && monthlyPerformances.length > 0 && (
+          <div className="border border-[var(--color-border)]/40 rounded-xl p-4 space-y-3">
+            <h3 className="font-semibold text-sm">Son 1 Yıllık Aylık Performans</h3>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+              {monthlyPerformances.map((mp) => (
+                <div
+                  key={mp.monthKey}
+                  className="flex flex-col items-center justify-center p-2 rounded-lg border border-[var(--color-border)]/35 text-center select-none"
+                  style={getCellStyle(mp.pct, isDark)}
+                >
+                  <span className="text-[10px] opacity-75 font-semibold uppercase tracking-wider">
+                    {monthLabel(mp.monthKey)}
+                  </span>
+                  <span className="text-xs font-bold mt-1 tabular-nums">
+                    {mp.pct == null ? "–" : formatPercent(mp.pct)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* İşlem Geçmişi */}
         {data?.transactions && (

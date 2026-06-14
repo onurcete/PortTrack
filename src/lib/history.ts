@@ -1,4 +1,4 @@
-import "server-only";
+// import "server-only";
 import { prisma } from "./prisma";
 import {
   fetchYahooHistory,
@@ -118,7 +118,8 @@ export interface BackfillResult {
 }
 
 function monthKeyOf(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return `${trDate.getUTCFullYear()}-${String(trDate.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 // Yeni TEFAS API'si yaklasik bu tarihten itibaren veri donuyor
@@ -562,19 +563,23 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
     }
     const txUpTo = tx.filter((t) => isBeforeOrEqualDay(t.date, date));
     const usdAt = fx(date);
-    const { totals } = computePositions(txUpTo, priceMap, fx, usdAt);
+    const { totals, allocation } = computePositions(txUpTo, priceMap, fx, usdAt);
 
     let valTRY = totals.valueTRY;
     let valUSD = totals.valueUSD;
 
     if (!usesFullBacklog(date.getFullYear()) && snap) {
+      const byType = emptyByType();
+      for (const a of allocation) {
+        byType[a.assetType] = { valueTRY: a.valueTRY, valueUSD: a.valueUSD };
+      }
       const point = applyBesOverride({
         month: monthKey,
         valueTRY: totals.valueTRY,
         valueUSD: totals.valueUSD,
         costTRY: totals.costTRY,
         costUSD: totals.costUSD,
-        byType: emptyByType(),
+        byType,
       }, snap.besTRY, usdAt);
       valTRY = point.valueTRY;
       valUSD = point.valueUSD;

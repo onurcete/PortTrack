@@ -89,7 +89,28 @@ export async function refreshPrices(): Promise<RefreshResult> {
     priceTRY: number,
     native: number,
     currency: string,
+    assetType: AssetType,
   ) {
+    const dayOfWeek = today.getUTCDay();
+    const isTrWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    if (isTrWeekend && assetType !== "CRYPTO") {
+      const lastSnap = await prisma.priceSnapshot.findFirst({
+        where: { symbol },
+        orderBy: { date: "desc" },
+      });
+      if (lastSnap) {
+        const isPriceSame = lastSnap.close === priceTRY && lastSnap.native === native;
+        if (isPriceSame) {
+          // Clean up if a duplicate snapshot for today already exists
+          await prisma.priceSnapshot.deleteMany({
+            where: { symbol, date: today },
+          });
+          return;
+        }
+      }
+    }
+
     await prisma.priceSnapshot.upsert({
       where: { symbol_date: { symbol, date: today } },
       create: {
@@ -110,7 +131,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
       // TEFAS: once toplu haritadan dene
       if (assetType === "TEFAS" && tefasMap.has(symbol)) {
         const p = tefasMap.get(symbol)!;
-        await writeSnapshot(symbol, p, p, "TRY");
+        await writeSnapshot(symbol, p, p, "TRY", assetType);
         updated++;
         return;
       }
@@ -125,7 +146,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
         failed.push(symbol);
         return;
       }
-      await writeSnapshot(symbol, cp.priceTRY, cp.price, cp.currency);
+      await writeSnapshot(symbol, cp.priceTRY, cp.price, cp.currency, assetType);
       updated++;
     } catch {
       failed.push(symbol);

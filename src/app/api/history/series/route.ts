@@ -24,11 +24,14 @@ export async function GET(req: NextRequest) {
       orderBy: { date: "asc" },
     });
 
-    // 2. Başlangıç tarihini belirle (ilk işlemden 30 gün öncesi veya default 1 yıl)
-    const firstTxDate = transactions.length > 0 
-      ? new Date(transactions[0].date) 
-      : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    const fromDate = new Date(firstTxDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // 2. Başlangıç tarihini belirle (en az son 13 ayı veya ilk işlemden 30 gün öncesini kapsayacak şekilde)
+    const thirteenMonthsAgo = new Date();
+    thirteenMonthsAgo.setMonth(thirteenMonthsAgo.getMonth() - 13);
+    const firstTxDate = transactions.length > 0 ? new Date(transactions[0].date) : new Date();
+    const fromDate = new Date(Math.min(
+      firstTxDate.getTime() - 30 * 24 * 60 * 60 * 1000,
+      thirteenMonthsAgo.getTime()
+    ));
 
     // 3. Döviz kuru geçmişini çek ve kur arama motorunu oluştur
     const fxRates = await prisma.fxRate.findMany({

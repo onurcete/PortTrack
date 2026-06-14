@@ -62,7 +62,8 @@ export function formatDate(date: Date | string): string {
 }
 
 export function monthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  const trDate = new Date(date.getTime() + 3 * 60 * 60 * 1000);
+  return `${trDate.getUTCFullYear()}-${String(trDate.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 export function monthLabel(key: string): string {

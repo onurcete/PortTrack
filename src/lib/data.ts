@@ -1,4 +1,4 @@
-import "server-only";
+// import "server-only";
 import { prisma } from "./prisma";
 import {
   computePositions,
@@ -43,22 +43,64 @@ export async function getPortfolio(): Promise<PortfolioData> {
     currency: t.currency as "TRY" | "USD",
   }));
 
-  const priceMap = new Map<string, CurrentPriceInfo>();
-  const seenCount = new Map<string, number>();
+  const symbolAssetType = new Map<string, AssetType>();
+  for (const t of txRows) {
+    symbolAssetType.set(t.symbol, t.assetType as AssetType);
+  }
+
+  const snapsBySymbol = new Map<string, typeof snaps>();
   for (const s of snaps) {
-    const count = seenCount.get(s.symbol) ?? 0;
-    if (count === 0) {
-      priceMap.set(s.symbol, {
-        priceTRY: s.close,
-        native: s.native,
-        nativeCurrency: s.nativeCurrency,
-      });
-      seenCount.set(s.symbol, 1);
-    } else if (count === 1) {
-      const current = priceMap.get(s.symbol)!;
-      current.prevPriceTRY = s.close;
-      current.prevPriceNative = s.native;
-      seenCount.set(s.symbol, 2);
+    let list = snapsBySymbol.get(s.symbol);
+    if (!list) {
+      list = [];
+      snapsBySymbol.set(s.symbol, list);
+    }
+    list.push(s);
+  }
+
+  const priceMap = new Map<string, CurrentPriceInfo>();
+  for (const [symbol, symbolSnaps] of snapsBySymbol) {
+    const assetType = symbolAssetType.get(symbol);
+    const isCrypto = assetType === "CRYPTO";
+
+    const filteredSnaps = [];
+    for (let i = 0; i < symbolSnaps.length; i++) {
+      const currentSnap = symbolSnaps[i];
+      const nextSnap = symbolSnaps[i + 1];
+
+      if (!isCrypto && nextSnap) {
+        const day = currentSnap.date.getUTCDay();
+        const isWeekend = day === 0 || day === 6;
+        
+        let isPriceSame = false;
+        if (currentSnap.native !== null && nextSnap.native !== null) {
+          // If native price exists (e.g. Foreign stocks), check native price to ignore USDTRY weekend fluctuations
+          isPriceSame = currentSnap.native === nextSnap.native;
+        } else {
+          // Otherwise check TRY close price
+          isPriceSame = currentSnap.close === nextSnap.close;
+        }
+
+        if (isWeekend && isPriceSame) {
+          continue;
+        }
+      }
+      filteredSnaps.push(currentSnap);
+    }
+
+    if (filteredSnaps.length > 0) {
+      const latest = filteredSnaps[0];
+      const info: CurrentPriceInfo = {
+        priceTRY: latest.close,
+        native: latest.native,
+        nativeCurrency: latest.nativeCurrency,
+      };
+      if (filteredSnaps.length > 1) {
+        const prev = filteredSnaps[1];
+        info.prevPriceTRY = prev.close;
+        info.prevPriceNative = prev.native;
+      }
+      priceMap.set(symbol, info);
     }
   }
 
