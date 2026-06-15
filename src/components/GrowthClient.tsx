@@ -444,17 +444,6 @@ export function GrowthClient({
     return filtered.slice().sort((a, b) => a.month.localeCompare(b.month));
   }, [displaySeries, selectYearValue]);
 
-  const yearlyRows = useMemo(() => {
-    const lastByYear = new Map<string, GrowthPointDTO>();
-    for (const p of displaySeries) {
-      const y = p.month.slice(0, 4);
-      const prev = lastByYear.get(y);
-      if (!prev || p.month > prev.month) lastByYear.set(y, p);
-    }
-    return [...lastByYear.entries()]
-      .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([year, point]) => ({ year, point }));
-  }, [displaySeries]);
 
   const activeTypes = useMemo(() => {
     const has = new Set<AssetType>();
@@ -477,43 +466,53 @@ export function GrowthClient({
       byYear.set(y, arr);
     }
 
+    // Build a lookup from the full series (including baseline years) for prev-Dec
+    const fullByMonth = new Map<string, GrowthPointDTO>();
+    for (const p of series) fullByMonth.set(p.month, p);
+
     const rows: CumulativeYearRow[] = [];
     for (const year of [...byYear.keys()].sort()) {
       const months = byYear
         .get(year)!
         .slice()
         .sort((a, b) => a.month.localeCompare(b.month));
-      const first = months[0];
       const last = months[months.length - 1];
+
+      // Use previous year's December end as the start of this year (= year-start value)
+      const prevDec = fullByMonth.get(`${Number(year) - 1}-12`);
+      const startPoint = prevDec ?? months[0]; // fallback to first month if no prev Dec
+
       rows.push({
         label: year,
-        startTRY: first.valueTRY,
+        startTRY: startPoint.valueTRY,
         endTRY: last.valueTRY,
-        startUSD: first.valueUSD,
+        startUSD: startPoint.valueUSD,
         endUSD: last.valueUSD,
-        returnTRY: periodReturnPct(first.valueTRY, last.valueTRY),
-        returnUSD: periodReturnPct(first.valueUSD, last.valueUSD),
+        returnTRY: periodReturnPct(startPoint.valueTRY, last.valueTRY),
+        returnUSD: periodReturnPct(startPoint.valueUSD, last.valueUSD),
       });
     }
 
     const sorted = [...displaySeries].sort((a, b) =>
       a.month.localeCompare(b.month),
     );
-    const totalFirst = sorted[0];
+    // For TOPLAM, also use the Dec before the first display year if available
+    const firstYear = sorted[0].month.slice(0, 4);
+    const totalStartPoint = fullByMonth.get(`${Number(firstYear) - 1}-12`) ?? sorted[0];
     const totalLast = sorted[sorted.length - 1];
     rows.push({
       label: "TOPLAM",
-      startTRY: totalFirst.valueTRY,
+      startTRY: totalStartPoint.valueTRY,
       endTRY: totalLast.valueTRY,
-      startUSD: totalFirst.valueUSD,
+      startUSD: totalStartPoint.valueUSD,
       endUSD: totalLast.valueUSD,
-      returnTRY: periodReturnPct(totalFirst.valueTRY, totalLast.valueTRY),
-      returnUSD: periodReturnPct(totalFirst.valueUSD, totalLast.valueUSD),
+      returnTRY: periodReturnPct(totalStartPoint.valueTRY, totalLast.valueTRY),
+      returnUSD: periodReturnPct(totalStartPoint.valueUSD, totalLast.valueUSD),
       isTotal: true,
     });
 
     return rows;
-  }, [displaySeries]);
+  }, [displaySeries, series]);
 
   function handleImportBacklog() {
     setImporting(true);
@@ -1257,74 +1256,6 @@ export function GrowthClient({
                           <TableAmountCell
                             key={t}
                             current={typeValue(p, t, currency)}
-                            previous={
-                              prevPoint
-                                ? typeValue(prevPoint, t, currency)
-                                : null
-                            }
-                            mode={tableMetric}
-                            currency={currency}
-                          />
-                        ))}
-                        <TableAmountCell
-                          current={total}
-                          previous={prevTotal}
-                          mode={tableMetric}
-                          currency={currency}
-                          bold
-                        />
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <Card className="overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[var(--color-border)]">
-              <div>
-                <h2 className="font-semibold text-sm">Yıllık Özet</h2>
-              </div>
-              <MetricToggle
-                id="yearly-table-metric"
-                value={tableMetric}
-                onChange={setTableMetric}
-              />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--color-surface-muted)]/30">
-                  <tr className="border-b border-[var(--color-border)] text-left">
-                    <th className={thCls}>Yıl</th>
-                    {activeTypes.map((t) => (
-                      <th key={t} className={cn(thCls, "text-right")}>
-                        {ASSET_META[t].label}
-                      </th>
-                    ))}
-                    <th className={cn(thCls, "text-right")}>Toplam</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {yearlyRows.map(({ year, point }) => {
-                    const prevPoint = yearEndFromSeries(
-                      series,
-                      Number(year) - 1,
-                    );
-                    const total = totalValue(point, currency);
-                    const prevTotal = prevPoint
-                      ? totalValue(prevPoint, currency)
-                      : null;
-                    return (
-                      <tr
-                        key={year}
-                        className="border-b border-[var(--color-border)]/40 last:border-0 hover:bg-[var(--color-surface-muted)]/40 transition-colors duration-150"
-                      >
-                        <td className="px-4 py-2 font-semibold">{year}</td>
-                        {activeTypes.map((t) => (
-                          <TableAmountCell
-                            key={t}
-                            current={typeValue(point, t, currency)}
                             previous={
                               prevPoint
                                 ? typeValue(prevPoint, t, currency)
