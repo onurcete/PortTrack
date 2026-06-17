@@ -111,10 +111,17 @@ export function resolvePriceMapping(
 
     case "METAL": {
       // Gram bazli TL fiyat: USD ons futures -> gram -> TL
-      const isGold = /^(XAU|GAU|ALTIN)/.test(s);
+      let yahooSymbol = "GC=F"; // default gold
+      if (/^(XAG|GUMUS)/.test(s)) {
+        yahooSymbol = "SI=F"; // silver
+      } else if (/^XPT/.test(s)) {
+        yahooSymbol = "PL=F"; // platinum
+      } else if (/^XPD/.test(s)) {
+        yahooSymbol = "PA=F"; // palladium
+      }
       return {
         source: "yahoo",
-        yahooSymbol: isGold ? "GC=F" : "SI=F",
+        yahooSymbol,
         multiplyByUsdTry: true,
         perGramDivisor: TROY_OUNCE_GRAMS,
         currency: "TRY",

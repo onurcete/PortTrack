@@ -75,10 +75,10 @@ export async function getPortfolio(): Promise<PortfolioData> {
         let isPriceSame = false;
         if (currentSnap.native !== null && nextSnap.native !== null) {
           // If native price exists (e.g. Foreign stocks), check native price to ignore USDTRY weekend fluctuations
-          isPriceSame = currentSnap.native === nextSnap.native;
+          isPriceSame = Math.abs(currentSnap.native - nextSnap.native) < 1e-5;
         } else {
           // Otherwise check TRY close price
-          isPriceSame = currentSnap.close === nextSnap.close;
+          isPriceSame = Math.abs(currentSnap.close - nextSnap.close) < 1e-5;
         }
 
         if (isWeekend && isPriceSame) {

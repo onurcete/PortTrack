@@ -65,6 +65,8 @@ export interface PositionDTO {
   totalSellTRY: number;
   totalSellUSD: number;
   dailyChangePct: number | null;
+  xirrTRY: number | null;
+  xirrUSD: number | null;
 }
 
 export interface BenchmarkComparisonDTO {
@@ -619,7 +621,9 @@ function PositionsTable({
   onSelectPosition?: (position: PositionDTO) => void;
 }) {
   const [showClosed, setShowClosed] = useState(false);
-  const [showRoi, setShowRoi] = useState(false);
+  const [getiriMode, setGetiriMode] = useState<"getiri" | "roi" | "xirr">("getiri");
+  const showRoi = getiriMode === "roi";
+  const showXirr = getiriMode === "xirr";
   const [sortField, setSortField] = useState<SortField>("value");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
@@ -680,7 +684,7 @@ function PositionsTable({
               if (showClosed) {
                 return isTRY ? pos.realizedTRY : pos.realizedUSD;
               }
-              if (showRoi) {
+              if (showRoi || showXirr) {
                 return isTRY 
                   ? pos.unrealizedTRY + pos.realizedTRY 
                   : pos.unrealizedUSD + pos.realizedUSD;
@@ -691,6 +695,10 @@ function PositionsTable({
                 const buyVal = isTRY ? pos.totalBuyTRY : pos.totalBuyUSD;
                 const realizedVal = isTRY ? pos.realizedTRY : pos.realizedUSD;
                 return buyVal > 0 ? (realizedVal / buyVal) * 100 : 0;
+              }
+              if (showXirr) {
+                const val = isTRY ? pos.xirrTRY : pos.xirrUSD;
+                return val ?? -999999;
               }
               if (showRoi) {
                 const buyVal = isTRY ? pos.totalBuyTRY : pos.totalBuyUSD;
@@ -931,7 +939,7 @@ function PositionsTable({
                       />
                       <SortHeader
                         field="pnl"
-                        label={showRoi ? "Net K/Z" : "Kar / Zarar"}
+                        label={getiriMode === "getiri" ? "Kar / Zarar" : "Net K/Z"}
                         activeField={sortField}
                         order={sortOrder}
                         onSort={handleSort}
@@ -944,11 +952,15 @@ function PositionsTable({
                             className="inline-flex items-center gap-1 cursor-pointer select-none"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setShowRoi(!showRoi);
+                              setGetiriMode((prev) => {
+                                if (prev === "getiri") return "roi";
+                                if (prev === "roi") return "xirr";
+                                return "getiri";
+                              });
                             }}
-                            title="Tıklayarak Getiri ile ROI (Yatırım Getirisi) arasında geçiş yapın"
+                            title="Tıklayarak Getiri, ROI (Yatırım Getirisi) ve XIRR (Yıllıklandırılmış Getiri) arasında geçiş yapın"
                           >
-                            {showRoi ? "ROI" : "Getiri"}
+                            {getiriMode === "getiri" ? "Getiri" : getiriMode === "roi" ? "ROI" : "XIRR"}
                             <span className="text-[11px] opacity-75 font-normal">⇄</span>
                           </span>
                         }
@@ -1039,17 +1051,21 @@ function PositionsTable({
 
                   // Open positions rendering
                   const value = isTRY ? p.valueTRY : p.valueUSD;
-                  const pnl = showRoi
+                  const pnl = (showRoi || showXirr)
                     ? (isTRY 
                         ? p.unrealizedTRY + p.realizedTRY 
                         : p.unrealizedUSD + p.realizedUSD)
                     : (isTRY ? p.unrealizedTRY : p.unrealizedUSD);
-                  const pct = showRoi
-                    ? (isTRY
-                        ? (p.totalBuyTRY > 0 ? (pnl / p.totalBuyTRY) * 100 : 0)
-                        : (p.totalBuyUSD > 0 ? (pnl / p.totalBuyUSD) * 100 : 0))
-                    : (isTRY ? p.unrealizedPctTRY : p.unrealizedPctUSD);
-                  const positive = pnl >= 0;
+                  const pct = showXirr
+                    ? (isTRY ? p.xirrTRY : p.xirrUSD)
+                    : showRoi
+                      ? (isTRY
+                          ? (p.totalBuyTRY > 0 ? (pnl / p.totalBuyTRY) * 100 : 0)
+                          : (p.totalBuyUSD > 0 ? (pnl / p.totalBuyUSD) * 100 : 0))
+                      : (isTRY ? p.unrealizedPctTRY : p.unrealizedPctUSD);
+                  const positive = showXirr
+                    ? (pct !== null ? pct >= 0 : pnl >= 0)
+                    : pnl >= 0;
 
                   const holdingDays = (() => {
                     if (!p.firstBuyDate) return "-";
@@ -1167,7 +1183,7 @@ function PositionsTable({
                               : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
                           )}
                         >
-                          {formatPercent(pct)}
+                          {pct !== null ? formatPercent(pct) : "-"}
                         </span>
                       </div>
                     </div>
@@ -1964,7 +1980,6 @@ function PositionDetailModal({
                     <th className="px-4 py-2.5 text-right">Adet</th>
                     <th className="px-4 py-2.5 text-right">Birim Fiyat</th>
                     <th className="px-4 py-2.5 text-right">Toplam</th>
-                    <th className="px-4 py-2.5">Not</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)]/40 font-medium">
@@ -1984,9 +1999,6 @@ function PositionDetailModal({
                       <td className="px-4 py-2 text-right tabular-nums">{formatNumber(t.quantity, 4)}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{formatMoney(t.unitPrice, t.currency)}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{formatMoney(t.total, t.currency)}</td>
-                      <td className="px-4 py-2 text-[var(--color-muted)] max-w-[150px] truncate" title={t.note || undefined}>
-                        {t.note || "-"}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2032,11 +2044,6 @@ const CustomTooltipDetail = ({ active, payload, isTRY }: any) => {
               {formatMoney(t.unitPrice, t.currency)}
             </span>
           </div>
-          {t.note && (
-            <div className="text-[10px] italic text-[var(--color-muted)]">
-              Not: {t.note}
-            </div>
-          )}
         </div>
       ))}
     </div>

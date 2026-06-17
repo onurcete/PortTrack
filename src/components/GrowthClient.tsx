@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AreaChart,
@@ -246,12 +246,14 @@ function TableAmountCell({
   mode,
   currency,
   bold,
+  className,
 }: {
   current: number;
   previous: number | null | undefined;
   mode: TableDisplayMode;
   currency: "TRY" | "USD";
   bold?: boolean;
+  className?: string;
 }) {
   if (mode === "percent") {
     const pct = changeVsPrevious(current, previous);
@@ -262,6 +264,7 @@ function TableAmountCell({
           "text-right",
           bold && "font-semibold",
           pct == null && "text-[var(--color-muted)]",
+          className,
         )}
       >
         {pct != null ? <ReturnCell pct={pct} /> : "—"}
@@ -275,6 +278,7 @@ function TableAmountCell({
         "text-right",
         bold && "font-semibold",
         current <= 0 && "text-[var(--color-muted)]",
+        className,
       )}
     >
       {current > 0 ? formatMoney(current, currency) : "—"}
@@ -663,6 +667,69 @@ export function GrowthClient({
     "px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700";
   const tdCls = "px-4 py-2 text-xs tabular-nums whitespace-nowrap";
   const tdMuted = cn(tdCls, "text-[var(--color-muted)]");
+
+  const renderYearSummary = (year: string) => {
+    const monthsOfYear = displaySeries.filter((p) => p.month.startsWith(year));
+    if (monthsOfYear.length === 0) return null;
+
+    const sortedMonths = monthsOfYear.slice().sort((a, b) => a.month.localeCompare(b.month));
+    const lastMonth = sortedMonths[sortedMonths.length - 1];
+
+    const prevDecKey = `${Number(year) - 1}-12`;
+    const startMonth = seriesByMonth.get(prevDecKey) ?? sortedMonths[0];
+
+    const totalStart = totalValue(startMonth, currency);
+    const totalEnd = totalValue(lastMonth, currency);
+    const totalReturn = periodReturnPct(totalStart, totalEnd);
+    const totalChange = totalEnd - totalStart;
+
+    return (
+      <tr
+        key={`summary-${year}`}
+        className="bg-[var(--color-brand-soft)]/20 font-bold border-y border-[var(--color-border)]/60 text-[var(--color-brand-strong)]"
+      >
+        <td className="px-4 py-2.5 font-bold whitespace-nowrap sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/20">
+          <span className="inline-flex items-center gap-1.5">
+            {year} Getiri %
+          </span>
+        </td>
+        {activeTypes.map((t) => {
+          const startVal = typeValue(startMonth, t, currency);
+          const endVal = typeValue(lastMonth, t, currency);
+          const pct = (startVal > 0 && endVal > 0) ? periodReturnPct(startVal, endVal) : null;
+          return (
+            <td
+              key={t}
+              className={cn(
+                tdClsStatic,
+                "text-right font-bold",
+                pct == null && "text-[var(--color-muted)]",
+              )}
+            >
+              {pct != null ? <ReturnCell pct={pct} /> : "—"}
+            </td>
+          );
+        })}
+        <td className={cn(
+          tdClsStatic,
+          "text-right font-bold border-l border-[var(--color-border)]/20 bg-[var(--color-surface-muted)]/10",
+          totalChange === 0 && "text-[var(--color-muted)]",
+          totalChange > 0 && "text-[var(--color-profit)]",
+          totalChange < 0 && "text-[var(--color-loss)]"
+        )}>
+          {totalChange !== 0 ? (
+            <span>
+              {totalChange > 0 ? "+" : ""}
+              {formatMoney(totalChange, currency)}
+            </span>
+          ) : "—"}
+        </td>
+        <td className="px-4 py-2.5 text-right font-bold border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/30">
+          {totalReturn != null ? <ReturnCell pct={totalReturn} /> : "—"}
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -1130,12 +1197,42 @@ export function GrowthClient({
                 <thead className="bg-[var(--color-surface-muted)]/30">
                   <tr className="border-b border-[var(--color-border)] text-left">
                     <th className={thCls}>Yıl</th>
-                    <th className={cn(thCls, "text-right")}>Başlangıç (₺)</th>
-                    <th className={cn(thCls, "text-right")}>Bitiş (₺)</th>
-                    <th className={cn(thCls, "text-right")}>Başlangıç ($)</th>
-                    <th className={cn(thCls, "text-right")}>Bitiş ($)</th>
-                    <th className={cn(thCls, "text-right")}>Kümülatif Getiri (₺)</th>
-                    <th className={cn(thCls, "text-right")}>Kümülatif Getiri ($)</th>
+                    <th className={cn(thCls, "text-right")}>
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
+                        Başlangıç (₺)
+                      </span>
+                    </th>
+                    <th className={cn(thCls, "text-right")}>
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
+                        Bitiş (₺)
+                      </span>
+                    </th>
+                    <th className={cn(thCls, "text-right")}>
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-blue-500" />
+                        Başlangıç ($)
+                      </span>
+                    </th>
+                    <th className={cn(thCls, "text-right")}>
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-blue-500" />
+                        Bitiş ($)
+                      </span>
+                    </th>
+                    <th className={cn(thCls, "text-right")}>
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
+                        Kümülatif Getiri (₺)
+                      </span>
+                    </th>
+                    <th className={cn(thCls, "text-right")}>
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-blue-500" />
+                        Kümülatif Getiri ($)
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1211,22 +1308,26 @@ export function GrowthClient({
               <table className="w-full text-sm">
                 <thead className="bg-[var(--color-surface-muted)]/30">
                   <tr className="border-b border-[var(--color-border)] text-left">
-                    <th className={cn(thCls, "sticky left-0 bg-[var(--color-surface-muted)] z-10 border-r border-[var(--color-border)]/40")}>
+                    <th className={cn(thCls, "sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/40")}>
                       Ay
                     </th>
                     {activeTypes.map((t) => (
                       <th key={t} className={cn(thCls, "text-right")}>
-                        {ASSET_META[t].label}
+                        <span className="inline-flex items-center justify-end gap-1.5">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ASSET_META[t].color }} />
+                          {ASSET_META[t].label}
+                        </span>
                       </th>
                     ))}
-                    <th className={cn(thCls, "text-right")}>Toplam</th>
+                    <th className={cn(thCls, "text-right border-l border-[var(--color-border)]/40 bg-[var(--color-surface-muted)]/20")}>Değişim</th>
+                    <th className={cn(thCls, "text-right border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40")}>Toplam</th>
                   </tr>
                 </thead>
                 <tbody>
                   {monthlyRows.length === 0 && (
                     <tr>
                       <td
-                        colSpan={activeTypes.length + 2}
+                        colSpan={activeTypes.length + 3}
                         className="px-4 py-10 text-center text-[var(--color-muted)]"
                       >
                         {selectYearValue === YEAR_FILTER_ALL
@@ -1235,7 +1336,7 @@ export function GrowthClient({
                       </td>
                     </tr>
                   )}
-                  {monthlyRows.map((p) => {
+                  {monthlyRows.map((p, idx) => {
                     const prevKey = prevMonthKey(p.month);
                     const prevPoint = prevKey
                       ? seriesByMonth.get(prevKey)
@@ -1244,37 +1345,80 @@ export function GrowthClient({
                     const prevTotal = prevPoint
                       ? totalValue(prevPoint, currency)
                       : null;
+
+                    const currentYear = p.month.slice(0, 4);
+                    const prevRowYear = idx > 0 ? monthlyRows[idx - 1].month.slice(0, 4) : null;
+                    const showYearSummary = prevRowYear !== null && currentYear !== prevRowYear;
+                    const showYearSeparator = selectYearValue === YEAR_FILTER_ALL && prevRowYear !== null && currentYear !== prevRowYear;
+
                     return (
-                      <tr
-                        key={p.month}
-                        className="border-b border-[var(--color-border)]/40 last:border-0 hover:bg-[var(--color-surface-muted)]/40 transition-colors duration-150"
-                      >
-                        <td className="px-4 py-2 font-semibold whitespace-nowrap sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/20">
-                          {monthTableLabel(p.month)}
-                        </td>
-                        {activeTypes.map((t) => (
+                      <Fragment key={p.month}>
+                        {showYearSummary && prevRowYear && renderYearSummary(prevRowYear)}
+                        {showYearSeparator && (
+                          <tr>
+                            <td
+                              colSpan={activeTypes.length + 3}
+                              className="px-4 py-1.5 bg-[var(--color-surface-muted)]/50 border-y border-[var(--color-border)]/50"
+                            >
+                              <div className="flex items-center gap-3 text-[10px] font-extrabold uppercase tracking-widest text-[var(--color-muted)]">
+                                <span className="flex-1 h-px bg-[var(--color-border)]/60" />
+                                <span>{currentYear}</span>
+                                <span className="flex-1 h-px bg-[var(--color-border)]/60" />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        <tr
+                          className="border-b border-[var(--color-border)]/40 last:border-0 hover:bg-[var(--color-surface-muted)]/40 transition-colors duration-150"
+                        >
+                          <td className="px-4 py-2 font-semibold whitespace-nowrap sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/20">
+                            {monthTableLabel(p.month)}
+                          </td>
+                          {activeTypes.map((t) => (
+                            <TableAmountCell
+                              key={t}
+                              current={typeValue(p, t, currency)}
+                              previous={
+                                prevPoint
+                                  ? typeValue(prevPoint, t, currency)
+                                  : null
+                              }
+                              mode={tableMetric}
+                              currency={currency}
+                            />
+                          ))}
+                          {(() => {
+                            const momChange = prevTotal !== null ? total - prevTotal : null;
+                            return (
+                              <td className={cn(
+                                tdClsStatic,
+                                "text-right font-semibold border-l border-[var(--color-border)]/20 bg-[var(--color-surface-muted)]/5",
+                                momChange === null && "text-[var(--color-muted)]",
+                                momChange !== null && momChange > 0 && "text-[var(--color-profit)]",
+                                momChange !== null && momChange < 0 && "text-[var(--color-loss)]",
+                              )}>
+                                {momChange !== null ? (
+                                  <span>
+                                    {momChange > 0.01 ? "+" : ""}
+                                    {formatMoney(momChange, currency)}
+                                  </span>
+                                ) : "—"}
+                              </td>
+                            );
+                          })()}
                           <TableAmountCell
-                            key={t}
-                            current={typeValue(p, t, currency)}
-                            previous={
-                              prevPoint
-                                ? typeValue(prevPoint, t, currency)
-                                : null
-                            }
+                            current={total}
+                            previous={prevTotal}
                             mode={tableMetric}
                             currency={currency}
+                            bold
+                            className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20"
                           />
-                        ))}
-                        <TableAmountCell
-                          current={total}
-                          previous={prevTotal}
-                          mode={tableMetric}
-                          currency={currency}
-                          bold
-                        />
-                      </tr>
+                        </tr>
+                      </Fragment>
                     );
                   })}
+                  {monthlyRows.length > 0 && renderYearSummary(monthlyRows[monthlyRows.length - 1].month.slice(0, 4))}
                 </tbody>
               </table>
             </div>

@@ -84,6 +84,12 @@ export async function refreshPrices(): Promise<RefreshResult> {
   const failed: string[] = [];
   let updated = 0;
 
+  function isPriceSameEnough(p1: number | null | undefined, p2: number | null | undefined): boolean {
+    if (p1 === p2) return true;
+    if (p1 == null || p2 == null) return false;
+    return Math.abs(p1 - p2) < 1e-5;
+  }
+
   async function writeSnapshot(
     symbol: string,
     priceTRY: number,
@@ -91,16 +97,13 @@ export async function refreshPrices(): Promise<RefreshResult> {
     currency: string,
     assetType: AssetType,
   ) {
-    const dayOfWeek = today.getUTCDay();
-    const isTrWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-    if (isTrWeekend && assetType !== "CRYPTO") {
+    if (assetType !== "CRYPTO") {
       const lastSnap = await prisma.priceSnapshot.findFirst({
-        where: { symbol },
+        where: { symbol, date: { lt: today } },
         orderBy: { date: "desc" },
       });
       if (lastSnap) {
-        const isPriceSame = lastSnap.close === priceTRY && lastSnap.native === native;
+        const isPriceSame = isPriceSameEnough(lastSnap.close, priceTRY) && isPriceSameEnough(lastSnap.native, native);
         if (isPriceSame) {
           // Clean up if a duplicate snapshot for today already exists
           await prisma.priceSnapshot.deleteMany({
@@ -125,6 +128,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
       update: { close: priceTRY, native, nativeCurrency: currency },
     });
   }
+
 
   await mapLimit(symbols, 6, async ({ symbol, assetType }) => {
     try {

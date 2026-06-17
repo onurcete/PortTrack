@@ -45,6 +45,8 @@ export interface Position {
   totalSellTRY: number;
   totalSellUSD: number;
   dailyChangePct: number | null;
+  xirrTRY: number | null;
+  xirrUSD: number | null;
 }
 
 export interface PortfolioTotals {
@@ -90,6 +92,48 @@ export function buildFxLookup(
 }
 
 const EPS = 1e-9;
+
+export function calculateXIRR(cashFlows: { date: Date; amount: number }[]): number | null {
+  const hasNegative = cashFlows.some(cf => cf.amount < -1e-2);
+  const hasPositive = cashFlows.some(cf => cf.amount > 1e-2);
+  if (!hasNegative || !hasPositive) return null;
+
+  const sorted = [...cashFlows].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const t0 = sorted[0].date.getTime();
+
+  const flows = sorted.map(cf => ({
+    t: (cf.date.getTime() - t0) / (365 * 24 * 60 * 60 * 1000),
+    v: cf.amount
+  }));
+
+  let r = 0.1; // initial guess
+  const maxIterations = 100;
+  const precision = 1e-6;
+
+  for (let i = 0; i < maxIterations; i++) {
+    let f_r = 0;
+    let df_r = 0;
+
+    for (const flow of flows) {
+      const base = 1 + r;
+      if (base <= 0) return null;
+
+      f_r += flow.v / Math.pow(base, flow.t);
+      df_r -= (flow.t * flow.v) / Math.pow(base, flow.t + 1);
+    }
+
+    if (Math.abs(df_r) < 1e-12) break;
+
+    const nextR = r - f_r / df_r;
+    if (Math.abs(nextR - r) < precision) {
+      if (nextR < -0.999) return null;
+      return nextR * 100;
+    }
+    r = nextR;
+  }
+
+  return null;
+}
 
 interface Running {
   qty: number;
@@ -223,6 +267,30 @@ export function computePositions(
       ? ((currentPriceNative - prevPriceNative) / prevPriceNative) * 100
       : null;
 
+    // Reconstruct cash flows for this symbol to compute XIRR
+    const symbolTxs = transactions.filter((t) => t.symbol === symbol);
+    const cashFlowsTRY: { date: Date; amount: number }[] = [];
+    const cashFlowsUSD: { date: Date; amount: number }[] = [];
+
+    for (const t of symbolTxs) {
+      const rate = fx(t.date) || currentUsdTry;
+      const sign = t.side === "BUY" ? -1 : 1;
+      const tTRY = t.currency === "USD" ? t.total * rate : t.total;
+      const tUSD = t.currency === "USD" ? t.total : t.total / rate;
+
+      cashFlowsTRY.push({ date: new Date(t.date), amount: sign * tTRY });
+      cashFlowsUSD.push({ date: new Date(t.date), amount: sign * tUSD });
+    }
+
+    if (open) {
+      const today = new Date();
+      cashFlowsTRY.push({ date: today, amount: valueTRY });
+      cashFlowsUSD.push({ date: today, amount: valueUSD });
+    }
+
+    const xirrTRY = calculateXIRR(cashFlowsTRY);
+    const xirrUSD = calculateXIRR(cashFlowsUSD);
+
     positions.push({
       symbol,
       assetType: r.assetType,
@@ -249,6 +317,8 @@ export function computePositions(
       totalSellTRY: r.totalSellTRY,
       totalSellUSD: r.totalSellUSD,
       dailyChangePct,
+      xirrTRY,
+      xirrUSD,
     });
   }
 

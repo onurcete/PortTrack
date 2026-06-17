@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Upload, Search, Download, FileSpreadsheet, RotateCcw } from "lucide-react";
 import { Modal } from "./Modal";
@@ -13,6 +13,8 @@ import {
   updateTransaction,
   deleteTransaction,
   importBundledCsv,
+  searchSymbols,
+  getSymbolPrice,
 } from "@/app/transactions/actions";
 
 export interface TxDTO {
@@ -76,7 +78,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
 
   // Export to CSV function
   const exportToCSV = () => {
-    const headers = ["Tarih", "Tür", "Sembol", "İşlem", "Birim Fiyat", "Adet", "Toplam", "Para Birimi", "Not"];
+    const headers = ["Tarih", "Tür", "Sembol", "İşlem", "Birim Fiyat", "Adet", "Toplam", "Para Birimi"];
     const rows = filtered.map(t => [
       formatDate(t.date),
       ASSET_META[t.assetType]?.label ?? t.assetType,
@@ -85,8 +87,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       t.unitPrice,
       t.quantity,
       t.total,
-      t.currency,
-      t.note ?? ""
+      t.currency
     ]);
     
     const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
@@ -111,8 +112,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       "Birim Fiyat": t.unitPrice,
       "Adet": t.quantity,
       "Toplam": t.total,
-      "Para Birimi": t.currency,
-      "Not": t.note ?? ""
+      "Para Birimi": t.currency
     }));
     
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -365,6 +365,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       >
         <TransactionForm
           editing={editing}
+          transactions={transactions}
           onDone={() => {
             setModalOpen(false);
             router.refresh();
@@ -383,9 +384,11 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
 
 function TransactionForm({
   editing,
+  transactions,
   onDone,
 }: {
   editing: TxDTO | null;
+  transactions: TxDTO[];
   onDone: () => void;
 }) {
   const [pending, startTransition] = useTransition();
@@ -396,10 +399,113 @@ function TransactionForm({
   const [currency, setCurrency] = useState<"TRY" | "USD">(
     editing?.currency ?? "USD",
   );
+  const [symbol, setSymbol] = useState(editing?.symbol ?? "");
+  const [side, setSide] = useState<"BUY" | "SELL">(editing?.side ?? "BUY");
+  const [fetchingPrice, setFetchingPrice] = useState(false);
+  const unitPriceRef = useRef<HTMLInputElement>(null);
+  const quantityRef = useRef<HTMLInputElement>(null);
 
   function onAssetChange(v: AssetType) {
     setAssetType(v);
     setCurrency(v === "FOREIGN" ? "USD" : "TRY");
+  }
+
+  function cleanSymbol(sym: string): string {
+    if (!sym) return "";
+    let s = sym.trim().toUpperCase();
+    if (s.endsWith(".IS")) {
+      s = s.substring(0, s.length - 3);
+    }
+    if (s.endsWith("-USD")) {
+      s = s.substring(0, s.length - 4);
+    }
+    return s;
+  }
+
+  function getCurrentHoldingQty(sym: string): number {
+    if (!sym) return 0;
+    const cleanSym = cleanSymbol(sym);
+    let qty = 0;
+    
+    transactions.forEach((t) => {
+      if (cleanSymbol(t.symbol) === cleanSym) {
+        if (t.side === "BUY") {
+          qty += t.quantity;
+        } else if (t.side === "SELL") {
+          qty -= t.quantity;
+        }
+      }
+    });
+    
+    return qty > 0 ? qty : 0;
+  }
+
+  function handleSymbolChange(newSymbol: string) {
+    const cleanSym = cleanSymbol(newSymbol);
+    setSymbol(cleanSym);
+    
+    // Auto-detect currency and asset type based on user's history
+    const historyMatch = transactions.find(
+      (t) => cleanSymbol(t.symbol) === cleanSym
+    );
+    if (historyMatch) {
+      setAssetType(historyMatch.assetType);
+      setCurrency(historyMatch.currency);
+    } else {
+      const upper = newSymbol.trim().toUpperCase();
+      if (upper.endsWith(".IS")) {
+        setAssetType("BIST");
+        setCurrency("TRY");
+      }
+    }
+  }
+
+  async function handleSymbolSelect(selectedSymbol: string) {
+    if (!selectedSymbol) return;
+    
+    const cleanSym = cleanSymbol(selectedSymbol);
+    setSymbol(cleanSym);
+    
+    // Auto-detect from history first
+    const historyMatch = transactions.find(
+      (t) => cleanSymbol(t.symbol) === cleanSym
+    );
+    let currentType = assetType;
+    if (historyMatch) {
+      setAssetType(historyMatch.assetType);
+      setCurrency(historyMatch.currency);
+      currentType = historyMatch.assetType;
+    } else {
+      const upper = selectedSymbol.trim().toUpperCase();
+      if (upper.endsWith(".IS")) {
+        setAssetType("BIST");
+        setCurrency("TRY");
+        currentType = "BIST";
+      }
+    }
+
+    // Auto-fill quantity if SELL transaction
+    if (side === "SELL") {
+      const qty = getCurrentHoldingQty(cleanSym);
+      if (qty > 0 && quantityRef.current) {
+        quantityRef.current.value = String(qty);
+      }
+    }
+
+    setFetchingPrice(true);
+    try {
+      const result = await getSymbolPrice(selectedSymbol, currentType);
+      if (result && result.price) {
+        if (unitPriceRef.current) {
+          unitPriceRef.current.value = String(result.price);
+        }
+        setCurrency(result.currency);
+      }
+    } catch (err) {
+      console.error("Failed to fetch price:", err);
+    } finally {
+      setFetchingPrice(false);
+    }
   }
 
   function submit(formData: FormData) {
@@ -436,7 +542,17 @@ function TransactionForm({
           <label className={labelCls}>İşlem Tipi</label>
           <select
             name="side"
-            defaultValue={editing?.side ?? "BUY"}
+            value={side}
+            onChange={(e) => {
+              const newSide = e.target.value as "BUY" | "SELL";
+              setSide(newSide);
+              if (newSide === "SELL" && symbol) {
+                const qty = getCurrentHoldingQty(symbol);
+                if (qty > 0 && quantityRef.current) {
+                  quantityRef.current.value = String(qty);
+                }
+              }
+            }}
             className={inputCls}
           >
             <option value="BUY">Alış</option>
@@ -463,12 +579,13 @@ function TransactionForm({
         </div>
         <div>
           <label className={labelCls}>Sembol</label>
-          <input
-            name="symbol"
-            required
-            defaultValue={editing?.symbol ?? ""}
+          <SymbolCombobox
+            value={symbol}
+            onChange={handleSymbolChange}
+            onSelect={handleSymbolSelect}
+            assetType={assetType}
+            transactions={transactions}
             placeholder="AAPL, GTL, BTC/TRY"
-            className={inputCls}
           />
         </div>
       </div>
@@ -477,6 +594,7 @@ function TransactionForm({
         <div>
           <label className={labelCls}>Adet</label>
           <input
+            ref={quantityRef}
             name="quantity"
             type="number"
             step="any"
@@ -486,8 +604,11 @@ function TransactionForm({
           />
         </div>
         <div>
-          <label className={labelCls}>Birim Fiyat</label>
+          <label className={labelCls}>
+            Birim Fiyat {fetchingPrice && <span className="inline-block w-2.5 h-2.5 border-2 border-[var(--color-muted)] border-t-transparent rounded-full animate-spin ml-1"></span>}
+          </label>
           <input
+            ref={unitPriceRef}
             name="unitPrice"
             type="number"
             step="any"
@@ -523,10 +644,7 @@ function TransactionForm({
         />
       </div>
 
-      <div>
-        <label className={labelCls}>Not (opsiyonel)</label>
-        <input name="note" defaultValue={editing?.note ?? ""} className={inputCls} />
-      </div>
+
 
       {error && <p className="text-sm text-[var(--color-loss)]">{error}</p>}
 
@@ -538,3 +656,314 @@ function TransactionForm({
     </form>
   );
 }
+
+interface SearchResult {
+  symbol: string;
+  name: string;
+  assetType: AssetType;
+  source: "db" | "yahoo";
+}
+
+function SymbolCombobox({
+  value,
+  onChange,
+  onSelect,
+  assetType,
+  transactions,
+  placeholder,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onSelect?: (val: string) => void;
+  assetType: AssetType;
+  transactions: TxDTO[];
+  placeholder?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+  const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync with value prop
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  // Click outside listener
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter unique symbols in portfolio history of current assetType
+  const portfolioSymbols = useMemo(() => {
+    const unique = new Map<string, string>();
+    transactions.forEach((t) => {
+      if (t.assetType === assetType && t.symbol) {
+        unique.set(t.symbol.toUpperCase(), t.note || t.symbol);
+      }
+    });
+    return Array.from(unique.entries()).map(([symbol, name]) => ({
+      symbol,
+      name,
+    })).sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [transactions, assetType]);
+
+  // Matching portfolio symbols based on typed input
+  const matchingPortfolioSymbols = useMemo(() => {
+    if (!inputValue) return portfolioSymbols;
+    const cleanInput = inputValue.trim().toUpperCase();
+    return portfolioSymbols.filter(
+      (item) =>
+        item.symbol.includes(cleanInput) ||
+        item.name.toUpperCase().includes(cleanInput)
+    );
+  }, [portfolioSymbols, inputValue]);
+
+  // Debounced search
+  useEffect(() => {
+    if (!isOpen) return;
+    if (inputValue.trim().length < 1) {
+      setSuggestions([]);
+      return;
+    }
+
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchSymbols(inputValue, assetType);
+        const filteredRes = res.filter(
+          (item) => !portfolioSymbols.some((p) => p.symbol === item.symbol.toUpperCase())
+        );
+        setSuggestions(filteredRes);
+      } catch (err) {
+        console.error("Search error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [inputValue, assetType, isOpen, portfolioSymbols]);
+
+  const defaultSuggestions = useMemo(() => {
+    if (assetType === "METAL") {
+      return [
+        { symbol: "ALTIN", name: "Gram Altın (TL/Gram)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "GUMUS", name: "Gram Gümüş (TL/Gram)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "XAU", name: "Ons Altın (USD/Ons)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "XAG", name: "Ons Gümüş (USD/Ons)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "XPT", name: "Ons Platin (USD/Ons)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "XPD", name: "Ons Paladyum (USD/Ons)", assetType: "METAL" as const, source: "db" as const },
+      ];
+    }
+    if (assetType === "FX") {
+      return [
+        { symbol: "USD/TRY", name: "Amerikan Doları (USD)", assetType: "FX" as const, source: "db" as const },
+        { symbol: "EUR/TRY", name: "Euro (EUR)", assetType: "FX" as const, source: "db" as const },
+        { symbol: "GBP/TRY", name: "İngiliz Sterlini (GBP)", assetType: "FX" as const, source: "db" as const },
+        { symbol: "CHF/TRY", name: "İsviçre Frangı (CHF)", assetType: "FX" as const, source: "db" as const },
+        { symbol: "EUR/USD", name: "Euro / Dolar Paritesi", assetType: "FX" as const, source: "db" as const },
+      ];
+    }
+    return [];
+  }, [assetType]);
+
+  const matchingDefaultSuggestions = useMemo(() => {
+    if (!defaultSuggestions.length) return [];
+    if (!inputValue) return defaultSuggestions;
+    const cleanInput = inputValue.trim().toUpperCase();
+    return defaultSuggestions.filter(
+      (item) =>
+        item.symbol.includes(cleanInput) ||
+        item.name.toUpperCase().includes(cleanInput)
+    );
+  }, [defaultSuggestions, inputValue]);
+
+  const allOptions = useMemo(() => {
+    const list: Array<{ symbol: string; name: string; isPortfolio: boolean; isDefault: boolean }> = [];
+    matchingPortfolioSymbols.forEach((p) => {
+      list.push({ symbol: p.symbol, name: p.name, isPortfolio: true, isDefault: false });
+    });
+    matchingDefaultSuggestions.forEach((d) => {
+      if (!list.some(item => item.symbol === d.symbol)) {
+        list.push({ symbol: d.symbol, name: d.name, isPortfolio: false, isDefault: true });
+      }
+    });
+    suggestions.forEach((s) => {
+      if (!list.some(item => item.symbol === s.symbol)) {
+        list.push({ symbol: s.symbol, name: s.name, isPortfolio: false, isDefault: false });
+      }
+    });
+    return list;
+  }, [matchingPortfolioSymbols, matchingDefaultSuggestions, suggestions]);
+
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [allOptions]);
+
+  const selectOption = (opt: { symbol: string; name: string }) => {
+    onChange(opt.symbol);
+    setInputValue(opt.symbol);
+    setIsOpen(false);
+    if (onSelect) {
+      onSelect(opt.symbol);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
+        setIsOpen(true);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      setActiveIndex((prev) => (prev + 1 < allOptions.length ? prev + 1 : 0));
+      e.preventDefault();
+    } else if (e.key === "ArrowUp") {
+      setActiveIndex((prev) => (prev - 1 >= 0 ? prev - 1 : allOptions.length - 1));
+      e.preventDefault();
+    } else if (e.key === "Enter") {
+      if (activeIndex >= 0 && activeIndex < allOptions.length) {
+        selectOption(allOptions[activeIndex]);
+        e.preventDefault();
+      } else if (inputValue.trim()) {
+        const sym = inputValue.trim().toUpperCase();
+        onChange(sym);
+        setIsOpen(false);
+        if (onSelect) onSelect(sym);
+        e.preventDefault();
+      }
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+      e.preventDefault();
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <input type="hidden" name="symbol" value={value} />
+      
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          onChange(e.target.value.toUpperCase());
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => {
+          if (inputValue.trim() && onSelect) {
+            onSelect(inputValue.trim().toUpperCase());
+          }
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        required
+        autoComplete="off"
+        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)]"
+      />
+
+      {isOpen && (allOptions.length > 0 || loading) && (
+        <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto border border-[var(--color-border)] bg-[var(--color-surface)] rounded-xl shadow-lg z-50 py-1 divide-y divide-[var(--color-border)]">
+          {allOptions.some(o => o.isPortfolio) && (
+            <div className="py-1">
+              <div className="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface-muted)]/30">
+                Portföyümdeki Varlıklar
+              </div>
+              {allOptions.map((item, idx) => {
+                if (!item.isPortfolio) return null;
+                const isActive = activeIndex === idx;
+                return (
+                  <button
+                    key={`port-${item.symbol}`}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectOption(item)}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors ${
+                      isActive ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-semibold" : "hover:bg-[var(--color-surface-muted)]"
+                    }`}
+                  >
+                    <span>{item.symbol}</span>
+                    <span className="text-xs text-[var(--color-muted)] truncate max-w-[200px]">{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {allOptions.some(o => o.isDefault) && (
+            <div className="py-1">
+              <div className="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface-muted)]/30">
+                Popüler Seçenekler
+              </div>
+              {allOptions.map((item, idx) => {
+                if (!item.isDefault) return null;
+                const isActive = activeIndex === idx;
+                return (
+                  <button
+                    key={`def-${item.symbol}`}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectOption(item)}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors ${
+                      isActive ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-semibold" : "hover:bg-[var(--color-surface-muted)]"
+                    }`}
+                  >
+                    <span>{item.symbol}</span>
+                    <span className="text-xs text-[var(--color-muted)] truncate max-w-[200px]">{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {allOptions.some(o => !o.isPortfolio && !o.isDefault) && (
+            <div className="py-1">
+              <div className="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface-muted)]/30">
+                Genel Arama Sonuçları
+              </div>
+              {allOptions.map((item, idx) => {
+                if (item.isPortfolio || item.isDefault) return null;
+                const isActive = activeIndex === idx;
+                return (
+                  <button
+                    key={`gen-${item.symbol}-${idx}`}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectOption(item)}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors ${
+                      isActive ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-semibold" : "hover:bg-[var(--color-surface-muted)]"
+                    }`}
+                  >
+                    <span className="font-medium">{item.symbol}</span>
+                    <span className="text-xs text-[var(--color-muted)] truncate max-w-[200px]">{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {loading && (
+            <div className="px-4 py-2 text-xs text-[var(--color-muted)] flex items-center gap-2">
+              <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--color-muted)] border-t-transparent rounded-full animate-spin"></span>
+              <span>Aranıyor...</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+

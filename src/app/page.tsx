@@ -38,6 +38,8 @@ export default async function DashboardPage() {
       totalSellTRY: x.totalSellTRY,
       totalSellUSD: x.totalSellUSD,
       dailyChangePct: x.dailyChangePct,
+      xirrTRY: x.xirrTRY,
+      xirrUSD: x.xirrUSD,
     })),
     totals: p.totals,
     allocation: p.allocation,

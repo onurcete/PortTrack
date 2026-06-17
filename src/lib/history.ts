@@ -39,6 +39,22 @@ function startOfDay(d: Date): Date {
   return new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
 }
 
+/** Turkey-time year */
+function trYear(d: Date): number {
+  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return trDate.getUTCFullYear();
+}
+/** Turkey-time month (0-indexed) */
+function trMonth(d: Date): number {
+  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return trDate.getUTCMonth();
+}
+/** Turkey-time day of month */
+function trDateOfMonth(d: Date): number {
+  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return trDate.getUTCDate();
+}
+
 function isBeforeOrEqualDay(d1: Date, d2: Date): boolean {
   const y1 = d1.getFullYear();
   const m1 = d1.getMonth();
@@ -56,14 +72,16 @@ function isBeforeOrEqualDay(d1: Date, d2: Date): boolean {
 /** Ilk islemden bugune kadar ay sonu tarihleri. */
 function monthEnds(from: Date, to: Date): Date[] {
   const ends: Date[] = [];
-  let y = from.getFullYear();
-  let m = from.getMonth();
+  let y = trYear(from);
+  let m = trMonth(from);
   const today = startOfDay(to);
+  const toY = trYear(to);
+  const toM = trMonth(to);
   while (true) {
-    const end = new Date(y, m + 1, 0); // ayin son gunu
+    const end = new Date(Date.UTC(y, m + 1, 0)); // ayin son gunu (UTC)
     const clamped = end > today ? today : end;
     ends.push(startOfDay(clamped));
-    if (y === to.getFullYear() && m === to.getMonth()) break;
+    if (y === toY && m === toM) break;
     m++;
     if (m > 11) {
       m = 0;
@@ -436,10 +454,10 @@ export async function getGrowthSeries(): Promise<GrowthPoint[]> {
   const series: GrowthPoint[] = [];
 
   for (const end of ends) {
-    const monthKey = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}`;
+    const monthKey = monthKeyOf(end);
     const snap = manualSnaps.get(monthKey);
 
-    if (usesFullBacklog(end.getFullYear()) && snap) {
+    if (usesFullBacklog(trYear(end)) && snap) {
       series.push(growthPointFromSnapshot(snap));
       continue;
     }
@@ -467,7 +485,7 @@ export async function getGrowthSeries(): Promise<GrowthPoint[]> {
     };
 
     // 2025+: diger kolonlar hesap; BES her zaman snapshot (excel veya form)
-    if (!usesFullBacklog(end.getFullYear()) && snap) {
+    if (!usesFullBacklog(trYear(end)) && snap) {
       point = applyBesOverride(point, snap.besTRY, usdAt);
     }
 
@@ -548,10 +566,10 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
   const today = new Date();
 
   function getValAt(date: Date) {
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const monthKey = monthKeyOf(date);
     const snap = manualSnaps.get(monthKey);
 
-    if (usesFullBacklog(date.getFullYear()) && snap) {
+    if (usesFullBacklog(trYear(date)) && snap) {
       const p = growthPointFromSnapshot(snap);
       return { valueTRY: p.valueTRY, valueUSD: p.valueUSD };
     }
@@ -568,7 +586,7 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
     let valTRY = totals.valueTRY;
     let valUSD = totals.valueUSD;
 
-    if (!usesFullBacklog(date.getFullYear()) && snap) {
+    if (!usesFullBacklog(trYear(date)) && snap) {
       const byType = emptyByType();
       for (const a of allocation) {
         byType[a.assetType] = { valueTRY: a.valueTRY, valueUSD: a.valueUSD };
@@ -591,9 +609,9 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
   const t0 = getValAt(today);
   const t1 = getValAt(new Date(today.getTime() - 24 * 60 * 60 * 1000));
   const t7 = getValAt(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
-  const tMtd = getValAt(new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59));
+  const tMtd = getValAt(new Date(Date.UTC(trYear(today), trMonth(today), 0, 12, 0, 0)));
   const t30 = getValAt(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000));
-  const tYtd = getValAt(new Date(today.getFullYear() - 1, 11, 31, 23, 59, 59));
+  const tYtd = getValAt(new Date(Date.UTC(trYear(today) - 1, 11, 31, 12, 0, 0)));
 
   function calcPct(cur: number, prev: number) {
     if (cur == null || prev == null || prev <= 0) return null;
@@ -695,7 +713,7 @@ export async function getProductPerformance(
   const ends = allEnds.slice(Math.max(0, allEnds.length - (monthsBack + 1)));
   const months = ends
     .slice(1)
-    .map((e) => `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, "0")}`);
+    .map((e) => monthKeyOf(e));
 
   const rows: ProductPerfRow[] = [];
   for (const symbol of held) {
@@ -844,10 +862,10 @@ export async function getBenchmarkComparisonData(): Promise<BenchmarkComparisonD
   ]);
 
   function getValAt(date: Date) {
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const monthKey = monthKeyOf(date);
     const snap = manualSnaps.get(monthKey);
 
-    if (usesFullBacklog(date.getFullYear()) && snap) {
+    if (usesFullBacklog(trYear(date)) && snap) {
       const p = growthPointFromSnapshot(snap);
       return { valueTRY: p.valueTRY, valueUSD: p.valueUSD };
     }
@@ -864,14 +882,19 @@ export async function getBenchmarkComparisonData(): Promise<BenchmarkComparisonD
     let valTRY = totals.valueTRY;
     let valUSD = totals.valueUSD;
 
-    if (!usesFullBacklog(date.getFullYear()) && snap) {
+    if (!usesFullBacklog(trYear(date)) && snap) {
+      const { allocation } = computePositions(txUpTo, priceMap, fx, usdAt);
+      const byType = emptyByType();
+      for (const a of allocation) {
+        byType[a.assetType] = { valueTRY: a.valueTRY, valueUSD: a.valueUSD };
+      }
       const point = applyBesOverride({
         month: monthKey,
         valueTRY: totals.valueTRY,
         valueUSD: totals.valueUSD,
         costTRY: totals.costTRY,
         costUSD: totals.costUSD,
-        byType: Object.fromEntries(ASSET_TYPES.map((t) => [t, { valueTRY: 0, valueUSD: 0 }])) as any,
+        byType,
       }, snap.besTRY, usdAt);
       valTRY = point.valueTRY;
       valUSD = point.valueUSD;
@@ -885,7 +908,7 @@ export async function getBenchmarkComparisonData(): Promise<BenchmarkComparisonD
   const d1W = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
   const d1M = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
   const d3M = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-  const dYtd = new Date(today.getFullYear() - 1, 11, 31, 23, 59, 59);
+  const dYtd = new Date(Date.UTC(trYear(today) - 1, 11, 31, 12, 0, 0));
   const d1Y = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
 
   const v0 = getValAt(d0);
