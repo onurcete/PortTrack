@@ -577,6 +577,7 @@ function SortHeader({
   order,
   onSort,
   align = "right",
+  className,
 }: {
   field: SortField;
   label: React.ReactNode;
@@ -584,6 +585,7 @@ function SortHeader({
   order: SortOrder;
   onSort: (field: SortField) => void;
   align?: "left" | "right";
+  className?: string;
 }) {
   const isActive = field === activeField;
   return (
@@ -592,6 +594,7 @@ function SortHeader({
       className={cn(
         "text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] hover:text-[var(--color-text)] flex items-center gap-1 transition-colors outline-none",
         align === "right" ? "justify-end ml-auto text-right" : "justify-start text-left",
+        className,
       )}
     >
       <span>{label}</span>
@@ -809,7 +812,10 @@ function PositionsTable({
                     >
                       {meta.label.charAt(0)}
                     </span>
-                    <span className="font-bold text-sm">{meta.label}</span>
+                    <span className="font-bold text-sm inline-flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                      {meta.label}
+                    </span>
                     <span className="rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted)]">
                       {positions.length}
                     </span>
@@ -843,7 +849,7 @@ function PositionsTable({
                 </div>
 
                 {/* Tablo başlıkları */}
-                <div className={cn("grid gap-2 px-6 py-2.5 border-t border-[var(--color-border)]/40 bg-[var(--color-surface-muted)]/30", gridColsClass)}>
+                <div className={cn("grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40 bg-[var(--color-surface-muted)]/30", gridColsClass)}>
                   {showClosed ? (
                     <>
                       <SortHeader
@@ -885,6 +891,7 @@ function PositionsTable({
                         order={sortOrder}
                         onSort={handleSort}
                         align="right"
+                        className="bg-[var(--color-brand-soft)]/20 px-2.5 py-1 rounded-xl text-[var(--color-brand-strong)]"
                       />
                     </>
                   ) : (
@@ -928,6 +935,7 @@ function PositionsTable({
                         order={sortOrder}
                         onSort={handleSort}
                         align="right"
+                        className="bg-[var(--color-brand-soft)]/20 px-2.5 py-1 rounded-xl text-[var(--color-brand-strong)]"
                       />
                       <SortHeader
                         field="dailyChange"
@@ -968,6 +976,7 @@ function PositionsTable({
                         order={sortOrder}
                         onSort={handleSort}
                         align="right"
+                        className="bg-[var(--color-brand-soft)]/20 px-2.5 py-1 rounded-xl text-[var(--color-brand-strong)]"
                       />
                     </>
                   )}
@@ -1000,7 +1009,8 @@ function PositionsTable({
                             {p.symbol.slice(0, 3)}
                           </span>
                           <div className="min-w-0">
-                            <p className="font-semibold text-xs truncate leading-tight">
+                            <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
                               {p.symbol}
                             </p>
                             <p className="text-[10px] text-[var(--color-muted)] leading-tight">
@@ -1033,7 +1043,7 @@ function PositionsTable({
                         </p>
 
                         {/* Yüzde badge */}
-                        <div className="flex justify-end">
+                        <div className="flex justify-end bg-[var(--color-brand-soft)]/15 px-2.5 py-1.5 rounded-xl border border-[var(--color-brand)]/10">
                           <span
                             className={cn(
                               "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px]",
@@ -1110,7 +1120,8 @@ function PositionsTable({
                           {p.symbol.slice(0, 3)}
                         </span>
                         <div className="min-w-0">
-                          <p className="font-semibold text-xs truncate leading-tight">
+                          <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
                             {p.symbol}
                           </p>
                           <p className="text-[10px] text-[var(--color-muted)] leading-tight">
@@ -1138,7 +1149,7 @@ function PositionsTable({
                       </p>
 
                       {/* Değer */}
-                      <p className="text-xs font-semibold tabular-nums text-right">
+                      <p className="text-xs font-bold tabular-nums text-right bg-[var(--color-brand-soft)]/15 text-[var(--color-brand-strong)] px-2.5 py-1.5 rounded-xl border border-[var(--color-brand)]/10">
                         {formatMoney(value, currency)}
                       </p>
 
@@ -1174,7 +1185,7 @@ function PositionsTable({
                       </p>
 
                       {/* Yüzde badge */}
-                      <div className="flex justify-end">
+                      <div className="flex justify-end bg-[var(--color-brand-soft)]/15 px-2.5 py-1.5 rounded-xl border border-[var(--color-brand)]/10">
                         <span
                           className={cn(
                             "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px]",
