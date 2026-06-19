@@ -891,7 +891,7 @@ function PositionsTable({
                         order={sortOrder}
                         onSort={handleSort}
                         align="right"
-                        className="bg-[var(--color-brand-soft)]/20 px-2.5 py-1 rounded-xl text-[var(--color-brand-strong)]"
+                        className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
                       />
                     </>
                   ) : (
@@ -935,7 +935,7 @@ function PositionsTable({
                         order={sortOrder}
                         onSort={handleSort}
                         align="right"
-                        className="bg-[var(--color-brand-soft)]/20 px-2.5 py-1 rounded-xl text-[var(--color-brand-strong)]"
+                        className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
                       />
                       <SortHeader
                         field="dailyChange"
@@ -976,7 +976,7 @@ function PositionsTable({
                         order={sortOrder}
                         onSort={handleSort}
                         align="right"
-                        className="bg-[var(--color-brand-soft)]/20 px-2.5 py-1 rounded-xl text-[var(--color-brand-strong)]"
+                        className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
                       />
                     </>
                   )}
@@ -1043,7 +1043,7 @@ function PositionsTable({
                         </p>
 
                         {/* Yüzde badge */}
-                        <div className="flex justify-end bg-[var(--color-brand-soft)]/15 px-2.5 py-1.5 rounded-xl border border-[var(--color-brand)]/10">
+                        <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
                           <span
                             className={cn(
                               "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px]",
@@ -1149,7 +1149,7 @@ function PositionsTable({
                       </p>
 
                       {/* Değer */}
-                      <p className="text-xs font-bold tabular-nums text-right bg-[var(--color-brand-soft)]/15 text-[var(--color-brand-strong)] px-2.5 py-1.5 rounded-xl border border-[var(--color-brand)]/10">
+                      <p className="text-xs font-semibold tabular-nums text-right border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
                         {formatMoney(value, currency)}
                       </p>
 
@@ -1185,7 +1185,7 @@ function PositionsTable({
                       </p>
 
                       {/* Yüzde badge */}
-                      <div className="flex justify-end bg-[var(--color-brand-soft)]/15 px-2.5 py-1.5 rounded-xl border border-[var(--color-brand)]/10">
+                      <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
                         <span
                           className={cn(
                             "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px]",
