@@ -10,11 +10,8 @@ import {
   Zap,
   Target,
   Activity,
-  Trophy,
-  Flame,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui";
 import { ASSET_META, type AssetType } from "@/lib/assets";
 import { cn, formatNumber, formatPercent } from "@/lib/utils";
 
@@ -141,17 +138,17 @@ export function AnalysisClient({
 
       {/* Boş durum */}
       {noData && !refreshing && (
-        <Card className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+        <div className="card flex flex-col items-center justify-center gap-3 py-16 text-center">
           <Brain className="text-[var(--color-muted)]" size={36} />
           <p className="font-semibold">Henüz analiz verisi yok</p>
           <p className="text-sm text-[var(--color-muted)] max-w-sm">
             Yukarıdaki &quot;Analizi Güncelle&quot; butonuna basarak tüm enstrümanlarınızın teknik analizini başlatın.
           </p>
-        </Card>
+        </div>
       )}
 
       {/* Günün Özeti */}
-      {dailySummary && <DailySummaryCard summary={dailySummary} />}
+      {dailySummary && <DailySummaryCard summary={dailySummary} analyses={analyses} />}
 
       {/* Sekmeler ve Listeleme */}
       {!noData && (
@@ -244,155 +241,288 @@ export function AnalysisClient({
 
 // ────────── Günün Özeti Kartı ──────────
 
-function DailySummaryCard({ summary }: { summary: DailySummaryDTO }) {
+function DailySummaryCard({ summary, analyses }: { summary: DailySummaryDTO; analyses: AnalysisDTO[] }) {
   const total = summary.upCount + summary.downCount + summary.unchangedCount;
   const upPct = total > 0 ? (summary.upCount / total) * 100 : 0;
   const downPct = total > 0 ? (summary.downCount / total) * 100 : 0;
-  const unchangedPct = total > 0 ? (summary.unchangedCount / total) * 100 : 0;
+
+  // Ortalama teknik skor
+  const avgScore = analyses.length > 0
+    ? Math.round(analyses.reduce((s, a) => s + a.score, 0) / analyses.length)
+    : 0;
+
+  // Piyasa hissi (sentiment) hesaplama
+  const sentimentScore = total > 0
+    ? Math.round(((summary.upCount - summary.downCount) / total) * 100)
+    : 0;
+  const sentimentLabel = sentimentScore >= 40
+    ? "Güçlü Boğa"
+    : sentimentScore >= 10
+    ? "Boğa Eğilimli"
+    : sentimentScore <= -40
+    ? "Güçlü Ayı"
+    : sentimentScore <= -10
+    ? "Ayı Eğilimli"
+    : "Nötr";
+  const sentimentColor = sentimentScore >= 10
+    ? "var(--color-profit)"
+    : sentimentScore <= -10
+    ? "var(--color-loss)"
+    : "var(--color-muted)";
+
+  // Skor dağılımı
+  const highScoreCount = analyses.filter(a => a.score >= 70).length;
+  const midScoreCount = analyses.filter(a => a.score >= 40 && a.score < 70).length;
+  const lowScoreCount = analyses.filter(a => a.score < 40).length;
+
+  // Sinyal özeti
+  const buyCrossCount = analyses.filter(a => a.macdSignal === "BUY_CROSS").length;
+  const sellCrossCount = analyses.filter(a => a.macdSignal === "SELL_CROSS").length;
+  const oversoldCount = analyses.filter(a => a.rsiZone === "OVERSOLD").length;
+  const overboughtCount = analyses.filter(a => a.rsiZone === "OVERBOUGHT").length;
+  const strongUpCount = analyses.filter(a => a.trendSignal === "STRONG_UP").length;
+  const strongDownCount = analyses.filter(a => a.trendSignal === "STRONG_DOWN").length;
+
+  // En çok hareket edenlerden en yüksek mutlak değişim (ölçek çubuğu için)
+  const allMovers = [...summary.topGainers, ...summary.topLosers];
+  const maxAbsChange = allMovers.length > 0
+    ? Math.max(...allMovers.map(m => Math.abs(m.dailyChangePct)), 1)
+    : 1;
+
+  // Skor ring SVG parametreleri
+  const ringRadius = 36;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference - (avgScore / 100) * ringCircumference;
+  const ringColor = avgScore >= 70 ? "#10b981" : avgScore >= 40 ? "#f59e0b" : "#ef4444";
+
+  const allAlerts = [...summary.bigMoveAlerts, ...summary.streakAlerts];
 
   return (
-    <div className="card p-6 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-transparent border border-[var(--color-border)] shadow-xs space-y-6">
-      {/* Başlık */}
-      <div className="flex items-center justify-between border-b border-[var(--color-border)]/50 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shadow-inner">
-            <Zap size={20} className="fill-[var(--color-brand-strong)]/10" />
+    <div className="space-y-4">
+      {/* ───── Üst Metrik Şeridi ───── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* 1. Piyasa Hissi */}
+        <div className="card p-4 flex items-center gap-3">
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-xl shrink-0"
+            style={{ backgroundColor: `color-mix(in srgb, ${sentimentColor} 12%, transparent)` }}
+          >
+            {sentimentScore >= 10
+              ? <TrendingUp size={20} style={{ color: sentimentColor }} />
+              : sentimentScore <= -10
+              ? <TrendingDown size={20} style={{ color: sentimentColor }} />
+              : <Activity size={20} style={{ color: sentimentColor }} />}
           </div>
-          <div>
-            <h2 className="font-bold text-base text-[var(--color-foreground)]">Günün Özeti</h2>
-            <p className="text-xs text-[var(--color-muted)]">Portföyünüzün teknik nabzı ve hareketleri</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Piyasa Hissi</p>
+            <p className="font-black text-lg leading-tight" style={{ color: sentimentColor }}>{sentimentLabel}</p>
+            <p className="text-[10px] text-[var(--color-muted)] tabular-nums mt-0.5">
+              {summary.upCount}↑ {summary.unchangedCount > 0 && `${summary.unchangedCount}→ `}{summary.downCount}↓
+            </p>
           </div>
         </div>
-        <div className="text-xs font-bold px-2.5 py-1 bg-[var(--color-brand-soft)] border border-[var(--color-brand)]/10 shadow-xs text-[var(--color-brand-strong)] rounded-lg">
-          Genel Durum
+
+        {/* 2. Ortalama Teknik Skor (Ring) */}
+        <div className="card p-4 flex items-center gap-3">
+          <div className="relative shrink-0" style={{ width: 48, height: 48 }}>
+            <svg width="48" height="48" viewBox="0 0 80 80" className="-rotate-90">
+              <circle cx="40" cy="40" r={ringRadius} fill="none" stroke="var(--color-border)" strokeWidth="6" opacity="0.3" />
+              <circle
+                cx="40" cy="40" r={ringRadius}
+                fill="none"
+                stroke={ringColor}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={ringOffset}
+                className="transition-all duration-700"
+              />
+            </svg>
+            <span
+              className="absolute inset-0 flex items-center justify-center text-sm font-black"
+              style={{ color: ringColor }}
+            >
+              {avgScore}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)]">Ort. Skor</p>
+            <p className="text-xs font-semibold text-[var(--color-foreground)] mt-1">
+              {avgScore >= 70 ? "Güçlü" : avgScore >= 40 ? "Karışık" : "Zayıf"}
+            </p>
+            <div className="flex gap-1.5 mt-1">
+              <span className="text-[10px] font-bold text-emerald-500 tabular-nums">{highScoreCount}●</span>
+              <span className="text-[10px] font-bold text-amber-500 tabular-nums">{midScoreCount}●</span>
+              <span className="text-[10px] font-bold text-rose-500 tabular-nums">{lowScoreCount}●</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Boğa / Ayı Oranı Çubuğu */}
+        <div className="card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)] mb-2">Boğa / Ayı Oranı</p>
+          <div className="h-2.5 w-full rounded-full bg-slate-200/50 dark:bg-slate-800/50 overflow-hidden flex">
+            <div
+              className="h-full bg-[var(--color-profit)] transition-all rounded-l-full"
+              style={{ width: `${upPct}%` }}
+            />
+            <div
+              className="h-full bg-[var(--color-loss)] transition-all rounded-r-full"
+              style={{ width: `${downPct}%` }}
+            />
+          </div>
+          <div className="flex justify-between items-center text-[11px] mt-2 font-bold tabular-nums">
+            <span className="text-[var(--color-profit)]">%{upPct.toFixed(0)} Boğa</span>
+            <span className="text-[var(--color-loss)]">%{downPct.toFixed(0)} Ayı</span>
+          </div>
+        </div>
+
+        {/* 4. Toplam Varlık ve Aktif Sinyaller */}
+        <div className="card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)] mb-1">Portföy & Sinyaller</p>
+          <p className="text-2xl font-black text-[var(--color-foreground)] leading-none">{summary.totalCount}</p>
+          <p className="text-[10px] text-[var(--color-muted)] mb-2">varlık analiz edildi</p>
+          <div className="flex flex-wrap gap-1">
+            {buyCrossCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                {buyCrossCount} Alış Sinyali
+              </span>
+            )}
+            {sellCrossCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
+                {sellCrossCount} Satış Sinyali
+              </span>
+            )}
+            {oversoldCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400">
+                {oversoldCount} Aşırı Satım
+              </span>
+            )}
+            {overboughtCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400">
+                {overboughtCount} Aşırı Alım
+              </span>
+            )}
+            {strongUpCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                {strongUpCount} Güçlü Trend↑
+              </span>
+            )}
+            {strongDownCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
+                {strongDownCount} Güçlü Trend↓
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 3 Sütunlu Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sol Sütun: Portföy Oranı */}
-        <div className="space-y-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
-            Enstrüman Dağılımı
-          </p>
-          <div className="space-y-3 bg-[var(--color-surface-muted)]/40 p-4 rounded-2xl border border-[var(--color-border)]/50 shadow-xs">
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-[var(--color-foreground)]">{summary.totalCount}</span>
-              <span className="text-xs text-[var(--color-muted)] font-medium">Toplam Varlık</span>
-            </div>
-            
-            {/* Yükselen / Düşen Çubuğu */}
-            <div className="h-3 w-full rounded-full bg-slate-200/50 dark:bg-slate-800/50 overflow-hidden flex">
-              <div 
-                className="h-full bg-[var(--color-profit)] transition-all" 
-                style={{ width: `${upPct}%` }}
-                title={`Yükselen: ${summary.upCount}`}
-              />
-              <div 
-                className="h-full bg-slate-400 dark:bg-slate-600 transition-all" 
-                style={{ width: `${unchangedPct}%` }}
-                title={`Değişmeyen: ${summary.unchangedCount}`}
-              />
-              <div 
-                className="h-full bg-[var(--color-loss)] transition-all" 
-                style={{ width: `${downPct}%` }}
-                title={`Düşen: ${summary.downCount}`}
-              />
-            </div>
-
-            <div className="flex justify-between items-center text-xs mt-2 font-semibold">
-              <div className="flex items-center gap-1.5 text-[var(--color-profit)]">
-                <span className="h-2 w-2 rounded-full bg-[var(--color-profit)]" />
-                <span>{summary.upCount} Yükselen</span>
-              </div>
-              {summary.unchangedCount > 0 && (
-                <div className="flex items-center gap-1.5 text-[var(--color-muted)]">
-                  <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-600" />
-                  <span>{summary.unchangedCount} Stabil</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1.5 text-[var(--color-loss)]">
-                <span className="h-2 w-2 rounded-full bg-[var(--color-loss)]" />
-                <span>{summary.downCount} Düşen</span>
-              </div>
-            </div>
+      {/* ───── Alt Bölüm: En Çok Hareket Edenler + Sinyal Akışı ───── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Sol: En Çok Hareket Edenler (Görsel Çubuklu) */}
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] flex items-center gap-1.5">
+              <Zap size={13} className="text-amber-500" />
+              Günün Öne Çıkanları
+            </h3>
+            <span className="text-[10px] font-bold text-[var(--color-muted)] bg-[var(--color-surface-muted)] px-2 py-0.5 rounded-md">
+              Top {Math.min(4, summary.topGainers.length)} ↑↓
+            </span>
           </div>
-        </div>
 
-        {/* Orta Sütun: En Çok Yükselen / Düşen */}
-        <div className="space-y-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
-            En Çok Hareket Edenler
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-            {summary.topGainers.length > 0 && (
-              <div className="rounded-xl bg-[var(--color-profit-soft)] border border-[var(--color-profit)]/10 p-3 space-y-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-profit)] flex items-center gap-1">
-                  <Trophy size={12} className="fill-[var(--color-profit)]/10" />
-                  En Çok Yükselenler
-                </p>
-                {summary.topGainers.map((g) => (
-                  <div key={g.symbol} className="flex items-center justify-between text-xs font-medium">
-                    <span className="font-semibold text-[var(--color-foreground)]">{g.symbol}</span>
-                    <span className="font-bold text-[var(--color-profit)] tabular-nums">
+          {/* Yükselenler */}
+          {summary.topGainers.length > 0 && (
+            <div className="space-y-1.5">
+              {summary.topGainers.map((g) => {
+                const barW = Math.min(100, (Math.abs(g.dailyChangePct) / maxAbsChange) * 100);
+                return (
+                  <div key={g.symbol} className="flex items-center gap-2 group">
+                    <span className="w-16 text-xs font-bold text-[var(--color-foreground)] shrink-0 truncate">{g.symbol}</span>
+                    <div className="flex-1 h-5 rounded-md bg-[var(--color-surface-muted)]/30 overflow-hidden relative">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500/80 to-emerald-400/60 rounded-md transition-all duration-500"
+                        style={{ width: `${barW}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-black text-[var(--color-profit)] tabular-nums w-16 text-right">
                       +%{g.dailyChangePct.toFixed(1)}
                     </span>
                   </div>
-                ))}
-              </div>
-            )}
-            {summary.topLosers.length > 0 && (
-              <div className="rounded-xl bg-[var(--color-loss-soft)] border border-[var(--color-loss)]/10 p-3 space-y-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-loss)] flex items-center gap-1">
-                  <Flame size={12} className="fill-[var(--color-loss)]/10" />
-                  En Çok Düşenler
-                </p>
-                {summary.topLosers.map((l) => (
-                  <div key={l.symbol} className="flex items-center justify-between text-xs font-medium">
-                    <span className="font-semibold text-[var(--color-foreground)]">{l.symbol}</span>
-                    <span className="font-bold text-[var(--color-loss)] tabular-nums">
+                );
+              })}
+            </div>
+          )}
+
+          {/* Ayırıcı */}
+          {summary.topGainers.length > 0 && summary.topLosers.length > 0 && (
+            <div className="border-t border-[var(--color-border)]/30" />
+          )}
+
+          {/* Düşenler */}
+          {summary.topLosers.length > 0 && (
+            <div className="space-y-1.5">
+              {summary.topLosers.map((l) => {
+                const barW = Math.min(100, (Math.abs(l.dailyChangePct) / maxAbsChange) * 100);
+                return (
+                  <div key={l.symbol} className="flex items-center gap-2 group">
+                    <span className="w-16 text-xs font-bold text-[var(--color-foreground)] shrink-0 truncate">{l.symbol}</span>
+                    <div className="flex-1 h-5 rounded-md bg-[var(--color-surface-muted)]/30 overflow-hidden relative">
+                      <div
+                        className="h-full bg-gradient-to-r from-rose-500/80 to-rose-400/60 rounded-md transition-all duration-500"
+                        style={{ width: `${barW}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-black text-[var(--color-loss)] tabular-nums w-16 text-right">
                       -%{Math.abs(l.dailyChangePct).toFixed(1)}
                     </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Sağ Sütun: Önemli Gelişmeler & Trendler */}
-        <div className="space-y-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">
-            Önemli Sinyaller ve Trendler
-          </p>
-          <div className="bg-[var(--color-surface-muted)]/40 p-4 rounded-2xl border border-[var(--color-border)]/50 shadow-xs space-y-2 max-h-[290px] overflow-y-auto">
-            {summary.streakAlerts.length === 0 && summary.bigMoveAlerts.length === 0 ? (
-              <p className="text-xs text-[var(--color-muted)] italic py-4 text-center">
-                Bugün olağan dışı hareket veya seriye bağlayan varlık bulunmuyor.
-              </p>
+        {/* Sağ: Sinyal Akışı */}
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] flex items-center gap-1.5">
+            <AlertTriangle size={13} className="text-amber-500" />
+            Önemli Sinyaller & Trendler
+          </h3>
+
+          <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+            {allAlerts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="h-10 w-10 rounded-full bg-[var(--color-surface-muted)] flex items-center justify-center mb-2">
+                  <Activity size={18} className="text-[var(--color-muted)]" />
+                </div>
+                <p className="text-xs text-[var(--color-muted)] font-medium">
+                  Bugün olağan dışı hareket veya<br/>seriye bağlayan varlık bulunmuyor.
+                </p>
+              </div>
             ) : (
-              [...summary.bigMoveAlerts, ...summary.streakAlerts].map((alert, i) => {
+              allAlerts.map((alert, i) => {
                 let icon = "📢";
-                let cls = "border-l-2 border-slate-400 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-900/50";
-                
+                let cls = "border-l-2 border-slate-400 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-900/30";
+
                 if (alert.includes("yükseldi") || alert.includes("yükseliyor")) {
                   icon = "📈";
-                  cls = "border-l-2 border-[var(--color-profit)] bg-[var(--color-profit-soft)] text-[var(--color-profit)]";
+                  cls = "border-l-2 border-[var(--color-profit)] bg-[var(--color-profit-soft)]";
                 } else if (alert.includes("düştü") || alert.includes("düşüyor")) {
                   icon = "📉";
-                  cls = "border-l-2 border-[var(--color-loss)] bg-[var(--color-loss-soft)] text-[var(--color-loss)]";
+                  cls = "border-l-2 border-[var(--color-loss)] bg-[var(--color-loss-soft)]";
                 } else if (alert.includes("olağandışı")) {
                   icon = "🚀";
-                  cls = "border-l-2 border-[var(--color-brand)] bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]";
+                  cls = "border-l-2 border-[var(--color-brand)] bg-[var(--color-brand-soft)]";
                 } else if (alert.includes("sert satış")) {
                   icon = "💥";
-                  cls = "border-l-2 border-[var(--color-loss)] bg-[var(--color-loss-soft)] text-[var(--color-loss)]";
+                  cls = "border-l-2 border-[var(--color-loss)] bg-[var(--color-loss-soft)]";
                 }
 
                 return (
-                  <div key={i} className={cn("text-xs font-semibold p-2 rounded-lg flex items-start gap-2", cls)}>
+                  <div key={i} className={cn("text-xs font-semibold p-2.5 rounded-lg flex items-start gap-2", cls)}>
                     <span className="shrink-0 text-sm leading-none">{icon}</span>
-                    <span className="leading-tight">{alert.replace(/^[📈📉🚀💥📢]\s*/, "")}</span>
+                    <span className="leading-snug text-[var(--color-foreground)]">{alert.replace(/^[📈📉🚀💥📢]\s*/, "")}</span>
                   </div>
                 );
               })
