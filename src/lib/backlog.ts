@@ -301,15 +301,20 @@ export async function upsertBesMonth(
         data: { besTRY, source: "manual" },
       });
     }
-    return;
+  } else {
+    await prisma.portfolioMonthSnapshot.create({
+      data: {
+        month,
+        besTRY,
+        source: "manual",
+      },
+    });
   }
 
-  await prisma.portfolioMonthSnapshot.create({
-    data: {
-      month,
-      besTRY,
-      source: "manual",
-    },
+  // BES sembollü işlemin toplam fiyatını da güncelleyelim
+  await prisma.transaction.updateMany({
+    where: { symbol: "BES" },
+    data: { total: besTRY },
   });
 }
 
