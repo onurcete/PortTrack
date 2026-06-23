@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Upload, Search, Download, FileSpreadsheet, RotateCcw } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Search, Download, FileSpreadsheet, RotateCcw, ArrowLeft, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
 import { Modal } from "./Modal";
 import { Badge } from "./ui";
 import { ASSET_META, ASSET_TYPES, type AssetType } from "@/lib/assets";
@@ -13,6 +13,7 @@ import {
   updateTransaction,
   deleteTransaction,
   importBundledCsv,
+  importCsvContent,
   searchSymbols,
   getSymbolPrice,
 } from "@/app/transactions/actions";
@@ -43,6 +44,11 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   const [query, setQuery] = useState("");
   const [importing, setImporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importStep, setImportStep] = useState<"select" | "format_info" | "upload">("select");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
@@ -138,7 +144,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
     });
   }
 
-  function handleImport() {
+  function handleImportSystemCsv() {
     if (
       !confirm(
         "transactions.csv içeri aktarılacak. Mevcut tüm işlemler silinip yeniden yüklenecek. Devam edilsin mi?",
@@ -149,11 +155,55 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
     startTransition(async () => {
       const res = await importBundledCsv();
       setImporting(false);
-      setToast(res.message ?? (res.ok ? "Tamamlandı." : "Hata."));
+      setImportModalOpen(false);
+      setToast(res.message ?? (res.ok ? "Sistem CSV başarıyla içe aktarıldı." : "Hata."));
       router.refresh();
       setTimeout(() => setToast(null), 4000);
     });
   }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+      setUploadError("Lütfen geçerli bir CSV dosyası (.csv) seçin.");
+      setSelectedFile(null);
+      return;
+    }
+    setSelectedFile(file);
+    setUploadError(null);
+  };
+
+  const handleUploadAndImport = () => {
+    if (!selectedFile) return;
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      if (!text) {
+        setUploadError("Dosya içeriği boş veya okunamadı.");
+        setImporting(false);
+        return;
+      }
+      startTransition(async () => {
+        const res = await importCsvContent(text);
+        setImporting(false);
+        if (res.ok) {
+          setImportModalOpen(false);
+          setToast("CSV başarıyla içe aktarıldı.");
+          router.refresh();
+        } else {
+          setUploadError(res.message ?? "İçe aktarım sırasında bir hata oluştu.");
+        }
+        setTimeout(() => setToast(null), 4000);
+      });
+    };
+    reader.onerror = () => {
+      setUploadError("Dosya okunurken bir hata oluştu.");
+      setImporting(false);
+    };
+    reader.readAsText(selectedFile, "utf-8");
+  };
 
   return (
     <div>
@@ -166,14 +216,17 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         </div>
         <div className="flex gap-2">
           <button
-            onClick={handleImport}
+            onClick={() => {
+              setImportStep("select");
+              setSelectedFile(null);
+              setUploadError(null);
+              setImportModalOpen(true);
+            }}
             disabled={importing || pending}
             className="btn btn-outline"
           >
             <Upload size={15} />
-            <span className="hidden sm:inline">
-              {importing ? "Aktarılıyor..." : "CSV İçe Aktar"}
-            </span>
+            <span className="hidden sm:inline">CSV İçe Aktar</span>
           </button>
           <button onClick={openNew} className="btn btn-primary">
             <Plus size={16} />
@@ -371,6 +424,189 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             router.refresh();
           }}
         />
+      </Modal>
+
+      <Modal
+        open={importModalOpen}
+        onClose={() => !importing && setImportModalOpen(false)}
+        title={
+          importStep === "select"
+            ? "CSV İçe Aktarma"
+            : importStep === "format_info"
+            ? "Veri Formatı ve Kurallar"
+            : "Yeni CSV Yükle"
+        }
+      >
+        {importStep === "select" && (
+          <div className="space-y-4">
+            <p className="text-sm text-[var(--color-muted)]">
+              Lütfen işlemlerinizi içe aktarmak için bir yöntem seçin. Her iki işlem de mevcut işlemlerin tamamını silip yeniden yükleyecektir.
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                type="button"
+                onClick={handleImportSystemCsv}
+                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] bg-[var(--color-surface-muted)]/20 hover:bg-[var(--color-brand-soft)]/20 transition-all group flex items-start gap-3"
+              >
+                <div className="rounded-lg p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-strong)] group-hover:border-[var(--color-brand)]">
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-[var(--color-foreground)]">Sistemdeki transactions.csv Dosyasından</h3>
+                  <p className="text-xs text-[var(--color-muted)] mt-1">Proje dizininde yerleşik olarak bulunan default CSV dosyasını içeri aktarır.</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setImportStep("format_info")}
+                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] bg-[var(--color-surface-muted)]/20 hover:bg-[var(--color-brand-soft)]/20 transition-all group flex items-start gap-3"
+              >
+                <div className="rounded-lg p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-strong)] group-hover:border-[var(--color-brand)]">
+                  <Upload size={20} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-[var(--color-foreground)]">Bilgisayardan Yeni CSV Dosyası Yükle</h3>
+                  <p className="text-xs text-[var(--color-muted)] mt-1">Kendi hazırladığınız veya dışarıdan aldığınız bir CSV dosyasını yükler.</p>
+                </div>
+              </button>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setImportModalOpen(false)}
+                className="btn btn-outline text-xs py-2 px-4"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        )}
+
+        {importStep === "format_info" && (
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-xl border border-amber-200/50 bg-amber-50/15 text-amber-600 dark:text-amber-500 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="shrink-0 mt-0.5" size={16} />
+              <div>
+                <span className="font-bold">Önemli Uyarı:</span> Yeni dosya yüklendiğinde, sistemde kayıtlı olan tüm işlemler silinecek ve dosyadaki işlemler yazılacaktır.
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold text-xs text-[var(--color-foreground)]">Gerekli CSV Sütun Yapısı ve Örnek Satır:</h4>
+              <div className="overflow-x-auto text-[11px] font-mono bg-[var(--color-surface-muted)]/30 border border-[var(--color-border)] p-2.5 rounded-lg text-[var(--color-muted)] whitespace-nowrap">
+                <div className="text-[var(--color-foreground)] font-semibold mb-1">
+                  Tarih,Tür,Sembol,İşlem Tipi,Birim Fiyat (₺),Adet,Toplam (₺)
+                </div>
+                <div>
+                  &quot;29.05.2026&quot;,&quot;Nasdaq&quot;,&quot;VPG&quot;,&quot;Alış&quot;,&quot;124.49&quot;,&quot;0.803&quot;,&quot;99.97&quot;
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 text-xs text-[var(--color-muted)]">
+              <h4 className="font-semibold text-xs text-[var(--color-foreground)]">Sütun Kuralları:</h4>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>
+                  <span className="font-medium text-[var(--color-foreground)]">Tarih:</span> <code className="font-mono">GG.AA.YYYY</code> formatında olmalıdır (Örn: <code className="font-mono">29.05.2026</code>).
+                </li>
+                <li>
+                  <span className="font-medium text-[var(--color-foreground)]">Tür:</span> Varlık sınıfı: <code className="font-mono">Hisse</code>, <code className="font-mono">Fon</code>, <code className="font-mono">Nasdaq</code>, <code className="font-mono">Döviz</code>, <code className="font-mono">Altın</code>, <code className="font-mono">Kripto</code>, <code className="font-mono">Bes</code>.
+                </li>
+                <li>
+                  <span className="font-medium text-[var(--color-foreground)]">İşlem Tipi:</span> İşlem yönü: <code className="font-mono">Alış</code> veya <code className="font-mono">Satış</code>.
+                </li>
+                <li>
+                  <span className="font-medium text-[var(--color-foreground)]">Birim Fiyat & Adet:</span> Ondalıklı sayılar için Türkçe/Excel uyumlu virgül (,) veya nokta (.) kullanılabilir (Örn: <code className="font-mono">124,49</code> veya <code className="font-mono">124.49</code>).
+                </li>
+                <li>
+                  <span className="font-medium text-[var(--color-foreground)]">Toplam (Opsiyonel):</span> Boş bırakılırsa Birim Fiyat * Adet olarak hesaplanır.
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
+              <button
+                onClick={() => setImportStep("select")}
+                className="btn btn-outline text-xs py-2 px-4 flex items-center gap-1.5"
+              >
+                <ArrowLeft size={13} />
+                Geri
+              </button>
+              <button
+                onClick={() => setImportStep("upload")}
+                className="btn btn-primary text-xs py-2 px-4"
+              >
+                Anladım, Devam Et
+              </button>
+            </div>
+          </div>
+        )}
+
+        {importStep === "upload" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-[var(--color-foreground)]">
+                CSV Dosyası Seçin
+              </label>
+              
+              <div className="relative border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-brand)] rounded-xl p-6 transition-all bg-[var(--color-surface-muted)]/10 text-center">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  disabled={importing}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center justify-center space-y-2">
+                  <div className="rounded-full p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)]">
+                    <FileText size={24} />
+                  </div>
+                  {selectedFile ? (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-[var(--color-foreground)]">{selectedFile.name}</p>
+                      <p className="text-xs text-[var(--color-muted)]">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-[var(--color-foreground)]">Tıklayın veya dosyanızı buraya sürükleyin</p>
+                      <p className="text-xs text-[var(--color-muted)] mt-1">Yalnızca .csv dosyaları</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {uploadError && (
+              <div className="p-3 rounded-xl border border-red-200/50 bg-red-50/15 text-red-600 dark:text-red-500 text-xs font-medium">
+                {uploadError}
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
+              <button
+                onClick={() => {
+                  setUploadError(null);
+                  setImportStep("format_info");
+                }}
+                disabled={importing}
+                className="btn btn-outline text-xs py-2 px-4 flex items-center gap-1.5"
+              >
+                <ArrowLeft size={13} />
+                Geri
+              </button>
+              <button
+                onClick={handleUploadAndImport}
+                disabled={!selectedFile || importing}
+                className="btn btn-primary text-xs py-2 px-4 flex items-center gap-1.5"
+              >
+                {importing && (
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                )}
+                {importing ? "Yükleniyor..." : "Yükle ve İçe Aktar"}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {toast && (
