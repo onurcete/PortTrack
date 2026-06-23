@@ -75,6 +75,7 @@ export interface BenchmarkComparisonDTO {
   sp500: number | null;
   gold: number | null;
   usd: number | null;
+  inflation?: number | null;
 }
 
 export interface BenchmarkComparisonData {
@@ -175,6 +176,9 @@ function getBenchmarkText(
   if (isTRY) {
     if (data.bist !== null) parts.push(`BIST: ${formatPercent(data.bist)}`);
     if (data.usd !== null) parts.push(`USD: ${formatPercent(data.usd)}`);
+    if (data.inflation !== undefined && data.inflation !== null) {
+      parts.push(`Enflasyon: ${formatPercent(data.inflation)}`);
+    }
   } else {
     if (data.sp500 !== null) parts.push(`SPX: ${formatPercent(data.sp500)}`);
     if (data.gold !== null) parts.push(`Altın: ${formatPercent(data.gold)}`);
@@ -431,6 +435,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={weeklyPct ?? null}
             amt={weeklyAmt ?? null}
             currency={currency}
+            benchmarkText={getBenchmarkText("1W", isTRY, data.benchmarkData)}
             borderClasses="sm:border-r sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -438,6 +443,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={monthlyPct ?? null}
             amt={monthlyAmt ?? null}
             currency={currency}
+            benchmarkText={getBenchmarkText("1M", isTRY, data.benchmarkData)}
             borderClasses="sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -445,6 +451,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={ytdPct ?? null}
             amt={ytdAmt ?? null}
             currency={currency}
+            benchmarkText={getBenchmarkText("YTD", isTRY, data.benchmarkData)}
             borderClasses="sm:border-r border-[var(--color-border)]/70 sm:border-b-0 border-b"
           />
           <CombinedReturnCell
@@ -1273,6 +1280,9 @@ function BenchmarkComparison({
 
     if (isTRY) {
       items.push({ name: "Dolar", value: periodData.usd, color: "#10b981" }); // Green
+      if (periodData.inflation !== undefined && periodData.inflation !== null) {
+        items.push({ name: "Enflasyon", value: periodData.inflation, color: "#ef4444" }); // Red
+      }
     }
 
     return items.filter((item) => item.value !== null) as {

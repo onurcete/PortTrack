@@ -783,12 +783,113 @@ async function fetchYahooHistoryCached(symbol: string, fromDate: Date): Promise<
   }
 }
 
+// TÜİK Resmi TÜFE Endeks Sayıları (2003=100) - Aylık Veriler
+const TURKISH_CPI_HISTORY = [
+  { date: new Date(Date.UTC(2022, 11, 31)), value: 1128.45 }, // Aralık 2022
+  { date: new Date(Date.UTC(2023, 0, 31)), value: 1203.48 },  // Ocak 2023
+  { date: new Date(Date.UTC(2023, 1, 28)), value: 1241.33 },  // Şubat 2023
+  { date: new Date(Date.UTC(2023, 2, 31)), value: 1269.75 },  // Mart 2023
+  { date: new Date(Date.UTC(2023, 3, 30)), value: 1300.04 },  // Nisan 2023
+  { date: new Date(Date.UTC(2023, 4, 31)), value: 1300.60 },  // Mayıs 2023
+  { date: new Date(Date.UTC(2023, 5, 30)), value: 1351.59 },  // Haziran 2023
+  { date: new Date(Date.UTC(2023, 6, 31)), value: 1479.84 },  // Temmuz 2023
+  { date: new Date(Date.UTC(2023, 7, 31)), value: 1614.31 },  // Ağustos 2023
+  { date: new Date(Date.UTC(2023, 8, 30)), value: 1691.04 },  // Eylül 2023
+  { date: new Date(Date.UTC(2023, 9, 31)), value: 1749.11 },  // Ekim 2023
+  { date: new Date(Date.UTC(2023, 10, 30)), value: 1806.50 }, // Kasım 2023
+  { date: new Date(Date.UTC(2023, 11, 31)), value: 1859.38 }, // Aralık 2023
+  { date: new Date(Date.UTC(2024, 0, 31)), value: 1984.02 },  // Ocak 2024
+  { date: new Date(Date.UTC(2024, 1, 29)), value: 2073.88 },  // Şubat 2024
+  { date: new Date(Date.UTC(2024, 2, 31)), value: 2139.47 },  // Mart 2024
+  { date: new Date(Date.UTC(2024, 3, 30)), value: 2207.50 },  // Nisan 2024
+  { date: new Date(Date.UTC(2024, 4, 31)), value: 2281.85 },  // Mayıs 2024
+  { date: new Date(Date.UTC(2024, 5, 30)), value: 2319.29 },  // Haziran 2024
+  { date: new Date(Date.UTC(2024, 6, 31)), value: 2394.10 },  // Temmuz 2024
+  { date: new Date(Date.UTC(2024, 7, 31)), value: 2453.34 },  // Ağustos 2024
+  { date: new Date(Date.UTC(2024, 8, 30)), value: 2526.16 },  // Eylül 2024
+  { date: new Date(Date.UTC(2024, 9, 31)), value: 2598.91 },  // Ekim 2024
+  { date: new Date(Date.UTC(2024, 10, 30)), value: 2657.23 }, // Kasım 2024
+  { date: new Date(Date.UTC(2024, 11, 31)), value: 2684.55 }, // Aralık 2024
+  { date: new Date(Date.UTC(2025, 0, 31)), value: 2819.65 },  // Ocak 2025
+  { date: new Date(Date.UTC(2025, 1, 28)), value: 2883.75 },  // Şubat 2025
+  { date: new Date(Date.UTC(2025, 2, 31)), value: 2954.69 },  // Mart 2025
+  { date: new Date(Date.UTC(2025, 3, 30)), value: 3043.23 },  // Nisan 2025
+  { date: new Date(Date.UTC(2025, 4, 31)), value: 3089.74 },  // Mayıs 2025
+  { date: new Date(Date.UTC(2025, 5, 30)), value: 3132.17 },  // Haziran 2025
+  { date: new Date(Date.UTC(2025, 6, 31)), value: 3196.66 },  // Temmuz 2025
+  { date: new Date(Date.UTC(2025, 7, 31)), value: 3261.72 },  // Ağustos 2025
+  { date: new Date(Date.UTC(2025, 8, 30)), value: 3367.22 },  // Eylül 2025
+  { date: new Date(Date.UTC(2025, 9, 31)), value: 3453.09 },  // Ekim 2025
+  { date: new Date(Date.UTC(2025, 10, 30)), value: 3482.96 }, // Kasım 2025
+  { date: new Date(Date.UTC(2025, 11, 31)), value: 3513.87 }, // Aralık 2025
+  { date: new Date(Date.UTC(2026, 0, 31)), value: 3683.83 },  // Ocak 2026
+  { date: new Date(Date.UTC(2026, 1, 28)), value: 3793.05 },  // Şubat 2026
+  { date: new Date(Date.UTC(2026, 2, 31)), value: 3866.74 },  // Mart 2026
+  { date: new Date(Date.UTC(2026, 3, 30)), value: 4028.47 },  // Nisan 2026
+  { date: new Date(Date.UTC(2026, 4, 31)), value: 4097.55 },  // Mayıs 2026
+];
+
+/** Belirli bir tarih için CPI endeksini doğrusal interpolasyon ve dinamik projeksiyonla hesaplar. */
+export function getCpiAtDate(date: Date): number {
+  const t = date.getTime();
+  const points = TURKISH_CPI_HISTORY;
+
+  if (t <= points[0].date.getTime()) {
+    return points[0].value;
+  }
+
+  let lastPoint = points[points.length - 1];
+  let secondLastPoint = points[points.length - 2];
+  
+  // En son ayın enflasyon oranı (örn. Mayıs 2026 / Nisan 2026)
+  const lastMoMChange = (lastPoint.value / secondLastPoint.value) - 1;
+
+  const activePoints = [...points];
+
+  // Eğer sorgulanan tarih bilinen son veriden daha sonraysa, aylık hızı koruyarak gelecek ayları dinamik üret
+  while (t > lastPoint.date.getTime()) {
+    const nextDate = new Date(lastPoint.date);
+    nextDate.setUTCMonth(nextDate.getUTCMonth() + 2, 0); // Sonraki ayın son günü
+    const nextValue = lastPoint.value * (1 + lastMoMChange);
+    const nextPoint = { date: nextDate, value: nextValue };
+    activePoints.push(nextPoint);
+    lastPoint = nextPoint;
+  }
+
+  // İnterpolasyon için çevreleyen noktaları bul
+  let before = activePoints[0];
+  let after = activePoints[1];
+
+  for (let i = 1; i < activePoints.length; i++) {
+    if (activePoints[i].date.getTime() >= t) {
+      before = activePoints[i - 1];
+      after = activePoints[i];
+      break;
+    }
+  }
+
+  const range = after.date.getTime() - before.date.getTime();
+  if (range === 0) return before.value;
+
+  const factor = (t - before.date.getTime()) / range;
+  return before.value + (after.value - before.value) * factor;
+}
+
+/** İki tarih arasındaki birikimli enflasyon getirisini hesaplar. */
+export function getInflationReturn(startDate: Date, endDate: Date): number {
+  const startCPI = getCpiAtDate(startDate);
+  const endCPI = getCpiAtDate(endDate);
+  if (startCPI <= 0) return 0;
+  return ((endCPI / startCPI) - 1) * 100;
+}
+
 export interface BenchmarkComparisonDTO {
   portfolio: number;
   bist: number | null;
   sp500: number | null;
   gold: number | null;
   usd: number | null;
+  inflation?: number | null;
 }
 
 export interface BenchmarkComparisonData {
@@ -965,6 +1066,7 @@ export async function getBenchmarkComparisonData(): Promise<BenchmarkComparisonD
       sp500: getBenchmarkReturn(sp500Hist, p.start, d0, "USD", "TRY"),
       gold: getBenchmarkReturn(goldHist, p.start, d0, "USD", "TRY"),
       usd: getBenchmarkReturn(usdTryHist, p.start, d0, "TRY", "TRY"),
+      inflation: getInflationReturn(p.start, d0),
     };
 
     result.usd[p.key] = {
@@ -973,6 +1075,7 @@ export async function getBenchmarkComparisonData(): Promise<BenchmarkComparisonD
       sp500: getBenchmarkReturn(sp500Hist, p.start, d0, "USD", "USD"),
       gold: getBenchmarkReturn(goldHist, p.start, d0, "USD", "USD"),
       usd: 0,
+      inflation: null,
     };
   }
 
