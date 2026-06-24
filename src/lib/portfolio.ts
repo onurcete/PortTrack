@@ -47,6 +47,16 @@ export interface Position {
   dailyChangePct: number | null;
   xirrTRY: number | null;
   xirrUSD: number | null;
+  mtdPctTRY?: number | null;
+  mtdPctUSD?: number | null;
+  oneMonthPctTRY?: number | null;
+  oneMonthPctUSD?: number | null;
+  sixMonthPctTRY?: number | null;
+  sixMonthPctUSD?: number | null;
+  ytdPctTRY?: number | null;
+  ytdPctUSD?: number | null;
+  oneYearPctTRY?: number | null;
+  oneYearPctUSD?: number | null;
 }
 
 export interface PortfolioTotals {

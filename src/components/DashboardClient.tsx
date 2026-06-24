@@ -39,6 +39,20 @@ const POSITION_SECTION_ORDER: AssetType[] = [
   "BES",
 ];
 
+const OPTIONAL_COLUMNS: {
+  key: string;
+  label: string;
+  headerLabel: string;
+  fieldTRY: keyof PositionDTO;
+  fieldUSD: keyof PositionDTO;
+}[] = [
+  { key: "mtd", label: "MTD % K/Z", headerLabel: "MTD", fieldTRY: "mtdPctTRY", fieldUSD: "mtdPctUSD" },
+  { key: "1m", label: "1 Ay % K/Z", headerLabel: "1 Ay", fieldTRY: "oneMonthPctTRY", fieldUSD: "oneMonthPctUSD" },
+  { key: "6m", label: "6 Ay % K/Z", headerLabel: "6 Ay", fieldTRY: "sixMonthPctTRY", fieldUSD: "sixMonthPctUSD" },
+  { key: "ytd", label: "YTD % K/Z", headerLabel: "YTD", fieldTRY: "ytdPctTRY", fieldUSD: "ytdPctUSD" },
+  { key: "1y", label: "1 Yıl % K/Z", headerLabel: "1 Yıl", fieldTRY: "oneYearPctTRY", fieldUSD: "oneYearPctUSD" },
+];
+
 export interface PositionDTO {
   symbol: string;
   assetType: AssetType;
@@ -67,6 +81,16 @@ export interface PositionDTO {
   dailyChangePct: number | null;
   xirrTRY: number | null;
   xirrUSD: number | null;
+  mtdPctTRY: number | null;
+  mtdPctUSD: number | null;
+  oneMonthPctTRY: number | null;
+  oneMonthPctUSD: number | null;
+  sixMonthPctTRY: number | null;
+  sixMonthPctUSD: number | null;
+  ytdPctTRY: number | null;
+  ytdPctUSD: number | null;
+  oneYearPctTRY: number | null;
+  oneYearPctUSD: number | null;
 }
 
 export interface BenchmarkComparisonDTO {
@@ -663,6 +687,8 @@ function PositionsTable({
 }) {
   const [showClosed, setShowClosed] = useState(false);
   const [getiriMode, setGetiriMode] = useState<"getiri" | "roi" | "xirr">("getiri");
+  const [selectedOptionalCols, setSelectedOptionalCols] = useState<string[]>([]);
+  const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
   const showRoi = getiriMode === "roi";
   const showXirr = getiriMode === "xirr";
   const [sortField, setSortField] = useState<SortField>("value");
@@ -777,9 +803,34 @@ function PositionsTable({
     });
   }, [positionsByType, sortField, sortOrder, isTRY, currentUsdTry, showClosed]);
 
-  const gridColsClass = showClosed
-    ? "grid-cols-[minmax(120px,_1.5fr)_minmax(100px,_1.2fr)_minmax(100px,_1.2fr)_minmax(100px,_1.2fr)_minmax(80px,_90px)]"
-    : "grid-cols-[minmax(110px,_1.3fr)_minmax(60px,_70px)_minmax(90px,_0.9fr)_minmax(90px,_0.9fr)_minmax(95px,_1.1fr)_minmax(90px,_1fr)_minmax(95px,_1.1fr)_minmax(80px,_90px)]";
+  const gridStyle = useMemo(() => {
+    if (showClosed) {
+      return {
+        display: "grid",
+        gridTemplateColumns: "minmax(120px, 1.5fr) minmax(100px, 1.2fr) minmax(100px, 1.2fr) minmax(100px, 1.2fr) minmax(80px, 90px)",
+        gap: "8px",
+        alignItems: "center"
+      };
+    } else {
+      const cols = [
+        "minmax(110px, 1.3fr)", // Sembol
+        "minmax(60px, 70px)",   // Gün
+        "minmax(90px, 0.9fr)",  // Ort. Maliyet
+        "minmax(90px, 0.9fr)",  // Güncel Fiyat
+        "minmax(95px, 1.1fr)",  // Değer
+        "minmax(90px, 1fr)",    // Günlük Değişim
+        "minmax(95px, 1.1fr)",  // K/Z
+        ...selectedOptionalCols.map(() => "minmax(75px, 0.8fr)"),
+        "minmax(80px, 90px)"    // Getiri
+      ].join(" ");
+      return {
+        display: "grid",
+        gridTemplateColumns: cols,
+        gap: "8px",
+        alignItems: "center"
+      };
+    }
+  }, [showClosed, selectedOptionalCols]);
 
   return (
     <Card className="overflow-hidden">
@@ -808,6 +859,55 @@ function PositionsTable({
             Kapalı Pozisyonlar ({closedPositions.length})
           </button>
         </div>
+
+        {/* Özelleştir Açılır Menüsü */}
+        {!showClosed && (
+          <div className="relative">
+            <button
+              onClick={() => setShowCustomizeMenu(!showCustomizeMenu)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] transition-all cursor-pointer select-none"
+            >
+              <span>⚙️ Sütunları Özelleştir</span>
+            </button>
+
+            {showCustomizeMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowCustomizeMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl z-50 flex flex-col gap-2">
+                  <p className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1 px-1">
+                    Görüntülenecek Sütunlar
+                  </p>
+                  {OPTIONAL_COLUMNS.map((col) => {
+                    const isSelected = selectedOptionalCols.includes(col.key);
+                    return (
+                      <label 
+                        key={col.key} 
+                        className="flex items-center gap-2.5 px-1 py-1.5 hover:bg-[var(--color-surface-muted)]/40 rounded-lg cursor-pointer text-xs font-semibold text-[var(--color-text)] select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (isSelected) {
+                              setSelectedOptionalCols(selectedOptionalCols.filter(k => k !== col.key));
+                            } else {
+                              setSelectedOptionalCols([...selectedOptionalCols, col.key]);
+                            }
+                          }}
+                          className="rounded border-[var(--color-border)] text-[var(--color-brand)] focus:ring-[var(--color-brand)] accent-[var(--color-brand)] h-4 w-4 cursor-pointer"
+                        />
+                        <span>{col.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
       {activePositions.length === 0 ? (
         <p className="px-6 py-10 text-center text-sm text-[var(--color-muted)]">
@@ -887,7 +987,7 @@ function PositionsTable({
                 </div>
 
                 {/* Tablo başlıkları */}
-                <div className={cn("grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40 bg-[var(--color-surface-muted)]/30", gridColsClass)}>
+                <div className="grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40 bg-[var(--color-surface-muted)]/30" style={gridStyle}>
                   {showClosed ? (
                     <>
                       <SortHeader
@@ -991,6 +1091,18 @@ function PositionsTable({
                         onSort={handleSort}
                         align="right"
                       />
+                      {selectedOptionalCols.map((colKey) => {
+                        const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
+                        if (!colDef) return null;
+                        return (
+                          <span 
+                            key={colKey} 
+                            className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] text-right block pr-2 select-none"
+                          >
+                            {colDef.headerLabel}
+                          </span>
+                        );
+                      })}
                       <SortHeader
                         field="pct"
                         label={
@@ -1001,7 +1113,7 @@ function PositionsTable({
                               setGetiriMode((prev) => {
                                 if (prev === "getiri") return "roi";
                                 if (prev === "roi") return "xirr";
-                                return "getiri";
+                                  return "getiri";
                               });
                             }}
                             title="Tıklayarak Getiri, ROI (Yatırım Getirisi) ve XIRR (Yıllıklandırılmış Getiri) arasında geçiş yapın"
@@ -1033,7 +1145,8 @@ function PositionsTable({
                       <div
                         key={`${p.assetType}-${p.symbol}`}
                         onClick={() => onSelectPosition?.(p)}
-                        className={cn("grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors hover:bg-[var(--color-surface-muted)]/40 cursor-pointer", gridColsClass)}
+                        className="grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors hover:bg-[var(--color-surface-muted)]/40 cursor-pointer"
+                        style={gridStyle}
                       >
                         {/* Sembol */}
                         <div className="flex items-center gap-3 min-w-0">
@@ -1144,7 +1257,8 @@ function PositionsTable({
                     <div
                       key={`${p.assetType}-${p.symbol}`}
                       onClick={() => onSelectPosition?.(p)}
-                      className={cn("grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors hover:bg-[var(--color-surface-muted)]/40 cursor-pointer", gridColsClass)}
+                      className="grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors hover:bg-[var(--color-surface-muted)]/40 cursor-pointer"
+                      style={gridStyle}
                     >
                       {/* Sembol */}
                       <div className="flex items-center gap-3 min-w-0">
@@ -1221,6 +1335,33 @@ function PositionsTable({
                         {positive ? "+" : ""}
                         {formatMoney(pnl, currency)}
                       </p>
+
+                      {/* Optional Column Values */}
+                      {selectedOptionalCols.map((colKey) => {
+                        const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
+                        if (!colDef) return null;
+                        const val = (isTRY
+                          ? p[colDef.fieldTRY]
+                          : p[colDef.fieldUSD]) as number | null;
+                        return (
+                          <div key={colKey} className="flex justify-end">
+                            {val !== null && val !== undefined ? (
+                              <span
+                                className={cn(
+                                  "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px] select-none",
+                                  val >= 0
+                                    ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
+                                    : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
+                                )}
+                              >
+                                {formatPercent(val)}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-medium text-[var(--color-muted)] pr-4">-</span>
+                            )}
+                          </div>
+                        );
+                      })}
 
                       {/* Yüzde badge */}
                       <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
