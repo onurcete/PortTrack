@@ -144,28 +144,70 @@ export async function getPortfolio(): Promise<PortfolioData> {
   }
 
   function calculatePeriodReturn(
+    symbolTxs: TxInput[],
     symbolSnaps: typeof snaps,
     dStart: Date,
-    priceTodayTRY: number,
+    valueTodayTRY: number,
+    valueTodayUSD: number,
     isUSD: boolean,
     fxStart: number,
     fxEnd: number
   ): number | null {
     const startSnap = findPriceOnOrBefore(symbolSnaps, dStart);
-    if (!startSnap || startSnap.close <= 0) return null;
+    const priceAtStartTRY = startSnap ? startSnap.close : null;
+
+    let qtyAtStart = 0;
+    for (const t of symbolTxs) {
+      if (t.date.getTime() < dStart.getTime()) {
+        if (t.side === "BUY") {
+          qtyAtStart += t.quantity;
+        } else {
+          qtyAtStart -= t.quantity;
+        }
+      }
+    }
+    if (qtyAtStart < 0) qtyAtStart = 0;
+
+    let buysPeriodTRY = 0;
+    let buysPeriodUSD = 0;
+    let sellsPeriodTRY = 0;
+    let sellsPeriodUSD = 0;
+
+    for (const t of symbolTxs) {
+      if (t.date.getTime() >= dStart.getTime()) {
+        const rate = fx(t.date) || currentUsdTry;
+        const tTRY = t.currency === "USD" ? t.total * rate : t.total;
+        const tUSD = t.currency === "USD" ? t.total : t.total / rate;
+
+        if (t.side === "BUY") {
+          buysPeriodTRY += tTRY;
+          buysPeriodUSD += tUSD;
+        } else {
+          sellsPeriodTRY += tTRY;
+          sellsPeriodUSD += tUSD;
+        }
+      }
+    }
 
     if (!isUSD) {
-      return ((priceTodayTRY / startSnap.close) - 1) * 100;
+      const valueStartTRY = qtyAtStart * (priceAtStartTRY ?? 0);
+      const netCashFlowTRY = buysPeriodTRY - sellsPeriodTRY;
+      const pnlTRY = valueTodayTRY - valueStartTRY - netCashFlowTRY;
+      const denominatorTRY = valueStartTRY + buysPeriodTRY;
+      return denominatorTRY > 0.01 ? (pnlTRY / denominatorTRY) * 100 : null;
     } else {
-      const startUSD = startSnap.close / fxStart;
-      const endUSD = priceTodayTRY / fxEnd;
-      if (startUSD <= 0) return null;
-      return ((endUSD / startUSD) - 1) * 100;
+      const priceAtStartUSD = priceAtStartTRY !== null ? priceAtStartTRY / fxStart : null;
+      const valueStartUSD = qtyAtStart * (priceAtStartUSD ?? 0);
+      const netCashFlowUSD = buysPeriodUSD - sellsPeriodUSD;
+      const pnlUSD = valueTodayUSD - valueStartUSD - netCashFlowUSD;
+      const denominatorUSD = valueStartUSD + buysPeriodUSD;
+      return denominatorUSD > 0.01 ? (pnlUSD / denominatorUSD) * 100 : null;
     }
   }
 
   const positionsWithPeriodReturns = positions.map((p) => {
     const symbolSnaps = snapsBySymbol.get(p.symbol) || [];
+    const symbolTxs = tx.filter((t) => t.symbol === p.symbol);
     const priceTodayTRY = p.currentPriceTRY ?? (p.quantity > 0 ? p.avgCostTRY : null);
     if (priceTodayTRY == null) {
       return {
@@ -187,16 +229,16 @@ export async function getPortfolio(): Promise<PortfolioData> {
 
     return {
       ...p,
-      mtdPctTRY: calculatePeriodReturn(symbolSnaps, dMtd, priceTodayTRY, false, fxStartMtd, fxEnd),
-      mtdPctUSD: calculatePeriodReturn(symbolSnaps, dMtd, priceTodayTRY, true, fxStartMtd, fxEnd),
-      oneMonthPctTRY: calculatePeriodReturn(symbolSnaps, d1M, priceTodayTRY, false, fxStart1M, fxEnd),
-      oneMonthPctUSD: calculatePeriodReturn(symbolSnaps, d1M, priceTodayTRY, true, fxStart1M, fxEnd),
-      sixMonthPctTRY: calculatePeriodReturn(symbolSnaps, d6M, priceTodayTRY, false, fxStart6M, fxEnd),
-      sixMonthPctUSD: calculatePeriodReturn(symbolSnaps, d6M, priceTodayTRY, true, fxStart6M, fxEnd),
-      ytdPctTRY: calculatePeriodReturn(symbolSnaps, dYtd, priceTodayTRY, false, fxStartYtd, fxEnd),
-      ytdPctUSD: calculatePeriodReturn(symbolSnaps, dYtd, priceTodayTRY, true, fxStartYtd, fxEnd),
-      oneYearPctTRY: calculatePeriodReturn(symbolSnaps, d1Y, priceTodayTRY, false, fxStart1Y, fxEnd),
-      oneYearPctUSD: calculatePeriodReturn(symbolSnaps, d1Y, priceTodayTRY, true, fxStart1Y, fxEnd),
+      mtdPctTRY: calculatePeriodReturn(symbolTxs, symbolSnaps, dMtd, p.valueTRY, p.valueUSD, false, fxStartMtd, fxEnd),
+      mtdPctUSD: calculatePeriodReturn(symbolTxs, symbolSnaps, dMtd, p.valueTRY, p.valueUSD, true, fxStartMtd, fxEnd),
+      oneMonthPctTRY: calculatePeriodReturn(symbolTxs, symbolSnaps, d1M, p.valueTRY, p.valueUSD, false, fxStart1M, fxEnd),
+      oneMonthPctUSD: calculatePeriodReturn(symbolTxs, symbolSnaps, d1M, p.valueTRY, p.valueUSD, true, fxStart1M, fxEnd),
+      sixMonthPctTRY: calculatePeriodReturn(symbolTxs, symbolSnaps, d6M, p.valueTRY, p.valueUSD, false, fxStart6M, fxEnd),
+      sixMonthPctUSD: calculatePeriodReturn(symbolTxs, symbolSnaps, d6M, p.valueTRY, p.valueUSD, true, fxStart6M, fxEnd),
+      ytdPctTRY: calculatePeriodReturn(symbolTxs, symbolSnaps, dYtd, p.valueTRY, p.valueUSD, false, fxStartYtd, fxEnd),
+      ytdPctUSD: calculatePeriodReturn(symbolTxs, symbolSnaps, dYtd, p.valueTRY, p.valueUSD, true, fxStartYtd, fxEnd),
+      oneYearPctTRY: calculatePeriodReturn(symbolTxs, symbolSnaps, d1Y, p.valueTRY, p.valueUSD, false, fxStart1Y, fxEnd),
+      oneYearPctUSD: calculatePeriodReturn(symbolTxs, symbolSnaps, d1Y, p.valueTRY, p.valueUSD, true, fxStart1Y, fxEnd),
     };
   });
 
