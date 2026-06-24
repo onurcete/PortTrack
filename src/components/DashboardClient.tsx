@@ -168,22 +168,22 @@ function ProfitValue({
   );
 }
 
-function getBenchmarkText(
+function getAssetTypePeriodReturnsList(
   period: "1W" | "1M" | "YTD",
   isTRY: boolean,
   periodReturns?: PeriodReturnsDTO
-) {
-  if (!periodReturns?.assetTypeReturns) return "";
+): { label: string; pct: number }[] {
+  if (!periodReturns?.assetTypeReturns) return [];
   const key = period === "1W" ? "weekly" : period === "1M" ? "mtd" : "ytd";
   const returns = periodReturns.assetTypeReturns[key];
-  if (!returns) return "";
+  if (!returns) return [];
 
-  const parts: string[] = [];
+  const list: { label: string; pct: number }[] = [];
   const typesToDisplay = [
     { type: "TEFAS", label: "TEFAS" },
-    { type: "BIST", label: "Hisse (BIST)" },
-    { type: "FOREIGN", label: "Yabancı Borsa" },
-    { type: "METAL", label: "Kıymetli Maden" },
+    { type: "BIST", label: "Hisse" },
+    { type: "FOREIGN", label: "Y.Borsa" },
+    { type: "METAL", label: "K.Maden" },
     { type: "CRYPTO", label: "Kripto" },
     { type: "FX", label: "Döviz" },
     { type: "BES", label: "BES" },
@@ -194,12 +194,11 @@ function getBenchmarkText(
     if (val) {
       const pct = isTRY ? val.TRY : val.USD;
       if (pct !== null && pct !== undefined) {
-        parts.push(`${item.label}: ${formatPercent(pct)}`);
+        list.push({ label: item.label, pct });
       }
     }
   }
-
-  return parts.join(" • ");
+  return list;
 }
 
 function CombinedReturnCell({
@@ -207,14 +206,14 @@ function CombinedReturnCell({
   pct,
   amt,
   currency,
-  benchmarkText,
+  assetReturns = [],
   borderClasses,
 }: {
   label: string;
   pct: number | null;
   amt: number | null;
   currency: "TRY" | "USD";
-  benchmarkText?: string;
+  assetReturns?: { label: string; pct: number }[];
   borderClasses: string;
 }) {
   if (pct === null || amt === null) return null;
@@ -222,32 +221,48 @@ function CombinedReturnCell({
   const negative = pct < 0;
 
   return (
-    <div className={cn("p-5 flex flex-col justify-between bg-[var(--color-surface-muted)]/20", borderClasses)}>
-      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
-        {label}
-      </span>
-      <div className="mt-2.5">
-        <span
-          className={cn(
-            "text-2xl sm:text-3xl font-black tracking-tight tabular-nums block",
-            positive ? "text-[var(--color-profit)]" : negative ? "text-[var(--color-loss)]" : "text-[var(--color-muted)]",
-          )}
-        >
-          {formatPercent(pct)}
+    <div className={cn("p-5 flex justify-between items-center gap-4 bg-[var(--color-surface-muted)]/20", borderClasses)}>
+      {/* Sol Kısım: Ana İstatistikler */}
+      <div className="flex flex-col justify-between flex-1 min-w-0">
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] truncate block">
+          {label}
         </span>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-muted)] font-semibold">
-          <span className={cn(positive ? "text-[var(--color-profit)]/90" : negative ? "text-[var(--color-loss)]/90" : "text-[var(--color-muted)]")}>
+        <div className="mt-2.5">
+          <span
+            className={cn(
+              "text-2xl sm:text-3xl font-black tracking-tight tabular-nums block leading-tight",
+              positive ? "text-[var(--color-profit)]" : negative ? "text-[var(--color-loss)]" : "text-[var(--color-muted)]",
+            )}
+          >
+            {formatPercent(pct)}
+          </span>
+          <span className={cn("text-xs font-semibold tabular-nums block mt-1 leading-none", positive ? "text-[var(--color-profit)]/90" : negative ? "text-[var(--color-loss)]/90" : "text-[var(--color-muted)]")}>
             {positive ? "+" : ""}
             {formatMoney(amt, currency)}
           </span>
-          {benchmarkText && (
-            <>
-              <span className="text-[var(--color-border)]">•</span>
-              <span className="text-[var(--color-muted)]/70 font-medium">{benchmarkText}</span>
-            </>
-          )}
         </div>
       </div>
+
+      {/* Sağ Kısım: Varlık Getirileri (Dikey Liste) */}
+      {assetReturns.length > 0 && (
+        <div className="flex flex-col gap-1 text-[11px] sm:text-xs text-[var(--color-muted)]/90 font-medium justify-center pl-4 border-l border-[var(--color-border)]/45 shrink-0 select-none">
+          {assetReturns.map((item, idx) => {
+            const pos = item.pct > 0;
+            const neg = item.pct < 0;
+            return (
+              <div key={idx} className="flex items-center justify-between gap-3 text-right">
+                <span className="text-[var(--color-muted)] text-[10px] sm:text-[11px]">{item.label}</span>
+                <span className={cn(
+                  "font-bold tabular-nums",
+                  pos ? "text-[var(--color-profit)]" : neg ? "text-[var(--color-loss)]" : "text-[var(--color-muted)]"
+                )}>
+                  {formatPercent(item.pct)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -451,7 +466,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={weeklyPct ?? null}
             amt={weeklyAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("1W", isTRY, data.periodReturns)}
+            assetReturns={getAssetTypePeriodReturnsList("1W", isTRY, data.periodReturns)}
             borderClasses="sm:border-r sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -459,7 +474,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={monthlyPct ?? null}
             amt={monthlyAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("1M", isTRY, data.periodReturns)}
+            assetReturns={getAssetTypePeriodReturnsList("1M", isTRY, data.periodReturns)}
             borderClasses="sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -467,7 +482,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={ytdPct ?? null}
             amt={ytdAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("YTD", isTRY, data.periodReturns)}
+            assetReturns={getAssetTypePeriodReturnsList("YTD", isTRY, data.periodReturns)}
             borderClasses="sm:border-r border-[var(--color-border)]/70 sm:border-b-0 border-b"
           />
           <CombinedReturnCell
