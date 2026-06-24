@@ -108,6 +108,11 @@ export interface PeriodReturnsDTO {
   allTimeUSD: number | null;
   allTimeAmtTRY: number | null;
   allTimeAmtUSD: number | null;
+  assetTypeReturns?: {
+    weekly: Record<string, { TRY: number | null; USD: number | null }>;
+    mtd: Record<string, { TRY: number | null; USD: number | null }>;
+    ytd: Record<string, { TRY: number | null; USD: number | null }>;
+  };
 }
 
 export interface DashboardDTO {
@@ -166,23 +171,34 @@ function ProfitValue({
 function getBenchmarkText(
   period: "1W" | "1M" | "YTD",
   isTRY: boolean,
-  benchmarkData?: BenchmarkComparisonData
+  periodReturns?: PeriodReturnsDTO
 ) {
-  if (!benchmarkData) return "";
-  const data = isTRY ? benchmarkData.try[period] : benchmarkData.usd[period];
-  if (!data) return "";
+  if (!periodReturns?.assetTypeReturns) return "";
+  const key = period === "1W" ? "weekly" : period === "1M" ? "mtd" : "ytd";
+  const returns = periodReturns.assetTypeReturns[key];
+  if (!returns) return "";
 
   const parts: string[] = [];
-  if (isTRY) {
-    if (data.bist !== null) parts.push(`BIST: ${formatPercent(data.bist)}`);
-    if (data.usd !== null) parts.push(`USD: ${formatPercent(data.usd)}`);
-    if (data.inflation !== undefined && data.inflation !== null) {
-      parts.push(`Enflasyon: ${formatPercent(data.inflation)}`);
+  const typesToDisplay = [
+    { type: "TEFAS", label: "TEFAS" },
+    { type: "BIST", label: "Hisse (BIST)" },
+    { type: "FOREIGN", label: "Yabancı Borsa" },
+    { type: "METAL", label: "Kıymetli Maden" },
+    { type: "CRYPTO", label: "Kripto" },
+    { type: "FX", label: "Döviz" },
+    { type: "BES", label: "BES" },
+  ];
+
+  for (const item of typesToDisplay) {
+    const val = returns[item.type];
+    if (val) {
+      const pct = isTRY ? val.TRY : val.USD;
+      if (pct !== null && pct !== undefined) {
+        parts.push(`${item.label}: ${formatPercent(pct)}`);
+      }
     }
-  } else {
-    if (data.sp500 !== null) parts.push(`SPX: ${formatPercent(data.sp500)}`);
-    if (data.gold !== null) parts.push(`Altın: ${formatPercent(data.gold)}`);
   }
+
   return parts.join(" • ");
 }
 
@@ -435,7 +451,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={weeklyPct ?? null}
             amt={weeklyAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("1W", isTRY, data.benchmarkData)}
+            benchmarkText={getBenchmarkText("1W", isTRY, data.periodReturns)}
             borderClasses="sm:border-r sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -443,7 +459,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={monthlyPct ?? null}
             amt={monthlyAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("1M", isTRY, data.benchmarkData)}
+            benchmarkText={getBenchmarkText("1M", isTRY, data.periodReturns)}
             borderClasses="sm:border-b border-[var(--color-border)]/70"
           />
           <CombinedReturnCell
@@ -451,7 +467,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             pct={ytdPct ?? null}
             amt={ytdAmt ?? null}
             currency={currency}
-            benchmarkText={getBenchmarkText("YTD", isTRY, data.benchmarkData)}
+            benchmarkText={getBenchmarkText("YTD", isTRY, data.periodReturns)}
             borderClasses="sm:border-r border-[var(--color-border)]/70 sm:border-b-0 border-b"
           />
           <CombinedReturnCell

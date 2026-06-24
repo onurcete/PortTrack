@@ -520,6 +520,11 @@ export interface PeriodReturnsDTO {
   allTimeUSD: number | null;
   allTimeAmtTRY: number | null;
   allTimeAmtUSD: number | null;
+  assetTypeReturns?: {
+    weekly: Record<string, { TRY: number | null; USD: number | null }>;
+    mtd: Record<string, { TRY: number | null; USD: number | null }>;
+    ytd: Record<string, { TRY: number | null; USD: number | null }>;
+  };
 }
 
 export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
@@ -606,12 +611,19 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
     return { valueTRY: valTRY, valueUSD: valUSD };
   }
 
-  const t0 = getValAt(today);
-  const t1 = getValAt(new Date(today.getTime() - 24 * 60 * 60 * 1000));
-  const t7 = getValAt(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
-  const tMtd = getValAt(new Date(Date.UTC(trYear(today), trMonth(today), 0, 12, 0, 0)));
-  const t30 = getValAt(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000));
-  const tYtd = getValAt(new Date(Date.UTC(trYear(today) - 1, 11, 31, 12, 0, 0)));
+  const d0 = today;
+  const d1 = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const d7 = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const dMtd = new Date(Date.UTC(trYear(today), trMonth(today), 0, 12, 0, 0));
+  const d30 = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const dYtd = new Date(Date.UTC(trYear(today) - 1, 11, 31, 12, 0, 0));
+
+  const t0 = getValAt(d0);
+  const t1 = getValAt(d1);
+  const t7 = getValAt(d7);
+  const tMtd = getValAt(dMtd);
+  const t30 = getValAt(d30);
+  const tYtd = getValAt(dYtd);
 
   function calcPct(cur: number, prev: number) {
     if (cur == null || prev == null || prev <= 0) return null;
@@ -621,6 +633,59 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
   function calcAmt(cur: number, prev: number) {
     if (cur == null || prev == null) return null;
     return cur - prev;
+  }
+
+  // Calculate asset type value-weighted returns
+  const priceMapToday = new Map<string, { priceTRY: number }>();
+  for (const [symbol, points] of bySymbol) {
+    const v = lookupOnOrBefore(points, today);
+    if (v != null) priceMapToday.set(symbol, { priceTRY: v });
+  }
+  const { positions: currentPositions } = computePositions(tx, priceMapToday, fx, current);
+  const openPositions = currentPositions.filter((p) => p.quantity > 1e-6);
+
+  function getAssetReturns(dStart: Date, dEnd: Date) {
+    const typeTotals = new Map<string, {
+      valTRY: number;
+      valUSD: number;
+      sumTRY: number;
+      sumUSD: number;
+    }>();
+
+    for (const p of openPositions) {
+      const points = bySymbol.get(p.symbol) || [];
+      const pStartTRY = lookupOnOrBefore(points, dStart);
+      const pEndTRY = lookupOnOrBefore(points, dEnd);
+      
+      if (pStartTRY == null || pEndTRY == null || pStartTRY <= 0) continue;
+
+      const rTRY = ((pEndTRY / pStartTRY) - 1) * 100;
+
+      const rateStart = fx(dStart);
+      const rateEnd = fx(dEnd);
+      const pStartUSD = pStartTRY / rateStart;
+      const pEndUSD = pEndTRY / rateEnd;
+      const rUSD = pStartUSD > 0 ? ((pEndUSD / pStartUSD) - 1) * 100 : 0;
+
+      const t = p.assetType;
+      const cur = typeTotals.get(t) ?? { valTRY: 0, valUSD: 0, sumTRY: 0, sumUSD: 0 };
+      
+      cur.valTRY += p.valueTRY;
+      cur.valUSD += p.valueUSD;
+      cur.sumTRY += p.valueTRY * rTRY;
+      cur.sumUSD += p.valueUSD * rUSD;
+
+      typeTotals.set(t, cur);
+    }
+
+    const result: Record<string, { TRY: number | null; USD: number | null }> = {};
+    for (const [t, data] of typeTotals.entries()) {
+      result[t] = {
+        TRY: data.valTRY > 0 ? data.sumTRY / data.valTRY : null,
+        USD: data.valUSD > 0 ? data.sumUSD / data.valUSD : null,
+      };
+    }
+    return result;
   }
 
   const series = await getGrowthSeries();
@@ -651,6 +716,11 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
     allTimeUSD: firstPoint ? calcPct(t0.valueUSD, firstPoint.valueUSD) : null,
     allTimeAmtTRY: firstPoint ? calcAmt(t0.valueTRY, firstPoint.valueTRY) : null,
     allTimeAmtUSD: firstPoint ? calcAmt(t0.valueUSD, firstPoint.valueUSD) : null,
+    assetTypeReturns: {
+      weekly: getAssetReturns(d7, d0),
+      mtd: getAssetReturns(dMtd, d0),
+      ytd: getAssetReturns(dYtd, d0),
+    },
   };
 }
 
