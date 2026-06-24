@@ -1073,7 +1073,6 @@ function PositionsTable({
                         order={sortOrder}
                         onSort={handleSort}
                         align="right"
-                        className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
                       />
                       <SortHeader
                         field="dailyChange"
@@ -1301,7 +1300,7 @@ function PositionsTable({
                       </p>
 
                       {/* Değer */}
-                      <p className="text-xs font-semibold tabular-nums text-right border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
+                      <p className="text-xs font-semibold tabular-nums text-right">
                         {formatMoney(value, currency)}
                       </p>
 
