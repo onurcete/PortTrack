@@ -88,14 +88,63 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
   const [selectedAssetType, setSelectedAssetType] = useState<string>("ALL");
   const [sortField, setSortField] = useState<"symbol" | "total">("symbol");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [period, setPeriod] = useState<"1Y" | "YTD">("1Y");
+
+  // Get current year based on latest month in the data
+  const latestYear = useMemo(() => {
+    if (data.months.length === 0) return new Date().getFullYear().toString();
+    return data.months[data.months.length - 1].split("-")[0];
+  }, [data.months]);
+
+  // Compute active months and indexes
+  const { activeMonths, activeIndices } = useMemo(() => {
+    if (period === "1Y") {
+      return {
+        activeMonths: data.months,
+        activeIndices: data.months.map((_, i) => i),
+      };
+    }
+    
+    // YTD: only months of the latest year
+    const indices: number[] = [];
+    const months: string[] = [];
+    data.months.forEach((m, i) => {
+      if (m.startsWith(`${latestYear}-`)) {
+        indices.push(i);
+        months.push(m);
+      }
+    });
+    return { activeMonths: months, activeIndices: indices };
+  }, [data.months, period, latestYear]);
 
   const processedRows = useMemo(() => {
-    // 1. Map returns and total depending on active currency
-    let mapped = data.rows.map((r) => ({
-      ...r,
-      returns: isTRY ? r.returnsTRY : r.returnsUSD,
-      total: isTRY ? r.totalTRY : r.totalUSD,
-    }));
+    // 1. Map returns and total depending on active currency and period
+    let mapped = data.rows.map((r) => {
+      const returnsAll = isTRY ? r.returnsTRY : r.returnsUSD;
+      const returns = activeIndices.map((i) => returnsAll[i]);
+      
+      let total: number | null = null;
+      if (period === "1Y") {
+        total = isTRY ? r.totalTRY : r.totalUSD;
+      } else {
+        // Calculate compound return for YTD
+        let product = 1;
+        let hasValue = false;
+        for (const v of returns) {
+          if (v != null) {
+            product *= (1 + v / 100);
+            hasValue = true;
+          }
+        }
+        total = hasValue ? (product - 1) * 100 : null;
+      }
+
+      return {
+        ...r,
+        returns,
+        total,
+      };
+    });
 
     // 2. Filter by search query
     if (searchQuery.trim() !== "") {
@@ -122,7 +171,7 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
     });
 
     return mapped;
-  }, [data.rows, isTRY, searchQuery, selectedAssetType, sortField, sortOrder]);
+  }, [data.rows, isTRY, searchQuery, selectedAssetType, sortField, sortOrder, activeIndices, period]);
 
   if (data.rows.length === 0) {
     return (
@@ -173,6 +222,34 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
             ))}
           </select>
         </div>
+
+        {/* Dönem Seçimi */}
+        <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40 shrink-0">
+          <button
+            type="button"
+            onClick={() => setPeriod("1Y")}
+            className={cn(
+              "rounded-lg px-3 py-1 text-xs font-bold transition-all duration-200 cursor-pointer",
+              period === "1Y"
+                ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
+                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
+            )}
+          >
+            1 Yıl
+          </button>
+          <button
+            type="button"
+            onClick={() => setPeriod("YTD")}
+            className={cn(
+              "rounded-lg px-3 py-1 text-xs font-bold transition-all duration-200 cursor-pointer",
+              period === "YTD"
+                ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
+                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
+            )}
+          >
+            YTD
+          </button>
+        </div>
       </div>
 
       {/* Tablo Kartı */}
@@ -207,7 +284,7 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
                       </span>
                     </button>
                   </th>
-                  {data.months.map((m) => (
+                  {activeMonths.map((m) => (
                     <th key={m} className="px-3 py-3 text-right font-semibold whitespace-nowrap">
                       {monthLabel(m)}
                     </th>
