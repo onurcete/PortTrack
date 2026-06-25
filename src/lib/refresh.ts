@@ -103,7 +103,9 @@ export async function refreshPrices(): Promise<RefreshResult> {
         orderBy: { date: "desc" },
       });
       if (lastSnap) {
-        const isPriceSame = isPriceSameEnough(lastSnap.close, priceTRY) && isPriceSameEnough(lastSnap.native, native);
+        const isPriceSame = (lastSnap.native !== null && native !== null)
+          ? isPriceSameEnough(lastSnap.native, native)
+          : isPriceSameEnough(lastSnap.close, priceTRY);
         if (isPriceSame) {
           // Clean up if a duplicate snapshot for today already exists
           await prisma.priceSnapshot.deleteMany({
