@@ -14,7 +14,8 @@ function createPrismaClient(): PrismaClient {
 function isPrismaClientStale(client: PrismaClient): boolean {
   return (
     typeof (client as PrismaClient & { portfolioMonthSnapshot?: unknown })
-      .portfolioMonthSnapshot === "undefined"
+      .portfolioMonthSnapshot === "undefined" ||
+    typeof (client as PrismaClient & { note?: unknown }).note === "undefined"
   );
 }
 
