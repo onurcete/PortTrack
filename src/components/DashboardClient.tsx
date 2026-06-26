@@ -7,11 +7,13 @@ import {
   Wallet,
   Coins,
   PiggyBank,
+  StickyNote,
 } from "lucide-react";
 import { useCurrency } from "@/context/currency";
 import { Card, Badge } from "@/components/ui";
 import { ASSET_META, type AssetType } from "@/lib/assets";
 import { Modal } from "@/components/Modal";
+import { NotesDrawer } from "@/components/NotesDrawer";
 import { formatMoney, formatPercent, formatNumber, formatDate, monthLabel, cn } from "@/lib/utils";
 import { getCellStyle } from "@/components/PerformanceClient";
 import {
@@ -295,6 +297,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
   const { currency } = useCurrency();
   const isTRY = currency === "TRY";
   const [selectedPosition, setSelectedPosition] = useState<PositionDTO | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const openPositions = useMemo(
     () => data.positions.filter((p) => p.quantity > 1e-9 && p.valueTRY > 0),
@@ -415,9 +418,19 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
               : "Fiyatlar henüz güncellenmedi - sağ üstten \u201cFiyatları Güncelle\u201d"}
           </p>
         </div>
-        <Badge className="bg-[var(--color-surface-muted)] text-[var(--color-muted)]">
-          1 USD = {formatNumber(data.currentUsdTry, 2)} ₺
-        </Badge>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setNotesOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] hover:border-[var(--color-brand)]/40 text-[var(--color-muted)] hover:text-[var(--color-brand-strong)] transition-all duration-150 h-8"
+            title="Notlarım"
+          >
+            <StickyNote size={14} />
+            <span className="hidden sm:inline">Notlar</span>
+          </button>
+          <Badge className="bg-[var(--color-surface-muted)] text-[var(--color-muted)]">
+            1 USD = {formatNumber(data.currentUsdTry, 2)} ₺
+          </Badge>
+        </div>
       </div>
 
       {/* Kombine Portföy Değeri & Getiriler Kartı */}
@@ -552,6 +565,9 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
           onClose={() => setSelectedPosition(null)}
         />
       )}
+
+      {/* Notlar Drawer */}
+      <NotesDrawer open={notesOpen} onClose={() => setNotesOpen(false)} />
     </div>
   );
 }

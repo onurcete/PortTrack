@@ -126,3 +126,15 @@ model TechnicalAnalysis {
   @@index([symbol])
   @@index([date])
 }
+
+/// Kullanıcı notları (Genel Bakış sayfasında gösterilir)
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  color     String   @default("default") // default | blue | green | amber | red | purple
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pinned])
+}
