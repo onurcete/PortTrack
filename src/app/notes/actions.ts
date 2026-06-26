@@ -8,6 +8,7 @@ export interface NoteDTO {
   content: string;
   color: string;
   pinned: boolean;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -21,21 +22,26 @@ export async function getNotes(): Promise<NoteDTO[]> {
     content: n.content,
     color: n.color,
     pinned: n.pinned,
+    tags: n.tags || [],
     createdAt: n.createdAt.toISOString(),
     updatedAt: n.updatedAt.toISOString(),
   }));
 }
 
-export async function createNote(content: string, color: string = "default") {
+export async function createNote(
+  content: string,
+  color: string = "default",
+  tags: string[] = [],
+) {
   await prisma.note.create({
-    data: { content, color },
+    data: { content, color, tags },
   });
   revalidatePath("/");
 }
 
 export async function updateNote(
   id: string,
-  data: { content?: string; color?: string; pinned?: boolean },
+  data: { content?: string; color?: string; pinned?: boolean; tags?: string[] },
 ) {
   await prisma.note.update({
     where: { id },

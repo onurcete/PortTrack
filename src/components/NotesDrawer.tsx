@@ -42,6 +42,8 @@ const COLOR_DOTS: { key: string; dot: string }[] = [
   { key: "purple", dot: "bg-purple-500" },
 ];
 
+const PREDEFINED_TAGS = ["TEFAS", "Kripto", "Y.Borsa", "BIST", "Metal", "Döviz", "BES"];
+
 export function NotesDrawer({
   open,
   onClose,
@@ -53,8 +55,17 @@ export function NotesDrawer({
   const [loading, setLoading] = useState(true);
   const [newContent, setNewContent] = useState("");
   const [newColor, setNewColor] = useState("default");
+  const [newTags, setNewTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [selectedFilterTag, setSelectedFilterTag] = useState<string | null>(null);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [editCustomTagInput, setEditCustomTagInput] = useState("");
+  const [showEditCustomInput, setShowEditCustomInput] = useState(false);
+
   const [isPending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
@@ -91,10 +102,12 @@ export function NotesDrawer({
     if (!newContent.trim()) return;
     const content = newContent.trim();
     const color = newColor;
+    const tags = newTags;
     setNewContent("");
     setNewColor("default");
+    setNewTags([]);
     startTransition(async () => {
-      await createNote(content, color);
+      await createNote(content, color, tags);
       const updated = await getNotes();
       setNotes(updated);
     });
@@ -119,17 +132,49 @@ export function NotesDrawer({
   function handleStartEdit(note: NoteDTO) {
     setEditingId(note.id);
     setEditContent(note.content);
+    setEditTags(note.tags || []);
   }
 
   function handleSaveEdit(note: NoteDTO) {
     if (!editContent.trim()) return;
     const content = editContent.trim();
+    const tags = editTags;
     setEditingId(null);
     startTransition(async () => {
-      await updateNote(note.id, { content });
+      await updateNote(note.id, { content, tags });
       const updated = await getNotes();
       setNotes(updated);
     });
+  }
+
+  function toggleNewTag(tag: string) {
+    setNewTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }
+
+  function handleAddCustomTag() {
+    const tag = customTagInput.trim();
+    if (tag && !newTags.includes(tag)) {
+      setNewTags((prev) => [...prev, tag]);
+    }
+    setCustomTagInput("");
+    setShowCustomInput(false);
+  }
+
+  function toggleEditTag(tag: string) {
+    setEditTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  }
+
+  function handleAddEditCustomTag() {
+    const tag = editCustomTagInput.trim();
+    if (tag && !editTags.includes(tag)) {
+      setEditTags((prev) => [...prev, tag]);
+    }
+    setEditCustomTagInput("");
+    setShowEditCustomInput(false);
   }
 
   function handleColorChange(noteId: string, colorKey: string) {
@@ -208,6 +253,75 @@ export function NotesDrawer({
             />
           </div>
 
+          {/* Tag selector */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-2 mb-1">
+            <span className="text-[10px] text-[var(--color-muted)] font-medium">Etiketler:</span>
+            {PREDEFINED_TAGS.map((tag) => {
+              const isSelected = newTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggleNewTag(tag)}
+                  className={cn(
+                    "px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all",
+                    isSelected
+                      ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border-[var(--color-brand)]/30"
+                      : "bg-[var(--color-surface)] text-[var(--color-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface-muted)]"
+                  )}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+            {newTags
+              .filter((tag) => !PREDEFINED_TAGS.includes(tag))
+              .map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleNewTag(tag)}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border-[var(--color-brand)]/30 transition-all"
+                >
+                  {tag}
+                </button>
+              ))}
+
+            {showCustomInput ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={customTagInput}
+                  onChange={(e) => setCustomTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddCustomTag();
+                    }
+                    if (e.key === "Escape") {
+                      setShowCustomInput(false);
+                      setCustomTagInput("");
+                    }
+                  }}
+                  placeholder="Etiket..."
+                  className="px-1.5 py-0.5 text-[10px] rounded border border-[var(--color-brand)] outline-none bg-[var(--color-surface)] w-16"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAddCustomTag}
+                  className="text-[10px] text-[var(--color-brand-strong)] font-bold px-1"
+                >
+                  Ekle
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCustomInput(true)}
+                className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-dashed border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:border-[var(--color-muted)] transition-all"
+              >
+                + Özel
+              </button>
+            )}
+          </div>
+
           {/* Color picker + submit */}
           <div className="flex items-center justify-between mt-2.5">
             <div className="flex items-center gap-1.5">
@@ -244,6 +358,37 @@ export function NotesDrawer({
           </p>
         </div>
 
+        {/* Filter bar */}
+        {notes.length > 0 && (
+          <div className="px-5 py-2.5 border-b border-[var(--color-border)]/50 bg-[var(--color-surface-muted)]/10 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
+            <button
+              onClick={() => setSelectedFilterTag(null)}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0",
+                selectedFilterTag === null
+                  ? "bg-[var(--color-brand-strong)] text-white"
+                  : "bg-[var(--color-surface-muted)] text-[var(--color-muted)] hover:bg-[var(--color-border)]/50 border border-[var(--color-border)]/30"
+              )}
+            >
+              Tümü
+            </button>
+            {Array.from(new Set(notes.flatMap((n) => n.tags || []))).map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSelectedFilterTag(selectedFilterTag === tag ? null : tag)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 flex items-center gap-0.5",
+                  selectedFilterTag === tag
+                    ? "bg-[var(--color-brand-strong)] text-white"
+                    : "bg-[var(--color-surface-muted)] text-[var(--color-muted)] hover:bg-[var(--color-border)]/50 border border-[var(--color-border)]/30"
+                )}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Notes list */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {loading ? (
@@ -264,7 +409,10 @@ export function NotesDrawer({
               </p>
             </div>
           ) : (
-            notes.map((note) => {
+            (selectedFilterTag
+              ? notes.filter((n) => n.tags?.includes(selectedFilterTag))
+              : notes
+            ).map((note) => {
               const colors = getColorClasses(note.color);
               const isEditing = editingId === note.id;
               return (
@@ -327,7 +475,7 @@ export function NotesDrawer({
 
                   {/* Note content */}
                   {isEditing ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <textarea
                         ref={editRef}
                         value={editContent}
@@ -344,6 +492,80 @@ export function NotesDrawer({
                         className="w-full rounded-lg border border-[var(--color-brand)]/40 bg-[var(--color-surface)] px-3 py-2 text-sm resize-none outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 min-h-[60px]"
                         rows={3}
                       />
+
+                      {/* Editing Tags */}
+                      <div className="flex flex-wrap items-center gap-1.5 py-1">
+                        <span className="text-[10px] text-[var(--color-muted)] font-medium">Etiketler:</span>
+                        {PREDEFINED_TAGS.map((tag) => {
+                          const isSelected = editTags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleEditTag(tag)}
+                              className={cn(
+                                "px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all",
+                                isSelected
+                                  ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border-[var(--color-brand)]/30"
+                                  : "bg-[var(--color-surface)] text-[var(--color-muted)] border-[var(--color-border)] hover:bg-[var(--color-surface-muted)]"
+                              )}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })}
+                        {editTags
+                          .filter((tag) => !PREDEFINED_TAGS.includes(tag))
+                          .map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleEditTag(tag)}
+                              className="px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border-[var(--color-brand)]/30 transition-all"
+                            >
+                              {tag}
+                            </button>
+                          ))}
+
+                        {showEditCustomInput ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={editCustomTagInput}
+                              onChange={(e) => setEditCustomTagInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddEditCustomTag();
+                                }
+                                if (e.key === "Escape") {
+                                  setShowEditCustomInput(false);
+                                  setEditCustomTagInput("");
+                                }
+                              }}
+                              placeholder="Etiket..."
+                              className="px-1.5 py-0.5 text-[10px] rounded border border-[var(--color-brand)] outline-none bg-[var(--color-surface)] w-16"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAddEditCustomTag}
+                              className="text-[10px] text-[var(--color-brand-strong)] font-bold px-1"
+                            >
+                              Ekle
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowEditCustomInput(true)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-semibold border border-dashed border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:border-[var(--color-muted)] transition-all"
+                          >
+                            + Özel
+                          </button>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-2 justify-end">
                         <button
                           onClick={() => setEditingId(null)}
@@ -362,14 +584,30 @@ export function NotesDrawer({
                       </div>
                     </div>
                   ) : (
-                    <p
-                      className={cn(
-                        "text-sm leading-relaxed whitespace-pre-wrap break-words",
-                        colors.text,
+                    <div className="space-y-2">
+                      <p
+                        className={cn(
+                          "text-sm leading-relaxed whitespace-pre-wrap break-words",
+                          colors.text,
+                        )}
+                      >
+                        {note.content}
+                      </p>
+                      
+                      {/* Tags list on note card */}
+                      {note.tags && note.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1.5">
+                          {note.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-white/60 dark:bg-black/20 text-[var(--color-muted)] border border-[var(--color-border)]/30"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
                       )}
-                    >
-                      {note.content}
-                    </p>
+                    </div>
                   )}
                 </div>
               );
