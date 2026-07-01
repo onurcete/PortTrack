@@ -36,12 +36,12 @@ export type GrowthByType = Record<
 
 /** CSV'deki "Tur" ve sembolden ic varlik turunu belirler. */
 export function resolveAssetType(tur: string, symbol: string): AssetType {
-  const t = tur.trim().toLocaleLowerCase("tr");
+  const t = tur.trim().toLowerCase();
   const s = symbol.trim().toUpperCase();
 
   if (t === "fon") return "TEFAS";
   if (t === "bes") return "BES";
-  if (t === "bist") return "BIST";
+  if (t === "bist" || t === "bıst") return "BIST";
   if (t === "doviz" || t.includes("dov") || t.includes("döv")) {
     if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|AVAX|BNB|LTC)\b|\/TRY$/.test(s) === false) {
       // pariteye gore ayristir
