@@ -338,8 +338,8 @@ export function GrowthClient({
     latestDisplayYear(series),
   );
   const [chartYearFilter, setChartYearFilter] = useState<string>(YEAR_FILTER_ALL);
-  const [chartType, setChartType] = useState<"area" | "bar">("area");
-  const [chartMetric, setChartMetric] = useState<ChartMetric>("value");
+  const [chartType, setChartType] = useState<"area" | "bar">("bar");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("return");
   const [tableMetric, setTableMetric] = useState<TableDisplayMode>("value");
 
   const CustomTooltip = ({ active, payload }: any) => {
