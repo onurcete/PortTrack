@@ -270,23 +270,11 @@ function CombinedReturnCell({
             {positive ? "+" : ""}
             {formatMoney(amt, currency)}
           </span>
-          {xirrPct !== undefined && xirrPct !== null && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-md text-[10px] font-bold border tabular-nums",
-                xirrPct >= 0
-                  ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/15"
-                  : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/15",
-              )}
-            >
-              XIRR {formatPercent(xirrPct)}
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Sağ Kısım: Varlık Getirileri (Dikey Liste) */}
-      {assetReturns.length > 0 && (
+      {/* Sağ Kısım: Varlık Getirileri (Dikey Liste) veya XIRR */}
+      {assetReturns.length > 0 ? (
         <div className="flex flex-col gap-1 text-[11px] sm:text-xs text-[var(--color-muted)]/90 font-medium justify-center pl-4 border-l border-[var(--color-border)]/45 shrink-0 select-none">
           {assetReturns.map((item, idx) => {
             const pos = item.pct > 0;
@@ -303,6 +291,19 @@ function CombinedReturnCell({
               </div>
             );
           })}
+        </div>
+      ) : xirrPct !== undefined && xirrPct !== null && (
+        <div className="flex flex-col items-center justify-center pl-4 border-l border-[var(--color-border)]/45 shrink-0 select-none">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--color-muted)] mb-1">XIRR</span>
+          <span
+            className={cn(
+              "text-xl sm:text-2xl font-black tabular-nums tracking-tight leading-none",
+              xirrPct >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]",
+            )}
+          >
+            {formatPercent(xirrPct)}
+          </span>
+          <span className="text-[8px] font-semibold text-[var(--color-muted)] mt-1.5 tracking-wide">Yıllık Getiri</span>
         </div>
       )}
     </div>
