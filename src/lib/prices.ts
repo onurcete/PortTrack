@@ -12,6 +12,9 @@ export interface CurrentPrice {
   currency: string;
   /** TL cinsinden fiyat (cevrim sonrasi) */
   priceTRY: number;
+  prevPrice?: number | null;
+  prevPriceTRY?: number | null;
+  prevDate?: Date | null;
 }
 
 const YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart/";
@@ -120,11 +123,31 @@ async function getCurrencyTryRate(
 /** Yahoo guncel fiyat (kendi para biriminde). */
 export async function fetchYahooQuote(
   symbol: string,
-): Promise<{ price: number; currency: string } | null> {
+): Promise<{ price: number; currency: string; prevPrice?: number | null; prevDate?: Date | null } | null> {
   const r = await yahooChart(symbol, "interval=1d&range=5d");
   const price = r?.meta?.regularMarketPrice;
   if (typeof price !== "number") return null;
-  return { price, currency: r?.meta?.currency || "USD" };
+
+  let prevPrice: number | null = null;
+  let prevDate: Date | null = null;
+  if (r?.timestamp && r.timestamp.length > 1) {
+    const closes = r.indicators?.quote?.[0]?.close || [];
+    for (let i = r.timestamp.length - 2; i >= 0; i--) {
+      const c = closes[i];
+      if (typeof c === "number" && Number.isFinite(c)) {
+        prevPrice = c;
+        prevDate = new Date(r.timestamp[i] * 1000);
+        break;
+      }
+    }
+  }
+
+  return {
+    price,
+    currency: r?.meta?.currency || "USD",
+    prevPrice,
+    prevDate,
+  };
 }
 
 /** Yahoo gunluk gecmis kapanislar. */
@@ -368,19 +391,42 @@ export async function resolveCurrentPriceTRY(
   let priceTRY: number;
   let nativeCurrency = q.currency;
 
+  let prevPrice: number | null = null;
+  let prevPriceTRY: number | null = null;
+
   if (map.source === "yahoo-fx") {
     // USDTRY=X dogrudan TL fiyat verir
     priceTRY = price;
     nativeCurrency = "TRY";
+    if (q.prevPrice) {
+      prevPrice = q.prevPrice;
+      prevPriceTRY = q.prevPrice;
+    }
   } else if (map.multiplyByUsdTry) {
     // Metal/kripto: USD bazli futures/parite
     priceTRY = price * usdTry;
     nativeCurrency = "TRY";
+    if (q.prevPrice) {
+      const pPrev = map.perGramDivisor ? q.prevPrice / map.perGramDivisor : q.prevPrice;
+      prevPrice = pPrev;
+      prevPriceTRY = pPrev * usdTry;
+    }
   } else {
     // Hisse/ETF/fon: Yahoo'nun bildirdigi gercek para birimini kullan
     const rate = await getCurrencyTryRate(q.currency, usdTry);
     priceTRY = price * rate;
+    if (q.prevPrice) {
+      prevPrice = q.prevPrice;
+      prevPriceTRY = q.prevPrice * rate;
+    }
   }
 
-  return { price, currency: nativeCurrency, priceTRY };
+  return {
+    price,
+    currency: nativeCurrency,
+    priceTRY,
+    prevPrice,
+    prevPriceTRY,
+    prevDate: q.prevDate,
+  };
 }

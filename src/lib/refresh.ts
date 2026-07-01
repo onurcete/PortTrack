@@ -96,7 +96,29 @@ export async function refreshPrices(): Promise<RefreshResult> {
     native: number,
     currency: string,
     assetType: AssetType,
+    prevPrice?: number | null,
+    prevPriceTRY?: number | null,
+    prevDate?: Date | null,
   ) {
+    if (prevPrice !== undefined && prevPrice !== null && prevDate) {
+      const prevDay = new Date(prevDate);
+      prevDay.setHours(0, 0, 0, 0);
+
+      await prisma.priceSnapshot.upsert({
+        where: { symbol_date: { symbol, date: prevDay } },
+        create: {
+          symbol,
+          date: prevDay,
+          close: prevPriceTRY ?? prevPrice,
+          native: prevPrice,
+          nativeCurrency: currency,
+          currency: "TRY",
+          source: "auto",
+        },
+        update: { close: prevPriceTRY ?? prevPrice, native: prevPrice, nativeCurrency: currency },
+      });
+    }
+
     if (assetType !== "CRYPTO") {
       const lastSnap = await prisma.priceSnapshot.findFirst({
         where: { symbol, date: { lt: today } },
@@ -152,7 +174,16 @@ export async function refreshPrices(): Promise<RefreshResult> {
         failed.push(symbol);
         return;
       }
-      await writeSnapshot(symbol, cp.priceTRY, cp.price, cp.currency, assetType);
+      await writeSnapshot(
+        symbol,
+        cp.priceTRY,
+        cp.price,
+        cp.currency,
+        assetType,
+        cp.prevPrice,
+        cp.prevPriceTRY,
+        cp.prevDate,
+      );
       updated++;
     } catch {
       failed.push(symbol);
