@@ -308,16 +308,8 @@ export async function backfillTefas(budgetMs = 45000): Promise<TefasProgress> {
     processedMonths.get(code)!.add(monthKeyOf(m.date));
   }
 
-  // Also support the legacy __TEFAS_MARK__ symbol if it exists so we don't break existing setups
-  const legacyMarks = await prisma.priceSnapshot.findMany({
-    where: { symbol: TEFAS_MARK },
-    select: { date: true },
-  });
-  const legacyDoneMonths = new Set(legacyMarks.map((m) => monthKeyOf(m.date)));
-
   const pending = ends.filter((e) => {
     const key = monthKeyOf(e);
-    if (legacyDoneMonths.has(key)) return false;
     return tefasCodes.some((code) => !processedMonths.get(code)?.has(key));
   });
 
