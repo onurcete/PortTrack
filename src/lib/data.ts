@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 import {
   computePositions,
   buildFxLookup,
+  calculateXIRR,
   type TxInput,
   type CurrentPriceInfo,
   type Position,
@@ -20,6 +21,8 @@ export interface PortfolioData {
   currentUsdTry: number;
   lastUpdated: Date | null;
   transactionCount: number;
+  portfolioXirrTRY: number | null;
+  portfolioXirrUSD: number | null;
 }
 
 export async function getPortfolio(): Promise<PortfolioData> {
@@ -242,6 +245,28 @@ export async function getPortfolio(): Promise<PortfolioData> {
     };
   });
 
+  // Portfolio-level XIRR: aggregate all cash flows across all symbols
+  const allCashFlowsTRY: { date: Date; amount: number }[] = [];
+  const allCashFlowsUSD: { date: Date; amount: number }[] = [];
+
+  for (const t of tx) {
+    const rate = fx(t.date) || currentUsdTry;
+    const sign = t.side === "BUY" ? -1 : 1;
+    const tTRY = t.currency === "USD" ? t.total * rate : t.total;
+    const tUSD = t.currency === "USD" ? t.total : t.total / rate;
+
+    allCashFlowsTRY.push({ date: new Date(t.date), amount: sign * tTRY });
+    allCashFlowsUSD.push({ date: new Date(t.date), amount: sign * tUSD });
+  }
+
+  // Add current portfolio value as the final (positive) cash flow
+  const todayForXirr = new Date();
+  allCashFlowsTRY.push({ date: todayForXirr, amount: totals.valueTRY });
+  allCashFlowsUSD.push({ date: todayForXirr, amount: totals.valueUSD });
+
+  const portfolioXirrTRY = calculateXIRR(allCashFlowsTRY);
+  const portfolioXirrUSD = calculateXIRR(allCashFlowsUSD);
+
   return {
     positions: positionsWithPeriodReturns,
     totals,
@@ -249,5 +274,7 @@ export async function getPortfolio(): Promise<PortfolioData> {
     currentUsdTry,
     lastUpdated: snaps.length > 0 ? snaps[0].date : null,
     transactionCount: txRows.length,
+    portfolioXirrTRY,
+    portfolioXirrUSD,
   };
 }

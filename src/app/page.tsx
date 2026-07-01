@@ -58,6 +58,8 @@ export default async function DashboardPage() {
     transactionCount: p.transactionCount,
     benchmarkData,
     periodReturns,
+    portfolioXirrTRY: p.portfolioXirrTRY,
+    portfolioXirrUSD: p.portfolioXirrUSD,
   };
 
   return <DashboardClient data={data} />;

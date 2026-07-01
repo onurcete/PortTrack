@@ -166,6 +166,8 @@ export interface DashboardDTO {
   transactionCount: number;
   benchmarkData?: BenchmarkComparisonData;
   periodReturns?: PeriodReturnsDTO;
+  portfolioXirrTRY?: number | null;
+  portfolioXirrUSD?: number | null;
 }
 
 function ProfitValue({
@@ -234,6 +236,7 @@ function CombinedReturnCell({
   currency,
   assetReturns = [],
   borderClasses,
+  xirrPct,
 }: {
   label: string;
   pct: number | null;
@@ -241,6 +244,7 @@ function CombinedReturnCell({
   currency: "TRY" | "USD";
   assetReturns?: { label: string; pct: number }[];
   borderClasses: string;
+  xirrPct?: number | null;
 }) {
   if (pct === null || amt === null) return null;
   const positive = pct > 0;
@@ -266,6 +270,18 @@ function CombinedReturnCell({
             {positive ? "+" : ""}
             {formatMoney(amt, currency)}
           </span>
+          {xirrPct !== undefined && xirrPct !== null && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-md text-[10px] font-bold border tabular-nums",
+                xirrPct >= 0
+                  ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/15"
+                  : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/15",
+              )}
+            >
+              XIRR {formatPercent(xirrPct)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -347,6 +363,8 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
 
   const allTimePct = isTRY ? data.periodReturns?.allTimeTRY : data.periodReturns?.allTimeUSD;
   const allTimeAmt = isTRY ? data.periodReturns?.allTimeAmtTRY : data.periodReturns?.allTimeAmtUSD;
+
+  const portfolioXirr = isTRY ? data.portfolioXirrTRY : data.portfolioXirrUSD;
 
   const prevCloseVal = totalValue - (dailyChangeAmt ?? 0);
   const ytdCloseVal = totalValue - (ytdAmt ?? 0);
@@ -528,6 +546,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             amt={allTimeAmt ?? null}
             currency={currency}
             borderClasses=""
+            xirrPct={portfolioXirr}
           />
         </div>
       </div>
