@@ -4,11 +4,14 @@ import {
   type TxDTO,
 } from "@/components/TransactionsClient";
 import type { AssetType } from "@/lib/assets";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function TransactionsPage() {
+  const userId = await requireUser();
   const rows = await prisma.transaction.findMany({
+    where: { userId },
     orderBy: { date: "desc" },
   });
 

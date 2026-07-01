@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireUser } from "@/lib/auth";
 
 export interface NoteDTO {
   id: string;
@@ -14,7 +15,9 @@ export interface NoteDTO {
 }
 
 export async function getNotes(): Promise<NoteDTO[]> {
+  const userId = await requireUser();
   const notes = await prisma.note.findMany({
+    where: { userId },
     orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
   });
   return notes.map((n) => ({
@@ -33,8 +36,9 @@ export async function createNote(
   color: string = "default",
   tags: string[] = [],
 ) {
+  const userId = await requireUser();
   await prisma.note.create({
-    data: { content, color, tags },
+    data: { content, color, tags, userId },
   });
   revalidatePath("/");
 }
@@ -43,14 +47,18 @@ export async function updateNote(
   id: string,
   data: { content?: string; color?: string; pinned?: boolean; tags?: string[] },
 ) {
-  await prisma.note.update({
-    where: { id },
+  const userId = await requireUser();
+  await prisma.note.updateMany({
+    where: { id, userId },
     data,
   });
   revalidatePath("/");
 }
 
 export async function deleteNote(id: string) {
-  await prisma.note.delete({ where: { id } });
+  const userId = await requireUser();
+  await prisma.note.deleteMany({
+    where: { id, userId },
+  });
   revalidatePath("/");
 }

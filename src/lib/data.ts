@@ -10,7 +10,7 @@ import {
   type PortfolioTotals,
   type AllocationSlice,
 } from "./portfolio";
-import type { AssetType } from "./assets";
+import { resolvePriceMapping, type AssetType } from "./assets";
 
 const FALLBACK_USDTRY = 40;
 
@@ -25,13 +25,19 @@ export interface PortfolioData {
   portfolioXirrUSD: number | null;
 }
 
-export async function getPortfolio(): Promise<PortfolioData> {
-  const [txRows, snaps, fxRows] = await Promise.all([
-    prisma.transaction.findMany({ orderBy: { date: "asc" } }),
+export async function getPortfolio(userId: string): Promise<PortfolioData> {
+  const [txRows, snaps, fxRows, instruments] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: "asc" },
+    }),
     prisma.priceSnapshot.findMany({ orderBy: { date: "desc" } }),
     prisma.fxRate.findMany({
       where: { pair: "USDTRY" },
       orderBy: { date: "asc" },
+    }),
+    prisma.instrument.findMany({
+      where: { userId },
     }),
   ]);
 
@@ -111,6 +117,20 @@ export async function getPortfolio(): Promise<PortfolioData> {
   const currentUsdTry =
     fxHist.length > 0 ? fxHist[fxHist.length - 1].rate : FALLBACK_USDTRY;
   const fx = buildFxLookup(fxHist, currentUsdTry);
+
+  // Override or inject user-specific manual prices
+  for (const inst of instruments) {
+    if (inst.manualPrice !== null && inst.manualPrice !== undefined) {
+      const map = resolvePriceMapping(inst.assetType as AssetType, inst.symbol);
+      const price = inst.manualPrice;
+      const priceTRY = map.currency === "USD" ? price * currentUsdTry : price;
+      priceMap.set(inst.symbol, {
+        priceTRY,
+        native: price,
+        nativeCurrency: map.currency,
+      });
+    }
+  }
 
   const { positions, totals, allocation } = computePositions(
     tx,

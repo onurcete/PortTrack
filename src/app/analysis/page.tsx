@@ -1,14 +1,17 @@
 import { prisma } from "@/lib/prisma";
 import { AnalysisClient } from "@/components/AnalysisClient";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalysisPage() {
+  const userId = await requireUser();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   // 1. Tüm işlemleri çekip aktif (açık) pozisyonu olan sembolleri bul
   const transactions = await prisma.transaction.findMany({
+    where: { userId },
     select: { symbol: true, quantity: true, side: true }
   });
 

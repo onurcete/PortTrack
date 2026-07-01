@@ -1,10 +1,12 @@
 import { getGrowthSeries, getPeriodReturns } from "@/lib/history";
 import { GrowthClient } from "@/components/GrowthClient";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function GrowthPage() {
-  const series = await getGrowthSeries();
-  const periodReturns = await getPeriodReturns();
+  const userId = await requireUser();
+  const series = await getGrowthSeries(userId);
+  const periodReturns = await getPeriodReturns(userId);
   return <GrowthClient series={series} periodReturns={periodReturns} />;
 }

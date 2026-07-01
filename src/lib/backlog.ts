@@ -212,6 +212,7 @@ export async function readBacklogFile(
 /** Veritabanina backlog satirlarini yazar (upsert). */
 export async function importBacklogToDb(
   rows: MonthSnapshotRow[],
+  userId: string,
 ): Promise<number> {
   assertPortfolioMonthSnapshot();
   let n = 0;
@@ -220,8 +221,9 @@ export async function importBacklogToDb(
 
     if (year <= BACKLOG_FULL_UNTIL_YEAR) {
       await prisma.portfolioMonthSnapshot.upsert({
-        where: { month: row.month },
+        where: { userId_month: { userId, month: row.month } },
         create: {
+          userId,
           month: row.month,
           besTRY: row.besTRY,
           bistTRY: row.bistTRY,
@@ -252,8 +254,9 @@ export async function importBacklogToDb(
     } else {
       // 2025+: yalnizca BES kolonu excel'den; diger kolonlar hesaplanir
       await prisma.portfolioMonthSnapshot.upsert({
-        where: { month: row.month },
+        where: { userId_month: { userId, month: row.month } },
         create: {
+          userId,
           month: row.month,
           besTRY: row.besTRY,
           source: "backlog",
@@ -269,6 +272,7 @@ export async function importBacklogToDb(
 export async function upsertBesMonth(
   monthKey: string,
   besTRY: number,
+  userId: string,
 ): Promise<void> {
   assertPortfolioMonthSnapshot();
   const [y, m] = monthKey.split("-").map(Number);
@@ -281,14 +285,14 @@ export async function upsertBesMonth(
   const isFullBacklogYear = y <= BACKLOG_FULL_UNTIL_YEAR;
 
   const existing = await prisma.portfolioMonthSnapshot.findUnique({
-    where: { month },
+    where: { userId_month: { userId, month } },
   });
 
   if (existing) {
     if (isFullBacklogYear) {
       const delta = besTRY - existing.besTRY;
       await prisma.portfolioMonthSnapshot.update({
-        where: { month },
+        where: { userId_month: { userId, month } },
         data: {
           besTRY,
           totalTRY: Math.max(0, existing.totalTRY + delta),
@@ -297,13 +301,14 @@ export async function upsertBesMonth(
       });
     } else {
       await prisma.portfolioMonthSnapshot.update({
-        where: { month },
+        where: { userId_month: { userId, month } },
         data: { besTRY, source: "manual" },
       });
     }
   } else {
     await prisma.portfolioMonthSnapshot.create({
       data: {
+        userId,
         month,
         besTRY,
         source: "manual",
@@ -313,16 +318,17 @@ export async function upsertBesMonth(
 
   // BES sembollü işlemin toplam fiyatını da güncelleyelim
   await prisma.transaction.updateMany({
-    where: { symbol: "BES" },
+    where: { symbol: "BES", userId },
     data: { total: besTRY },
   });
 }
 
 export type ManualSnapshotMap = Map<string, MonthSnapshotRow>;
 
-export async function loadManualSnapshots(): Promise<ManualSnapshotMap> {
+export async function loadManualSnapshots(userId: string): Promise<ManualSnapshotMap> {
   assertPortfolioMonthSnapshot();
   const rows = await prisma.portfolioMonthSnapshot.findMany({
+    where: { userId },
     orderBy: { month: "asc" },
   });
   const map: ManualSnapshotMap = new Map();

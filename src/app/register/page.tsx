@@ -2,12 +2,13 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Lock, Mail, LineChart } from "lucide-react";
+import { Lock, Mail, User, LineChart } from "lucide-react";
 import Link from "next/link";
 
-function LoginForm() {
+function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,10 +19,10 @@ function LoginForm() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
       if (res.ok) {
         const next = params.get("next") || "/";
@@ -29,7 +30,7 @@ function LoginForm() {
         router.refresh();
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Giriş başarısız.");
+        setError(data.error || "Kayıt başarısız.");
       }
     } catch {
       setError("Bir hata oluştu.");
@@ -48,10 +49,27 @@ function LoginForm() {
           <span className="text-lg font-bold">PortTrack</span>
         </div>
         <p className="text-sm text-[var(--color-muted)] mb-6">
-          Portföyünüze erişmek için giriş yapın.
+          Yeni bir portföy hesabı oluşturun.
         </p>
 
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Ad Soyad</label>
+            <div className="relative">
+              <User
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+              />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input pl-9"
+                placeholder="Adınız Soyadınız"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-1.5">E-posta</label>
             <div className="relative">
@@ -62,7 +80,6 @@ function LoginForm() {
               <input
                 type="email"
                 required
-                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input pl-9"
@@ -84,7 +101,7 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input pl-9"
-                placeholder="••••••••"
+                placeholder="En az 6 karakter"
               />
             </div>
           </div>
@@ -97,13 +114,13 @@ function LoginForm() {
           disabled={loading || !email || !password}
           className="btn btn-primary w-full mt-6"
         >
-          {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+          {loading ? "Hesap oluşturuluyor..." : "Kayıt Ol"}
         </button>
 
         <p className="text-xs text-center text-[var(--color-muted)] mt-5">
-          Hesabınız yok mu?{" "}
-          <Link href="/register" className="text-[var(--color-brand-strong)] hover:underline font-semibold">
-            Kayıt Olun
+          Zaten hesabınız var mı?{" "}
+          <Link href="/login" className="text-[var(--color-brand-strong)] hover:underline font-semibold">
+            Giriş Yapın
           </Link>
         </p>
       </div>
@@ -111,11 +128,11 @@ function LoginForm() {
   );
 }
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-4">
       <Suspense>
-        <LoginForm />
+        <RegisterForm />
       </Suspense>
     </div>
   );

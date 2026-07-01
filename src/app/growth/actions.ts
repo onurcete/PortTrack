@@ -7,6 +7,7 @@ import {
   upsertBesMonth,
 } from "@/lib/backlog";
 import { BES_MANUAL_FROM_YEAR } from "@/lib/backlog.constants";
+import { requireUser } from "@/lib/auth";
 
 export interface ActionResult {
   ok: boolean;
@@ -15,11 +16,12 @@ export interface ActionResult {
 
 export async function importBacklogXlsx(): Promise<ActionResult> {
   try {
+    const userId = await requireUser();
     const rows = await readBacklogFile();
     if (rows.length === 0) {
       return { ok: false, message: "backlog.xlsx okunamadı veya boş." };
     }
-    const n = await importBacklogToDb(rows);
+    const n = await importBacklogToDb(rows, userId);
     revalidatePath("/growth");
     return {
       ok: true,
@@ -36,6 +38,7 @@ export async function importBacklogXlsx(): Promise<ActionResult> {
 export async function updateBesBalance(
   formData: FormData,
 ): Promise<ActionResult> {
+  const userId = await requireUser();
   let month = String(formData.get("month") || "").trim();
   // input type=month -> YYYY-MM
   if (month.length === 7) {
@@ -57,7 +60,7 @@ export async function updateBesBalance(
     return { ok: false, message: "Geçersiz BES tutarı." };
   }
   try {
-    await upsertBesMonth(month, besTRY);
+    await upsertBesMonth(month, besTRY, userId);
     revalidatePath("/growth");
     return { ok: true, message: `${month} BES güncellendi.` };
   } catch (err) {

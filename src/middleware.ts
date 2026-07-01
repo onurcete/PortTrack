@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE, sessionToken } from "@/lib/auth";
+import { AUTH_COOKIE, getSessionUser } from "@/lib/auth";
 
-const PUBLIC = ["/login", "/api/auth/login", "/api/cron"];
+const PUBLIC = ["/login", "/register", "/api/auth/login", "/api/auth/register", "/api/cron"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -16,9 +16,9 @@ export async function middleware(req: NextRequest) {
   }
 
   const cookie = req.cookies.get(AUTH_COOKIE)?.value;
-  const expected = await sessionToken();
+  const userId = cookie ? await getSessionUser(cookie) : null;
 
-  if (cookie === expected) return NextResponse.next();
+  if (userId) return NextResponse.next();
 
   // API icin 401, sayfalar icin /login yonlendirme
   if (pathname.startsWith("/api")) {

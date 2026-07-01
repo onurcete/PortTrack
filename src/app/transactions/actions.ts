@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { parseTransactionsCsv } from "@/lib/csv";
 import { resolveAssetType, ASSET_TYPES, type AssetType } from "@/lib/assets";
 import { resolveCurrentPriceTRY, getUsdTryRate } from "@/lib/prices";
+import { requireUser } from "@/lib/auth";
 
 const txSchema = z.object({
   date: z.string().min(1),
@@ -36,6 +37,7 @@ function revalidateAll() {
 export async function createTransaction(
   formData: FormData,
 ): Promise<ActionResult> {
+  const userId = await requireUser();
   const raw = Object.fromEntries(formData) as Record<string, string>;
   const parsed = txSchema.safeParse(raw);
   if (!parsed.success) {
@@ -49,6 +51,7 @@ export async function createTransaction(
 
   await prisma.transaction.create({
     data: {
+      userId,
       date: new Date(d.date),
       assetType: d.assetType,
       symbol: d.symbol.trim().toUpperCase(),
@@ -68,6 +71,7 @@ export async function updateTransaction(
   id: string,
   formData: FormData,
 ): Promise<ActionResult> {
+  const userId = await requireUser();
   const raw = Object.fromEntries(formData) as Record<string, string>;
   const parsed = txSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, message: "Geçersiz veri." };
@@ -77,8 +81,8 @@ export async function updateTransaction(
       ? d.total
       : d.unitPrice * d.quantity;
 
-  await prisma.transaction.update({
-    where: { id },
+  await prisma.transaction.updateMany({
+    where: { id, userId },
     data: {
       date: new Date(d.date),
       assetType: d.assetType,
@@ -96,7 +100,8 @@ export async function updateTransaction(
 }
 
 export async function deleteTransaction(id: string): Promise<ActionResult> {
-  await prisma.transaction.delete({ where: { id } });
+  const userId = await requireUser();
+  await prisma.transaction.deleteMany({ where: { id, userId } });
   revalidateAll();
   return { ok: true };
 }
@@ -114,6 +119,7 @@ export async function importBundledCsv(): Promise<ActionResult> {
 
 /** Verilen CSV metnini iceri aktarir (mevcut kayitlari silip yeniden yukler). */
 export async function importCsvContent(content: string): Promise<ActionResult> {
+  const userId = await requireUser();
   const { rows, errors } = parseTransactionsCsv(content);
   if (rows.length === 0) {
     return {
@@ -123,9 +129,10 @@ export async function importCsvContent(content: string): Promise<ActionResult> {
   }
 
   await prisma.$transaction([
-    prisma.transaction.deleteMany({}),
+    prisma.transaction.deleteMany({ where: { userId } }),
     prisma.transaction.createMany({
       data: rows.map((r) => ({
+        userId,
         date: r.date,
         assetType: r.assetType,
         symbol: r.symbol,
@@ -144,9 +151,10 @@ export async function importCsvContent(content: string): Promise<ActionResult> {
     if (seen.has(r.symbol)) continue;
     seen.add(r.symbol);
     await prisma.instrument.upsert({
-      where: { symbol: r.symbol },
+      where: { symbol_userId: { symbol: r.symbol, userId } },
       create: {
         symbol: r.symbol,
+        userId,
         assetType: r.assetType,
         currency: r.currency,
         priceSource: r.assetType === "TEFAS" ? "tefas" : "yahoo",
@@ -383,9 +391,11 @@ export async function searchSymbols(
   const q = query.trim().toUpperCase();
   const normalizedQ = normalizeTurkish(q);
 
+  const userId = await requireUser();
   // 1. Search our database instruments first
   const dbResults = await prisma.instrument.findMany({
     where: {
+      userId,
       assetType,
       OR: [
         { symbol: { contains: q, mode: "insensitive" } },

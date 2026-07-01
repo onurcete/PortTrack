@@ -11,9 +11,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions            Transaction[]
+  instruments             Instrument[]
+  portfolioSnapshots      PortfolioSnapshot[]
+  portfolioMonthSnapshots PortfolioMonthSnapshot[]
+  notes                   Note[]
+}
+
 /// Her alis/satis islemi (kendi para biriminde saklanir)
 model Transaction {
   id        String   @id @default(cuid())
+  userId    String   @default("default-user-id")
   date      DateTime
   assetType String // BIST | TEFAS | FOREIGN | FX | METAL | CRYPTO | BES
   symbol    String
@@ -25,14 +41,17 @@ model Transaction {
   note      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([symbol])
   @@index([date])
+  @@index([userId])
 }
 
 /// Sembol -> fiyat kaynagi haritasi
 model Instrument {
-  symbol      String   @id
+  symbol      String
+  userId      String   @default("default-user-id")
   assetType   String
   name        String?
   yahooSymbol String?
@@ -40,6 +59,10 @@ model Instrument {
   priceSource String   @default("yahoo") // yahoo | tefas | manual
   manualPrice Float?
   updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([symbol, userId])
+  @@index([userId])
 }
 
 /// Gunluk kapanis fiyat onbellegi (gecmis grafikler icin)
@@ -72,17 +95,23 @@ model FxRate {
 /// Gunluk toplam portfoy degeri (aylik gelisim icin), her iki para biriminde
 model PortfolioSnapshot {
   id            String   @id @default(cuid())
-  date          DateTime @unique
+  userId        String   @default("default-user-id")
+  date          DateTime
   totalValueTRY Float
   totalCostTRY  Float
   totalValueUSD Float
   totalCostUSD  Float
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
 }
 
 /// Manuel ay sonu bakiyeleri (backlog.xlsx ve BES guncellemeleri)
 model PortfolioMonthSnapshot {
   id         String   @id @default(cuid())
-  month      DateTime @unique // ayin 1'i (YYYY-MM-01)
+  userId     String   @default("default-user-id")
+  month      DateTime // ayin 1'i (YYYY-MM-01)
   besTRY     Float    @default(0)
   bistTRY    Float    @default(0)
   tefasTRY   Float    @default(0)
@@ -94,8 +123,11 @@ model PortfolioMonthSnapshot {
   totalUSD   Float?
   usdTryRate Float?
   source     String   @default("backlog") // backlog | manual
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, month])
   @@index([month])
+  @@index([userId])
 }
 
 /// Günlük teknik analiz sonuçları (cron veya manuel tetik ile hesaplanır)
@@ -130,12 +162,15 @@ model TechnicalAnalysis {
 /// Kullanıcı notları (Genel Bakış sayfasında gösterilir)
 model Note {
   id        String   @id @default(cuid())
+  userId    String   @default("default-user-id")
   content   String
   color     String   @default("default") // default | blue | green | amber | red | purple
   pinned    Boolean  @default(false)
   tags      String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([pinned])
+  @@index([userId])
 }

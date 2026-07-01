@@ -406,12 +406,15 @@ function ensureBaselineYearEnd(series: GrowthPoint[]): GrowthPoint[] {
 }
 
 /** Ay-sonu portfoy degeri ve maliyet serisi (TL & USD). */
-export async function getGrowthSeries(): Promise<GrowthPoint[]> {
+export async function getGrowthSeries(userId: string): Promise<GrowthPoint[]> {
   const [txRows, snaps, fxRows, manualSnaps] = await Promise.all([
-    prisma.transaction.findMany({ orderBy: { date: "asc" } }),
+    prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: "asc" },
+    }),
     prisma.priceSnapshot.findMany({ orderBy: { date: "asc" } }),
     prisma.fxRate.findMany({ where: { pair: "USDTRY" }, orderBy: { date: "asc" } }),
-    loadManualSnapshots(),
+    loadManualSnapshots(userId),
   ]);
   if (txRows.length === 0 && manualSnaps.size === 0) return [];
 
@@ -527,12 +530,15 @@ export interface PeriodReturnsDTO {
   };
 }
 
-export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
+export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO> {
   const [txRows, snaps, fxRows, manualSnaps] = await Promise.all([
-    prisma.transaction.findMany({ orderBy: { date: "asc" } }),
+    prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: "asc" },
+    }),
     prisma.priceSnapshot.findMany({ orderBy: { date: "asc" } }),
     prisma.fxRate.findMany({ where: { pair: "USDTRY" }, orderBy: { date: "asc" } }),
-    loadManualSnapshots(),
+    loadManualSnapshots(userId),
   ]);
 
   if (txRows.length === 0 && manualSnaps.size === 0) {
@@ -688,7 +694,7 @@ export async function getPeriodReturns(): Promise<PeriodReturnsDTO> {
     return result;
   }
 
-  const series = await getGrowthSeries();
+  const series = await getGrowthSeries(userId);
   const firstPoint = series.length > 0 ? series[0] : null;
 
   return {
@@ -742,10 +748,14 @@ export interface ProductPerformance {
  * Hala tutulan urunlerin son `monthsBack` ay icin ay-ay getirisi (TL & USD).
  */
 export async function getProductPerformance(
+  userId: string,
   monthsBack = 12,
 ): Promise<ProductPerformance> {
   const [txRows, snaps, fxRows] = await Promise.all([
-    prisma.transaction.findMany({ orderBy: { date: "asc" } }),
+    prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: "asc" },
+    }),
     prisma.priceSnapshot.findMany({
       where: { source: { in: ["hist", "auto"] } },
       orderBy: { date: "asc" },
@@ -967,12 +977,15 @@ export interface BenchmarkComparisonData {
   usd: Record<"1W" | "1M" | "3M" | "YTD" | "1Y", BenchmarkComparisonDTO>;
 }
 
-export async function getBenchmarkComparisonData(): Promise<BenchmarkComparisonData> {
+export async function getBenchmarkComparisonData(userId: string): Promise<BenchmarkComparisonData> {
   const [txRows, snaps, fxRows, manualSnaps] = await Promise.all([
-    prisma.transaction.findMany({ orderBy: { date: "asc" } }),
+    prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { date: "asc" },
+    }),
     prisma.priceSnapshot.findMany({ orderBy: { date: "asc" } }),
     prisma.fxRate.findMany({ where: { pair: "USDTRY" }, orderBy: { date: "asc" } }),
-    loadManualSnapshots(),
+    loadManualSnapshots(userId),
   ]);
 
   const fallbackResult: BenchmarkComparisonData = {

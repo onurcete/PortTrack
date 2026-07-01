@@ -1,14 +1,16 @@
 import { getPortfolio } from "@/lib/data";
 import { getBenchmarkComparisonData, getPeriodReturns } from "@/lib/history";
 import { DashboardClient, type DashboardDTO } from "@/components/DashboardClient";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const userId = await requireUser();
   const [p, benchmarkData, periodReturns] = await Promise.all([
-    getPortfolio(),
-    getBenchmarkComparisonData(),
-    getPeriodReturns(),
+    getPortfolio(userId),
+    getBenchmarkComparisonData(userId),
+    getPeriodReturns(userId),
   ]);
 
   const data: DashboardDTO = {
