@@ -295,19 +295,42 @@ export async function backfillTefas(budgetMs = 45000): Promise<TefasProgress> {
   // Gerekli fon tiplerini belirle (cogu YAT) - ay basina istek sayisini azaltir
   const neededKinds = await resolveNeededKinds(heldSet);
 
-  // Daha once islenmis aylar (sentinel isaret)
+  // Find which months have been processed for each fund
   const marks = await prisma.priceSnapshot.findMany({
+    where: { symbol: { startsWith: "__TEFAS_MARK__:" } },
+    select: { symbol: true, date: true },
+  });
+
+  const processedMonths = new Map<string, Set<string>>();
+  for (const m of marks) {
+    const code = m.symbol.substring("__TEFAS_MARK__:".length);
+    if (!processedMonths.has(code)) processedMonths.set(code, new Set());
+    processedMonths.get(code)!.add(monthKeyOf(m.date));
+  }
+
+  // Also support the legacy __TEFAS_MARK__ symbol if it exists so we don't break existing setups
+  const legacyMarks = await prisma.priceSnapshot.findMany({
     where: { symbol: TEFAS_MARK },
     select: { date: true },
   });
-  const doneMonths = new Set(marks.map((m) => monthKeyOf(m.date)));
-  const pending = ends.filter((e) => !doneMonths.has(monthKeyOf(e)));
+  const legacyDoneMonths = new Set(legacyMarks.map((m) => monthKeyOf(m.date)));
+
+  const pending = ends.filter((e) => {
+    const key = monthKeyOf(e);
+    if (legacyDoneMonths.has(key)) return false;
+    return tefasCodes.some((code) => !processedMonths.get(code)?.has(key));
+  });
 
   let processed = 0;
   let snapshots = 0;
 
   for (const end of pending) {
     if (Date.now() - startedAt > budgetMs) break;
+    const key = monthKeyOf(end);
+    const pendingCodes = tefasCodes.filter((code) => !processedMonths.get(code)?.has(key));
+    if (pendingCodes.length === 0) continue;
+
+    const pendingSet = new Set(pendingCodes);
     const winStart = new Date(end);
     winStart.setDate(winStart.getDate() - 6);
 
@@ -316,13 +339,13 @@ export async function backfillTefas(budgetMs = 45000): Promise<TefasProgress> {
       const rows = await fetchTefasAll(kind, winStart, end);
       const latest = new Map<string, { date: string; price: number }>();
       for (const r of rows) {
-        if (!heldSet.has(r.code)) continue;
+        if (!pendingSet.has(r.code)) continue;
         const prev = latest.get(r.code);
         if (!prev || r.date > prev.date)
           latest.set(r.code, { date: r.date, price: r.price });
       }
       for (const [code, v] of latest) if (!found.has(code)) found.set(code, v.price);
-      if (found.size >= heldSet.size) break;
+      if (found.size >= pendingSet.size) break;
     }
 
     for (const [code, price] of found) {
@@ -342,18 +365,20 @@ export async function backfillTefas(budgetMs = 45000): Promise<TefasProgress> {
       snapshots++;
     }
 
-    // ay islendi isareti
-    await prisma.priceSnapshot.upsert({
-      where: { symbol_date: { symbol: TEFAS_MARK, date: end } },
-      create: {
-        symbol: TEFAS_MARK,
-        date: end,
-        close: 0,
-        currency: "TRY",
-        source: "mark",
-      },
-      update: {},
-    });
+    // Mark these pending codes as processed for this month
+    for (const code of pendingCodes) {
+      await prisma.priceSnapshot.upsert({
+        where: { symbol_date: { symbol: `__TEFAS_MARK__:${code}`, date: end } },
+        create: {
+          symbol: `__TEFAS_MARK__:${code}`,
+          date: end,
+          close: 0,
+          currency: "TRY",
+          source: "mark",
+        },
+        update: {},
+      });
+    }
     processed++;
   }
 

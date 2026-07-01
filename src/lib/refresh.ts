@@ -101,8 +101,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
     prevDate?: Date | null,
   ) {
     if (prevPrice !== undefined && prevPrice !== null && prevDate) {
-      const prevDay = new Date(prevDate);
-      prevDay.setHours(0, 0, 0, 0);
+      const prevDay = startOfDay(prevDate);
 
       await prisma.priceSnapshot.upsert({
         where: { symbol_date: { symbol, date: prevDay } },
