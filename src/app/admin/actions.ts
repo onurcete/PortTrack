@@ -1,13 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUserIdOptional } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { AdminUserDTO } from "@/components/AdminClient";
 
 /** Yetki kontrolü yardımcısı */
 async function checkAdminAuth() {
-  const user = await getSessionUser();
+  const userId = await getSessionUserIdOptional();
+  if (!userId) {
+    throw new Error("Bu işlemi yapmaya yetkiniz yok.");
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.email !== "admin@porttrack.com") {
     throw new Error("Bu işlemi yapmaya yetkiniz yok.");
   }
@@ -48,7 +52,7 @@ export async function deleteUser(userIdToDelete: string): Promise<AdminUserDTO[]
 
   return usersList.map((u) => ({
     id: u.id,
-    name: u.name,
+    name: u.name ?? "",
     email: u.email,
     createdAt: u.createdAt.toISOString(),
     transactionCount: u._count.transactions,

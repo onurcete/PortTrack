@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUserIdOptional } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AdminClient, type AdminUserDTO, type DbStatsDTO } from "@/components/AdminClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const user = await getSessionUser();
+  const userId = await getSessionUserIdOptional();
+  if (!userId) {
+    redirect("/");
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.email !== "admin@porttrack.com") {
     redirect("/");
   }
@@ -55,7 +59,7 @@ export default async function AdminPage() {
 
   const users: AdminUserDTO[] = usersList.map((u) => ({
     id: u.id,
-    name: u.name,
+    name: u.name ?? "",
     email: u.email,
     createdAt: u.createdAt.toISOString(),
     transactionCount: u._count.transactions,
