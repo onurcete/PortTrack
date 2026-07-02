@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +12,7 @@ import {
   TrendingUp,
   LineChart,
   Brain,
+  Shield,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
@@ -29,6 +30,25 @@ export function Topbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [refreshing, setRefreshing] = useState(false);
+  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
+
+  const navItems = [...NAV];
+  if (user?.email === "admin@porttrack.com") {
+    navItems.push({ href: "/admin", label: "Yönetim", icon: Shield });
+  }
 
   async function handleRefresh() {
     if (refreshing) return;
@@ -67,7 +87,7 @@ export function Topbar() {
 
         {/* Orta Bölüm: Yatay Menü Sekmeleri */}
         <nav className="flex items-center gap-1 md:gap-2">
-          {NAV.map((item) => {
+          {navItems.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"
