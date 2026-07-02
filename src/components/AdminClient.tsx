@@ -15,6 +15,10 @@ import {
   FileText,
   LineChart,
   RefreshCw,
+  Table,
+  List,
+  Eye,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,18 +40,35 @@ export interface DbStatsDTO {
   technicalAnalyses: number;
 }
 
+export interface DbColumnDTO {
+  name: string;
+  type: string;
+  nullable: boolean;
+}
+
+export interface DbTableDTO {
+  name: string;
+  rowCount: number;
+  totalSize: number;
+  tableSize: number;
+  indexSize: number;
+  columns: DbColumnDTO[];
+}
+
 interface AdminClientProps {
   initialUsers: AdminUserDTO[];
   dbStats: DbStatsDTO;
+  dbTables: DbTableDTO[];
 }
 
-type TabType = "overview" | "users" | "actions";
+type TabType = "overview" | "users" | "actions" | "tables";
 
-export function AdminClient({ initialUsers, dbStats }: AdminClientProps) {
+export function AdminClient({ initialUsers, dbStats, dbTables }: AdminClientProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [users, setUsers] = useState<AdminUserDTO[]>(initialUsers);
   const [isPending, startTransition] = useTransition();
+  const [selectedSchemaTable, setSelectedSchemaTable] = useState<DbTableDTO | null>(null);
 
   // States for running long server operations
   const [runningAction, setRunningAction] = useState<string | null>(null);
@@ -135,6 +156,18 @@ export function AdminClient({ initialUsers, dbStats }: AdminClientProps) {
           >
             <Database size={16} />
             <span>Veritabanı Durumu</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("tables")}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full",
+              activeTab === "tables"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20"
+                : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+            )}
+          >
+            <Table size={16} />
+            <span>Veritabanı Detayları</span>
           </button>
           <button
             onClick={() => setActiveTab("users")}
@@ -304,8 +337,128 @@ export function AdminClient({ initialUsers, dbStats }: AdminClientProps) {
               </div>
             </div>
           )}
+
+          {/* TAB 4: Veritabanı Detayları */}
+          {activeTab === "tables" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tabloları</h2>
+              <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+                        <th className="px-6 py-4">Tablo Adı</th>
+                        <th className="px-6 py-4 text-center">Kayıt Sayısı</th>
+                        <th className="px-6 py-4 text-center">Veri Boyutu</th>
+                        <th className="px-6 py-4 text-center">İndeks Boyutu</th>
+                        <th className="px-6 py-4 text-center">Toplam Boyut</th>
+                        <th className="px-6 py-4 text-right">Eylemler</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-border)] text-sm">
+                      {dbTables.map((t) => (
+                        <tr key={t.name} className="hover:bg-[var(--color-surface-hover)] transition-colors">
+                          <td className="px-6 py-4 font-semibold text-[var(--color-text)]">
+                            {t.name}
+                          </td>
+                          <td className="px-6 py-4 text-center font-medium text-[var(--color-text)]">
+                            {t.rowCount.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 text-center text-[var(--color-muted)] text-xs">
+                            {formatBytes(t.tableSize)}
+                          </td>
+                          <td className="px-6 py-4 text-center text-[var(--color-muted)] text-xs">
+                            {formatBytes(t.indexSize)}
+                          </td>
+                          <td className="px-6 py-4 text-center font-semibold text-[var(--color-text)] text-xs">
+                            {formatBytes(t.totalSize)}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={() => setSelectedSchemaTable(t)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-surface-muted)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
+                            >
+                              <Eye size={12} />
+                              <span>Şemayı İncele</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
+
+      {/* Şema Detay Modalı */}
+      {selectedSchemaTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in duration-200">
+            {/* Modal Başlık */}
+            <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-[var(--color-text)]">
+                  "{selectedSchemaTable.name}" Tablo Şeması
+                </h3>
+                <p className="text-xs text-[var(--color-muted)] mt-0.5">
+                  Toplam {selectedSchemaTable.columns.length} kolon tanımlı
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSchemaTable(null)}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal İçerik (Kolon Listesi) */}
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+                    <th className="pb-3">Kolon Adı</th>
+                    <th className="pb-3">Veri Tipi</th>
+                    <th className="pb-3 text-right">Boş Geçilebilir</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)] text-sm">
+                  {selectedSchemaTable.columns.map((c) => (
+                    <tr key={c.name} className="hover:bg-[var(--color-surface-hover)]/30">
+                      <td className="py-3 font-mono font-medium text-[var(--color-brand)] text-xs">
+                        {c.name}
+                      </td>
+                      <td className="py-3 font-mono text-[var(--color-text)] text-xs">
+                        {c.type}
+                      </td>
+                      <td className="py-3 text-right text-xs">
+                        {c.nullable ? (
+                          <span className="text-emerald-500 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/10">Evet</span>
+                        ) : (
+                          <span className="text-[var(--color-muted)] font-semibold bg-[var(--color-surface-muted)] px-2 py-0.5 rounded-full border border-[var(--color-border)]">Hayır</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Alt Alan */}
+            <div className="px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] flex justify-end">
+              <button
+                onClick={() => setSelectedSchemaTable(null)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -383,4 +536,13 @@ function TriggerCard({ title, description, btnText, onClick, isRunning, isAnyRun
       </div>
     </div>
   );
+}
+
+/** Bayt değerlerini okunabilir KB, MB, GB biçimine dönüştürür. */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
