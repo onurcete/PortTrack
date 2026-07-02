@@ -4,6 +4,7 @@ import { resolvePriceMapping, type AssetType } from "@/lib/assets";
 import { fetchYahooHistory } from "@/lib/prices";
 import { computeIndicators, type PriceBar } from "@/lib/technical";
 import { generateAnalysis, generateDailySummary, type DailySummaryItem } from "@/lib/commentary";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -11,7 +12,8 @@ export const maxDuration = 60;
 /** Analiz hesaplamasını tetikler. */
 export async function POST(req: NextRequest) {
   try {
-    const result = await runTechnicalAnalysis();
+    const userId = await requireUser();
+    const result = await runTechnicalAnalysis(userId);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     return NextResponse.json(
@@ -22,9 +24,10 @@ export async function POST(req: NextRequest) {
 }
 
 /** Tüm aktif pozisyonlar için teknik analiz hesaplar. */
-export async function runTechnicalAnalysis() {
+export async function runTechnicalAnalysis(userId?: string) {
   // 1. Tüm işlemleri çekip aktif (açık) pozisyonu olan sembolleri bul
   const transactions = await prisma.transaction.findMany({
+    where: userId ? { userId } : undefined,
     select: { symbol: true, quantity: true, side: true }
   });
 
@@ -45,7 +48,8 @@ export async function runTechnicalAnalysis() {
   // Sadece açık pozisyonların enstrüman detaylarını çek
   const instruments = await prisma.instrument.findMany({
     where: {
-      symbol: { in: openSymbols }
+      symbol: { in: openSymbols },
+      userId: userId ? userId : undefined,
     }
   });
 
@@ -164,16 +168,17 @@ export async function runTechnicalAnalysis() {
   }
 
   // 6. Günlük özeti de özel bir kayıt olarak sakla
+  const summarySymbol = userId ? `__DAILY_SUMMARY__:${userId}` : "__DAILY_SUMMARY__";
   const summary = generateDailySummary(summaryItems);
   await prisma.technicalAnalysis.upsert({
     where: {
       symbol_date: {
-        symbol: "__DAILY_SUMMARY__",
+        symbol: summarySymbol,
         date: today,
       },
     },
     create: {
-      symbol: "__DAILY_SUMMARY__",
+      symbol: summarySymbol,
       assetType: "SUMMARY",
       date: today,
       indicators: summary as any,

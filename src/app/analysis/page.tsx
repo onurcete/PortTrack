@@ -42,10 +42,17 @@ export default async function AnalysisPage() {
   });
 
   // Günlük özet
-  const summaryRecord = await prisma.technicalAnalysis.findFirst({
-    where: { symbol: "__DAILY_SUMMARY__" },
+  const summarySymbol = `__DAILY_SUMMARY__:${userId}`;
+  let summaryRecord = await prisma.technicalAnalysis.findFirst({
+    where: { symbol: summarySymbol },
     orderBy: { date: "desc" },
   });
+  if (!summaryRecord) {
+    summaryRecord = await prisma.technicalAnalysis.findFirst({
+      where: { symbol: "__DAILY_SUMMARY__" },
+      orderBy: { date: "desc" },
+    });
+  }
 
   const lastAnalysisDate = analyses.length > 0 ? analyses[0].date.toISOString() : null;
 
