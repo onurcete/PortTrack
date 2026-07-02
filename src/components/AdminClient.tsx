@@ -55,15 +55,23 @@ export interface DbTableDTO {
   columns: DbColumnDTO[];
 }
 
+export interface DbEngineDTO {
+  version: string;
+  databaseName: string;
+  user: string;
+  totalSize: string;
+}
+
 interface AdminClientProps {
   initialUsers: AdminUserDTO[];
   dbStats: DbStatsDTO;
   dbTables: DbTableDTO[];
+  dbEngine: DbEngineDTO;
 }
 
 type TabType = "overview" | "users" | "actions" | "tables";
 
-export function AdminClient({ initialUsers, dbStats, dbTables }: AdminClientProps) {
+export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: AdminClientProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [users, setUsers] = useState<AdminUserDTO[]>(initialUsers);
@@ -341,7 +349,41 @@ export function AdminClient({ initialUsers, dbStats, dbTables }: AdminClientProp
           {/* TAB 4: Veritabanı Detayları */}
           {activeTab === "tables" && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tabloları</h2>
+              {/* Veritabanı Sistem Bilgisi */}
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Motor Bilgileri</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                  <div className="text-xs text-[var(--color-muted)] font-medium">Veritabanı Motoru</div>
+                  <div className="text-base font-bold text-[var(--color-text)] mt-1">PostgreSQL</div>
+                </div>
+                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                  <div className="text-xs text-[var(--color-muted)] font-medium">Veritabanı Adı</div>
+                  <div className="text-base font-bold text-[var(--color-text)] mt-1">{dbEngine.databaseName}</div>
+                </div>
+                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                  <div className="text-xs text-[var(--color-muted)] font-medium">Bağlantı Kullanıcısı</div>
+                  <div className="text-base font-bold text-[var(--color-text)] mt-1">{dbEngine.user}</div>
+                </div>
+                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                  <div className="text-xs text-[var(--color-muted)] font-medium">Toplam Veritabanı Boyutu</div>
+                  <div className="text-base font-bold text-[var(--color-brand)] mt-1">{dbEngine.totalSize}</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8 pt-4 border-t border-[var(--color-border)]">
+                <div>
+                  <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tabloları</h2>
+                  <p className="text-[11px] text-[var(--color-muted)] mt-0.5 leading-normal max-w-[800px]">{dbEngine.version}</p>
+                </div>
+                <a
+                  href="/api/admin/db/export"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white shadow-sm transition-all text-center focus:outline-none"
+                >
+                  <FileText size={16} />
+                  <span>Tüm Veritabanını Dışa Aktar (.json)</span>
+                </a>
+              </div>
+
               <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -374,13 +416,22 @@ export function AdminClient({ initialUsers, dbStats, dbTables }: AdminClientProp
                             {formatBytes(t.totalSize)}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => setSelectedSchemaTable(t)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-surface-muted)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
-                            >
-                              <Eye size={12} />
-                              <span>Şemayı İncele</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => setSelectedSchemaTable(t)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-surface-muted)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
+                              >
+                                <Eye size={12} />
+                                <span>Şemayı İncele</span>
+                              </button>
+                              <a
+                                href={`/api/admin/db/export?table=${t.name}`}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-surface-muted)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
+                              >
+                                <FileText size={12} />
+                                <span>Dışa Aktar</span>
+                              </a>
+                            </div>
                           </td>
                         </tr>
                       ))}

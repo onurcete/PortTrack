@@ -6,6 +6,7 @@ import {
   type AdminUserDTO,
   type DbStatsDTO,
   type DbTableDTO,
+  type DbEngineDTO,
 } from "@/components/AdminClient";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  // Fetch db stats, users, and all base tables in parallel
+  // Fetch db stats, users, all base tables, and DB engine info in parallel
   const [
     userCount,
     txCount,
@@ -30,6 +31,7 @@ export default async function AdminPage() {
     techAnalysisCount,
     usersList,
     tablesList,
+    dbInfoResult,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.transaction.count(),
@@ -58,6 +60,13 @@ export default async function AdminPage() {
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
       ORDER BY table_name;
     `,
+    prisma.$queryRaw<Array<{ db_version: string; db_name: string; db_user: string; db_size: string }>>`
+      SELECT 
+        version() as db_version,
+        current_database() as db_name,
+        current_user as db_user,
+        pg_size_pretty(pg_database_size(current_database())) as db_size;
+    `,
   ]);
 
   const dbStats: DbStatsDTO = {
@@ -77,6 +86,20 @@ export default async function AdminPage() {
     transactionCount: u._count.transactions,
     instrumentCount: u._count.instruments,
   }));
+
+  const dbInfo = dbInfoResult[0] ?? {
+    db_version: "Unknown",
+    db_name: "Unknown",
+    db_user: "Unknown",
+    db_size: "Unknown",
+  };
+
+  const dbEngine: DbEngineDTO = {
+    version: dbInfo.db_version,
+    databaseName: dbInfo.db_name,
+    user: dbInfo.db_user,
+    totalSize: dbInfo.db_size,
+  };
 
   // Fetch details (row count, size, columns) for each table
   const dbTables: DbTableDTO[] = [];
@@ -124,5 +147,12 @@ export default async function AdminPage() {
     });
   }
 
-  return <AdminClient initialUsers={users} dbStats={dbStats} dbTables={dbTables} />;
+  return (
+    <AdminClient
+      initialUsers={users}
+      dbStats={dbStats}
+      dbTables={dbTables}
+      dbEngine={dbEngine}
+    />
+  );
 }
