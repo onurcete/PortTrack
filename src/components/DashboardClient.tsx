@@ -1588,6 +1588,7 @@ function BenchmarkComparison({
             <Tooltip
               content={<CustomTooltip />}
               cursor={{ fill: "var(--color-surface-muted)", opacity: 0.3 }}
+              contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
             />
             <ReferenceLine y={0} stroke="var(--color-border)" strokeWidth={1.5} />
             <Bar dataKey="value" radius={6} maxBarSize={32}>
@@ -1817,7 +1818,10 @@ function PortfolioProjection({
               axisLine={false}
               tickLine={false}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={<CustomTooltip />}
+              contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
+            />
             <Area
               type="monotone"
               dataKey="Toplam Değer"
@@ -2152,7 +2156,10 @@ function PositionDetailModal({
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip content={<CustomTooltipDetail isTRY={isTRY} />} />
+                  <Tooltip
+                    content={<CustomTooltipDetail isTRY={isTRY} />}
+                    contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
+                  />
                   
                   {/* Ortalama maliyet referans çizgisi */}
                   {position.quantity > 1e-9 && costVal > 0 && (
@@ -2234,7 +2241,11 @@ function PositionDetailModal({
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip content={<CustomTooltipInvestors />} />
+                  <Tooltip
+                    content={<CustomTooltipInvestors />}
+                    contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
+                    cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
+                  />
                   <Bar dataKey="investors" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

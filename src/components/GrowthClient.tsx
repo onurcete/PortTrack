@@ -1041,7 +1041,11 @@ export function GrowthClient({
                           strokeDasharray="4 4"
                         />
                       )}
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip
+                        content={<CustomTooltip />}
+                        contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
+                        cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
+                      />
                       <Legend
                         formatter={(v) => {
                           if (showReturnMetric) return "Aylık getiri";
@@ -1127,7 +1131,11 @@ export function GrowthClient({
                           strokeDasharray="4 4"
                         />
                       )}
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip
+                        content={<CustomTooltip />}
+                        contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
+                        cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
+                      />
                       <Legend
                         formatter={(v) => {
                           if (showReturnMetric) return "Aylık getiri";
