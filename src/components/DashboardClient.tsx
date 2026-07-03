@@ -94,6 +94,7 @@ export interface PositionDTO {
   ytdPctUSD: number | null;
   oneYearPctTRY: number | null;
   oneYearPctUSD: number | null;
+  name?: string | null;
 }
 
 export interface BenchmarkComparisonDTO {
@@ -2060,7 +2061,12 @@ function PositionDetailModal({
   const priceKey = isTRY ? "closeTRY" : "closeUSD";
 
   return (
-    <Modal open={true} onClose={onClose} title={`${position.symbol} Detayları`} size="xl">
+    <Modal
+      open={true}
+      onClose={onClose}
+      title={position.name ? `${position.symbol} - ${position.name}` : `${position.symbol} Detayları`}
+      size="xl"
+    >
       <div className="space-y-6">
         {/* Pozisyon Özet Kartları */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

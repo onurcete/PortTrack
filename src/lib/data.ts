@@ -139,6 +139,17 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
     currentUsdTry,
   );
 
+  // Map instrument names from database to positions
+  const nameMap = new Map<string, string>();
+  for (const inst of instruments) {
+    if (inst.name) {
+      nameMap.set(inst.symbol.toUpperCase(), inst.name);
+    }
+  }
+  for (const pos of positions) {
+    pos.name = nameMap.get(pos.symbol.toUpperCase()) || null;
+  }
+
   // Turkey-time date helpers
   function trYear(d: Date): number {
     const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);

@@ -57,6 +57,7 @@ export interface Position {
   ytdPctUSD?: number | null;
   oneYearPctTRY?: number | null;
   oneYearPctUSD?: number | null;
+  name?: string | null;
 }
 
 export interface PortfolioTotals {

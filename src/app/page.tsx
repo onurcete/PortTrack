@@ -52,6 +52,7 @@ export default async function DashboardPage() {
       ytdPctUSD: x.ytdPctUSD ?? null,
       oneYearPctTRY: x.oneYearPctTRY ?? null,
       oneYearPctUSD: x.oneYearPctUSD ?? null,
+      name: x.name ?? null,
     })),
     totals: p.totals,
     allocation: p.allocation,
