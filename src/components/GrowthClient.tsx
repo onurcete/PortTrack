@@ -15,6 +15,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  LabelList,
 } from "recharts";
 import { FileSpreadsheet, History, TrendingUp } from "lucide-react";
 import {
@@ -1153,6 +1154,12 @@ export function GrowthClient({
                           name="returnPctPlot"
                           radius={[5, 5, 0, 0]}
                         >
+                          <LabelList
+                            dataKey="returnPct"
+                            position="top"
+                            formatter={(v: any) => v != null ? `${Number(v).toFixed(1)}%` : ""}
+                            style={{ fill: "var(--color-text)", fontSize: 8, fontWeight: 600 }}
+                          />
                           {plotData.map((row, i) => (
                             <Cell
                               key={i}
@@ -1181,7 +1188,14 @@ export function GrowthClient({
                           fill="var(--color-brand)"
                           name="value"
                           radius={[5, 5, 0, 0]}
-                        />
+                        >
+                          <LabelList
+                            dataKey="value"
+                            position="top"
+                            formatter={(v: any) => formatMoney(Number(v), currency, { compact: true })}
+                            style={{ fill: "var(--color-text)", fontSize: 8, fontWeight: 600 }}
+                          />
+                        </Bar>
                       )}
                     </BarChart>
                   )}

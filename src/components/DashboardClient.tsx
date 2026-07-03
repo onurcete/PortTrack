@@ -28,6 +28,7 @@ import {
   ReferenceLine,
   AreaChart,
   Area,
+  LabelList,
 } from "recharts";
 
 /** Açık pozisyon bölüm sırası */
@@ -1592,6 +1593,12 @@ function BenchmarkComparison({
             />
             <ReferenceLine y={0} stroke="var(--color-border)" strokeWidth={1.5} />
             <Bar dataKey="value" radius={6} maxBarSize={32}>
+              <LabelList
+                dataKey="value"
+                position="top"
+                formatter={(v: any) => `${v > 0 ? "+" : ""}${Number(v).toFixed(1)}%`}
+                style={{ fill: "var(--color-text)", fontSize: 9, fontWeight: 600 }}
+              />
               {chartData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
@@ -2246,7 +2253,14 @@ function PositionDetailModal({
                     contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
                     cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
                   />
-                  <Bar dataKey="investors" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="investors" fill="#8b5cf6" radius={[4, 4, 0, 0]}>
+                    <LabelList
+                      dataKey="investors"
+                      position="top"
+                      formatter={(v: any) => v != null ? Number(v).toLocaleString("tr-TR") : ""}
+                      style={{ fill: "var(--color-text)", fontSize: 9, fontWeight: 600 }}
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
