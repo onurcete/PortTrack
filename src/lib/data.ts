@@ -1,4 +1,6 @@
 // import "server-only";
+import fs from "fs/promises";
+import path from "path";
 import { prisma } from "./prisma";
 import {
   computePositions,
@@ -40,6 +42,51 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
       where: { userId },
     }),
   ]);
+
+  // Load cache files to resolve missing instrument names
+  let tefasCache: { symbol: string; name: string }[] = [];
+  let bistCache: { symbol: string; name: string }[] = [];
+  try {
+    const tefasPath = path.join(process.cwd(), "src/lib/tefas_cache.json");
+    const bistPath = path.join(process.cwd(), "src/lib/bist_cache.json");
+    
+    const [tefasRaw, bistRaw] = await Promise.all([
+      fs.readFile(tefasPath, "utf-8").catch(() => "[]"),
+      fs.readFile(bistPath, "utf-8").catch(() => "[]"),
+    ]);
+    tefasCache = JSON.parse(tefasRaw);
+    bistCache = JSON.parse(bistRaw);
+  } catch (e) {
+    console.error("Error reading cache files for instrument names", e);
+  }
+
+  const cacheMap = new Map<string, string>();
+  for (const item of tefasCache) {
+    cacheMap.set(item.symbol.toUpperCase(), item.name);
+  }
+  for (const item of bistCache) {
+    cacheMap.set(item.symbol.toUpperCase(), item.name);
+  }
+
+  // Update instruments in DB if their name is missing but found in cache
+  const updatePromises = [];
+  for (const inst of instruments) {
+    if (!inst.name) {
+      const cachedName = cacheMap.get(inst.symbol.toUpperCase());
+      if (cachedName) {
+        inst.name = cachedName;
+        updatePromises.push(
+          prisma.instrument.update({
+            where: { symbol_userId: { symbol: inst.symbol, userId } },
+            data: { name: cachedName },
+          }).catch(err => console.error(`Error updating name for ${inst.symbol}:`, err))
+        );
+      }
+    }
+  }
+  if (updatePromises.length > 0) {
+    await Promise.all(updatePromises);
+  }
 
   const tx: TxInput[] = txRows.map((t) => ({
     date: t.date,
