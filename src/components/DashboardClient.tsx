@@ -1566,7 +1566,7 @@ function BenchmarkComparison({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+            margin={{ top: 20, right: 10, left: -20, bottom: 5 }}
           >
             <CartesianGrid
               strokeDasharray="3 3"
@@ -1593,18 +1593,18 @@ function BenchmarkComparison({
             />
             <ReferenceLine y={0} stroke="var(--color-border)" strokeWidth={1.5} />
             <Bar dataKey="value" radius={6} maxBarSize={32}>
-              <LabelList
-                dataKey="value"
-                position="top"
-                formatter={(v: any) => `${v > 0 ? "+" : ""}${Number(v).toFixed(1)}%`}
-                style={{ fill: "var(--color-text)", fontSize: 9, fontWeight: 600 }}
-              />
               {chartData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={entry.color}
                 />
               ))}
+              <LabelList
+                dataKey="value"
+                position="top"
+                formatter={(v: any) => `${v > 0 ? "+" : ""}${Number(v).toFixed(1)}%`}
+                style={{ fill: "var(--color-foreground)", fontSize: 9, fontWeight: 600 }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -2233,7 +2233,7 @@ function PositionDetailModal({
             </div>
             <div className="h-44 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={lastWeekInvestors} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <BarChart data={lastWeekInvestors} margin={{ top: 20, right: 5, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -2258,7 +2258,7 @@ function PositionDetailModal({
                       dataKey="investors"
                       position="top"
                       formatter={(v: any) => v != null ? Number(v).toLocaleString("tr-TR") : ""}
-                      style={{ fill: "var(--color-text)", fontSize: 9, fontWeight: 600 }}
+                      style={{ fill: "var(--color-foreground)", fontSize: 9, fontWeight: 600 }}
                     />
                   </Bar>
                 </BarChart>

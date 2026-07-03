@@ -1096,7 +1096,7 @@ export function GrowthClient({
                   ) : (
                     <BarChart
                       data={plotData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      margin={{ top: 20, right: 10, left: 0, bottom: 0 }}
                       barGap={showReturnMetric ? 0 : 2}
                     >
                       <CartesianGrid
@@ -1154,12 +1154,6 @@ export function GrowthClient({
                           name="returnPctPlot"
                           radius={[5, 5, 0, 0]}
                         >
-                          <LabelList
-                            dataKey="returnPct"
-                            position="top"
-                            formatter={(v: any) => v != null ? `${Number(v).toFixed(1)}%` : ""}
-                            style={{ fill: "var(--color-text)", fontSize: 8, fontWeight: 600 }}
-                          />
                           {plotData.map((row, i) => (
                             <Cell
                               key={i}
@@ -1170,6 +1164,12 @@ export function GrowthClient({
                               }
                             />
                           ))}
+                          <LabelList
+                            dataKey="returnPct"
+                            position="top"
+                            formatter={(v: any) => v != null ? `${Number(v).toFixed(1)}%` : ""}
+                            style={{ fill: "var(--color-foreground)", fontSize: 8, fontWeight: 600 }}
+                          />
                         </Bar>
                       ) : chartMetric === "allocation" ? (
                         activeTypes.map((t, index) => (
@@ -1193,7 +1193,7 @@ export function GrowthClient({
                             dataKey="value"
                             position="top"
                             formatter={(v: any) => formatMoney(Number(v), currency, { compact: true })}
-                            style={{ fill: "var(--color-text)", fontSize: 8, fontWeight: 600 }}
+                            style={{ fill: "var(--color-foreground)", fontSize: 8, fontWeight: 600 }}
                           />
                         </Bar>
                       )}
