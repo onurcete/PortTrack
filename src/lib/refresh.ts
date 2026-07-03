@@ -99,6 +99,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
     prevPrice?: number | null,
     prevPriceTRY?: number | null,
     prevDate?: Date | null,
+    investors?: number | null,
   ) {
     if (prevPrice !== undefined && prevPrice !== null && prevDate) {
       const prevDay = startOfDay(prevDate);
@@ -113,8 +114,9 @@ export async function refreshPrices(): Promise<RefreshResult> {
           nativeCurrency: currency,
           currency: "TRY",
           source: "auto",
+          investors: investors,
         },
-        update: { close: prevPriceTRY ?? prevPrice, native: prevPrice, nativeCurrency: currency },
+        update: { close: prevPriceTRY ?? prevPrice, native: prevPrice, nativeCurrency: currency, investors: investors },
       });
     }
 
@@ -127,7 +129,9 @@ export async function refreshPrices(): Promise<RefreshResult> {
         const isPriceSame = (lastSnap.native !== null && native !== null)
           ? isPriceSameEnough(lastSnap.native, native)
           : isPriceSameEnough(lastSnap.close, priceTRY);
-        if (isPriceSame) {
+        // Note: we only skip duplicate if investors count is also same
+        const isInvestorsSame = lastSnap.investors === investors;
+        if (isPriceSame && isInvestorsSame) {
           // Clean up if a duplicate snapshot for today already exists
           await prisma.priceSnapshot.deleteMany({
             where: { symbol, date: today },
@@ -147,8 +151,9 @@ export async function refreshPrices(): Promise<RefreshResult> {
         nativeCurrency: currency,
         currency: "TRY",
         source: "auto",
+        investors: investors,
       },
-      update: { close: priceTRY, native, nativeCurrency: currency },
+      update: { close: priceTRY, native, nativeCurrency: currency, investors: investors },
     });
   }
 
@@ -157,8 +162,8 @@ export async function refreshPrices(): Promise<RefreshResult> {
     try {
       // TEFAS: once toplu haritadan dene
       if (assetType === "TEFAS" && tefasMap.has(symbol)) {
-        const p = tefasMap.get(symbol)!;
-        await writeSnapshot(symbol, p, p, "TRY", assetType);
+        const tInfo = tefasMap.get(symbol)!;
+        await writeSnapshot(symbol, tInfo.price, tInfo.price, "TRY", assetType, undefined, undefined, undefined, tInfo.investors);
         updated++;
         return;
       }
@@ -182,6 +187,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
         cp.prevPrice,
         cp.prevPriceTRY,
         cp.prevDate,
+        cp.investors,
       );
       updated++;
     } catch {

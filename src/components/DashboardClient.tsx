@@ -1937,6 +1937,19 @@ function PositionDetailModal({
     });
   }, [data, isTRY]);
 
+  const lastWeekInvestors = useMemo(() => {
+    if (!data?.history || position.assetType !== "TEFAS") return [];
+    const withInv = data.history
+      .filter((h: any) => h.investors != null)
+      .map((h: any) => ({
+        date: new Date(h.date).toLocaleDateString("tr-TR", { day: "numeric", month: "short" }),
+        investors: h.investors as number,
+        rawDate: h.date as string,
+      }))
+      .sort((a: any, b: any) => a.rawDate.localeCompare(b.rawDate));
+    return withInv.slice(-7);
+  }, [data, position.assetType]);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -2195,6 +2208,40 @@ function PositionDetailModal({
           </div>
         )}
 
+        {/* Yatırımcı Sayısı (Son 1 Hafta) */}
+        {!loading && !error && position.assetType === "TEFAS" && lastWeekInvestors.length > 0 && (
+          <div className="border border-[var(--color-border)]/40 rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm text-[var(--color-text)]">Yatırımcı Sayısı (Son 1 Hafta)</h3>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/40">
+                TEFAS
+              </span>
+            </div>
+            <div className="h-44 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={lastWeekInvestors} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={["dataMin - 10", "dataMax + 10"]}
+                    tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                    tickFormatter={(v) => v.toLocaleString("tr-TR")}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltipInvestors />} />
+                  <Bar dataKey="investors" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {/* İşlem Geçmişi */}
         {data?.transactions && (
           <div className="space-y-3">
@@ -2238,6 +2285,23 @@ function PositionDetailModal({
     </Modal>
   );
 }
+
+const CustomTooltipInvestors = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const val = payload[0].value;
+  const data = payload[0].payload;
+  return (
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl text-xs min-w-[150px]">
+      <div className="font-bold text-[var(--color-foreground)] border-b border-[var(--color-border)]/40 pb-1 mb-1.5">
+        {data.rawDate ? new Date(data.rawDate).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }) : data.date}
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-[var(--color-muted)] font-medium">Yatırımcı Sayısı:</span>
+        <span className="font-bold text-violet-500 tabular-nums">{Number(val).toLocaleString("tr-TR")}</span>
+      </div>
+    </div>
+  );
+};
 
 const CustomTooltipDetail = ({ active, payload, isTRY }: any) => {
   if (!active || !payload || !payload.length) return null;

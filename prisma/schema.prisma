@@ -76,6 +76,7 @@ model PriceSnapshot {
   nativeCurrency String?
   currency       String
   source         String?
+  investors      Int?
 
   @@unique([symbol, date])
   @@index([symbol])

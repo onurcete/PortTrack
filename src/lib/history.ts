@@ -326,33 +326,34 @@ export async function backfillTefas(budgetMs = 45000): Promise<TefasProgress> {
     const winStart = new Date(end);
     winStart.setDate(winStart.getDate() - 6);
 
-    const found = new Map<string, number>();
+    const found = new Map<string, { price: number; investors?: number }>();
     for (const kind of neededKinds) {
       const rows = await fetchTefasAll(kind, winStart, end);
-      const latest = new Map<string, { date: string; price: number }>();
+      const latest = new Map<string, { date: string; price: number; investors?: number }>();
       for (const r of rows) {
         if (!pendingSet.has(r.code)) continue;
         const prev = latest.get(r.code);
         if (!prev || r.date > prev.date)
-          latest.set(r.code, { date: r.date, price: r.price });
+          latest.set(r.code, { date: r.date, price: r.price, investors: r.investors });
       }
-      for (const [code, v] of latest) if (!found.has(code)) found.set(code, v.price);
+      for (const [code, v] of latest) if (!found.has(code)) found.set(code, v);
       if (found.size >= pendingSet.size) break;
     }
 
-    for (const [code, price] of found) {
+    for (const [code, item] of found) {
       await prisma.priceSnapshot.upsert({
         where: { symbol_date: { symbol: code, date: end } },
         create: {
           symbol: code,
           date: end,
-          close: price,
-          native: price,
+          close: item.price,
+          native: item.price,
           nativeCurrency: "TRY",
           currency: "TRY",
           source: "hist",
+          investors: item.investors,
         },
-        update: { close: price, native: price, nativeCurrency: "TRY" },
+        update: { close: item.price, native: item.price, nativeCurrency: "TRY", investors: item.investors },
       });
       snapshots++;
     }

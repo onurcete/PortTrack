@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
         orderBy: { date: "asc" },
       });
 
-      history = snaps.map((s) => {
+       history = snaps.map((s) => {
         const priceTRY = s.close;
         const priceUSD = priceTRY / fx(s.date);
         return {
@@ -105,6 +105,7 @@ export async function GET(req: NextRequest) {
           closeTRY: priceTRY,
           closeUSD: priceUSD,
           closeNative: s.native ?? priceTRY,
+          investors: s.investors,
         };
       });
     }

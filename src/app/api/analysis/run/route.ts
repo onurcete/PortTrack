@@ -69,9 +69,10 @@ export async function runTechnicalAnalysis(userId?: string) {
       const mapping = resolvePriceMapping(assetType, inst.symbol);
 
       let bars: PriceBar[] = [];
+      let investorAlerts: string[] = [];
 
       if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
-        // Yahoo Finance'tan 300 günlük geçmiş çek
+        // Yahoo Finance'tan geçmiş çek
         const fromDate = new Date();
         fromDate.setDate(fromDate.getDate() - 370);
 
@@ -103,6 +104,30 @@ export async function runTechnicalAnalysis(userId?: string) {
           date: s.date,
           close: s.native ?? s.close,
         }));
+
+        // Yatırımcı sayısı değişim tespiti (son 1 haftalık değişim)
+        const snapsWithInvestors = snapshots.filter((s) => s.investors != null);
+        if (snapsWithInvestors.length >= 2) {
+          const latest = snapsWithInvestors[snapsWithInvestors.length - 1];
+          // Yaklaşık 7 gün önceki (5-10 gün arası) en yakın kaydı bul, yoksa bir öncekini al
+          const prior = snapsWithInvestors.find((s) => {
+            const diffDays = (latest.date.getTime() - s.date.getTime()) / (1000 * 60 * 60 * 24);
+            return diffDays >= 5 && diffDays <= 10;
+          }) || snapsWithInvestors[snapsWithInvestors.length - 2];
+
+          if (latest.investors && prior.investors && prior.investors > 0) {
+            const diff = latest.investors - prior.investors;
+            const pct = (diff / prior.investors) * 100;
+            // %0.5 veya daha fazla değişim varsa kullanıcıya bildir
+            if (Math.abs(pct) >= 0.5) {
+              const direction = pct > 0 ? "artış" : "azalış";
+              const emoji = pct > 0 ? "📈" : "📉";
+              investorAlerts.push(
+                `${emoji} Yatırımcı Sayısı: Son 1 haftada yatırımcı sayısı %${Math.abs(pct).toFixed(1)} ${direction} gösterdi (Son: ${latest.investors.toLocaleString()}, Önceki: ${prior.investors.toLocaleString()}).`
+              );
+            }
+          }
+        }
       } else {
         // Manuel (BES vb.) — analiz yapılamaz
         skipped++;
@@ -118,6 +143,7 @@ export async function runTechnicalAnalysis(userId?: string) {
 
       // 4. Yorum üret
       const analysis = generateAnalysis(inst.symbol, indicators);
+      const combinedAlerts = [...analysis.alerts, ...investorAlerts];
 
       // 5. DB'ye kaydet (upsert)
       await prisma.technicalAnalysis.upsert({
@@ -137,7 +163,7 @@ export async function runTechnicalAnalysis(userId?: string) {
           trendSignal: analysis.trendSignal,
           macdSignal: analysis.macdSignal,
           rsiZone: analysis.rsiZone,
-          alerts: analysis.alerts,
+          alerts: combinedAlerts,
         },
         update: {
           indicators: indicators as any,
@@ -146,7 +172,7 @@ export async function runTechnicalAnalysis(userId?: string) {
           trendSignal: analysis.trendSignal,
           macdSignal: analysis.macdSignal,
           rsiZone: analysis.rsiZone,
-          alerts: analysis.alerts,
+          alerts: combinedAlerts,
         },
       });
 

@@ -15,6 +15,7 @@ export interface CurrentPrice {
   prevPrice?: number | null;
   prevPriceTRY?: number | null;
   prevDate?: Date | null;
+  investors?: number | null;
 }
 
 const YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart/";
@@ -181,6 +182,7 @@ interface TefasRow {
   fonUnvan?: string;
   tarih: string;
   fiyat: number;
+  kisiSayisi?: number;
 }
 
 // --- TEFAS hiz sinirlayici (dakikada ~6 istek) ---
@@ -275,9 +277,9 @@ export async function fetchTefasHistory(
   code: string,
   from: Date,
   to: Date = new Date(),
-): Promise<PricePoint[]> {
+): Promise<Array<PricePoint & { investors?: number }>> {
   const upper = code.toUpperCase();
-  const points = new Map<string, number>();
+  const points = new Map<string, { close: number; investors?: number }>();
   const CHUNK = 28;
 
   for (const kind of TEFAS_KINDS) {
@@ -290,7 +292,10 @@ export async function fetchTefasHistory(
       const rows = await tefasPost(kind, upper, cur, end);
       for (const r of rows) {
         if (r.fiyat != null && r.tarih) {
-          points.set(r.tarih, Number(r.fiyat));
+          points.set(r.tarih, {
+            close: Number(r.fiyat),
+            investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
+          });
           found = true;
         }
       }
@@ -301,7 +306,7 @@ export async function fetchTefasHistory(
   }
 
   return [...points.entries()]
-    .map(([date, close]) => ({ date: new Date(date), close }))
+    .map(([date, item]) => ({ date: new Date(date), close: item.close, investors: item.investors }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
@@ -315,29 +320,45 @@ export async function fetchTefasLatest(code: string): Promise<number | null> {
   return hist[hist.length - 1].close;
 }
 
+/** Tek bir fonun detayli guncel fiyati ve yatirimci bilgisi. */
+export async function fetchTefasLatestDetail(code: string): Promise<{ price: number; investors?: number } | null> {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 12);
+  const hist = await fetchTefasHistory(code, from, to);
+  if (hist.length === 0) return null;
+  const latest = hist[hist.length - 1];
+  return { price: latest.close, investors: latest.investors };
+}
+
 /** Belirli bir fon tipi ve tarih araligindaki tum fon satirlari. */
 export async function fetchTefasAll(
   kind: TefasKind,
   from: Date,
   to: Date,
-): Promise<{ code: string; date: string; price: number }[]> {
+): Promise<{ code: string; date: string; price: number; investors?: number }[]> {
   const rows = await tefasPost(kind, null, from, to);
   return rows
     .filter((r) => r.fiyat != null && r.tarih)
-    .map((r) => ({ code: r.fonKodu, date: r.tarih, price: Number(r.fiyat) }));
+    .map((r) => ({
+      code: r.fonKodu,
+      date: r.tarih,
+      price: Number(r.fiyat),
+      investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
+    }));
 }
 
 export const ALL_TEFAS_KINDS = TEFAS_KINDS;
 
 /**
  * Tum TEFAS fonlarinin guncel fiyatlarini tek seferde (tip basina 1 istek)
- * ceker. Sembol -> TL fiyat haritasi doner.
+ * ceker. Sembol -> { price, investors } haritasi doner.
  */
-export async function fetchTefasLatestMap(): Promise<Map<string, number>> {
+export async function fetchTefasLatestMap(): Promise<Map<string, { price: number; investors?: number }>> {
   const to = new Date();
   const from = new Date();
   from.setDate(from.getDate() - 10);
-  const latestByCode = new Map<string, { date: string; price: number }>();
+  const latestByCode = new Map<string, { date: string; price: number; investors?: number }>();
 
   for (const kind of TEFAS_KINDS) {
     const rows = await tefasPost(kind, null, from, to);
@@ -345,13 +366,19 @@ export async function fetchTefasLatestMap(): Promise<Map<string, number>> {
       if (r.fiyat == null || !r.tarih) continue;
       const prev = latestByCode.get(r.fonKodu);
       if (!prev || r.tarih > prev.date) {
-        latestByCode.set(r.fonKodu, { date: r.tarih, price: Number(r.fiyat) });
+        latestByCode.set(r.fonKodu, {
+          date: r.tarih,
+          price: Number(r.fiyat),
+          investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
+        });
       }
     }
   }
 
-  const map = new Map<string, number>();
-  for (const [code, v] of latestByCode) map.set(code, v.price);
+  const map = new Map<string, { price: number; investors?: number }>();
+  for (const [code, v] of latestByCode) {
+    map.set(code, { price: v.price, investors: v.investors });
+  }
   return map;
 }
 
@@ -376,9 +403,9 @@ export async function resolveCurrentPriceTRY(
   if (map.source === "manual") return null;
 
   if (map.source === "tefas" && map.tefasCode) {
-    const p = await fetchTefasLatest(map.tefasCode);
-    if (p == null) return null;
-    return { price: p, currency: "TRY", priceTRY: p };
+    const detail = await fetchTefasLatestDetail(map.tefasCode);
+    if (detail == null) return null;
+    return { price: detail.price, currency: "TRY", priceTRY: detail.price, investors: detail.investors };
   }
 
   if (!map.yahooSymbol) return null;
