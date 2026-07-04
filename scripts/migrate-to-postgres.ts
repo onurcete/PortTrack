@@ -116,25 +116,25 @@ async function main() {
   }
 
   // ────────── PortfolioSnapshot ──────────
-  {
-    const rows = sqlite.prepare("SELECT * FROM PortfolioSnapshot").all() as any[];
-    console.log(`📦 PortfolioSnapshot: ${rows.length} kayıt taşınacak`);
-    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-      const batch = rows.slice(i, i + BATCH_SIZE);
-      await prisma.portfolioSnapshot.createMany({
-        data: batch.map((r: any) => ({
-          id: r.id,
-          date: new Date(r.date),
-          totalValueTRY: r.totalValueTRY,
-          totalCostTRY: r.totalCostTRY,
-          totalValueUSD: r.totalValueUSD,
-          totalCostUSD: r.totalCostUSD,
-        })),
-        skipDuplicates: true,
-      });
-      console.log(`  ✓ PortfolioSnapshot ${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length}`);
-    }
-  }
+  // {
+  //   const rows = sqlite.prepare("SELECT * FROM PortfolioSnapshot").all() as any[];
+  //   console.log(`📦 PortfolioSnapshot: ${rows.length} kayıt taşınacak`);
+  //   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+  //     const batch = rows.slice(i, i + BATCH_SIZE);
+  //     await prisma.portfolioSnapshot.createMany({
+  //       data: batch.map((r: any) => ({
+  //         id: r.id,
+  //         date: new Date(r.date),
+  //         totalValueTRY: r.totalValueTRY,
+  //         totalCostTRY: r.totalCostTRY,
+  //         totalValueUSD: r.totalValueUSD,
+  //         totalCostUSD: r.totalCostUSD,
+  //       })),
+  //       skipDuplicates: true,
+  //     });
+  //     console.log(`  ✓ PortfolioSnapshot ${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length}`);
+  //   }
+  // }
 
   // ────────── PortfolioMonthSnapshot ──────────
   {

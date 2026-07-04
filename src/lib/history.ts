@@ -29,26 +29,7 @@ import {
   type TxInput,
   type FxLookup,
 } from "./portfolio";
-
-function startOfDay(d: Date): Date {
-  const tzOffset = 3 * 60 * 60 * 1000;
-  const trDate = new Date(d.getTime() + tzOffset);
-  const y = trDate.getUTCFullYear();
-  const m = trDate.getUTCMonth();
-  const day = trDate.getUTCDate();
-  return new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
-}
-
-/** Turkey-time year */
-function trYear(d: Date): number {
-  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
-  return trDate.getUTCFullYear();
-}
-/** Turkey-time month (0-indexed) */
-function trMonth(d: Date): number {
-  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
-  return trDate.getUTCMonth();
-}
+import { startOfDay, trYear, trMonth } from "./utils";
 /** Turkey-time day of month */
 function trDateOfMonth(d: Date): number {
   const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);

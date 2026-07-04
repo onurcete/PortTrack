@@ -16,12 +16,12 @@ model User {
   email     String   @unique
   password  String
   name      String?
+  role      String   @default("USER")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   transactions            Transaction[]
   instruments             Instrument[]
-  portfolioSnapshots      PortfolioSnapshot[]
   portfolioMonthSnapshots PortfolioMonthSnapshot[]
   notes                   Note[]
 }
@@ -91,21 +91,6 @@ model FxRate {
 
   @@unique([pair, date])
   @@index([pair])
-}
-
-/// Gunluk toplam portfoy degeri (aylik gelisim icin), her iki para biriminde
-model PortfolioSnapshot {
-  id            String   @id @default(cuid())
-  userId        String   @default("default-user-id")
-  date          DateTime
-  totalValueTRY Float
-  totalCostTRY  Float
-  totalValueUSD Float
-  totalCostUSD  Float
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, date])
-  @@index([userId])
 }
 
 /// Manuel ay sonu bakiyeleri (backlog.xlsx ve BES guncellemeleri)

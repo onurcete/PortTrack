@@ -30,7 +30,7 @@ export function Topbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [refreshing, setRefreshing] = useState(false);
-  const [user, setUser] = useState<{ email: string; name: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; name: string; role: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -46,7 +46,7 @@ export function Topbar() {
   }, [pathname]);
 
   const navItems = [...NAV];
-  if (user?.email === "admin@porttrack.com") {
+  if (user?.role === "ADMIN") {
     navItems.push({ href: "/admin", label: "Yönetim", icon: Shield });
   }
 

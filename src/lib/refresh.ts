@@ -7,15 +7,7 @@ import {
   fetchTefasLatestMap,
 } from "./prices";
 import type { AssetType } from "./assets";
-
-function startOfDay(d: Date): Date {
-  const tzOffset = 3 * 60 * 60 * 1000;
-  const trDate = new Date(d.getTime() + tzOffset);
-  const y = trDate.getUTCFullYear();
-  const m = trDate.getUTCMonth();
-  const day = trDate.getUTCDate();
-  return new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
-}
+import { startOfDay } from "./utils";
 
 /** Sinirli es zamanlilik ile calistir. */
 async function mapLimit<T, R>(

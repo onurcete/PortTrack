@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolvePriceMapping, type AssetType } from "@/lib/assets";
 import { fetchYahooHistory, currencyToTryRate } from "@/lib/prices";
 import { buildFxLookup } from "@/lib/portfolio";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -18,9 +19,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const userId = await requireUser();
+
     // 1. İlgili sembole ait tüm işlemleri çek
     const transactions = await prisma.transaction.findMany({
-      where: { symbol },
+      where: { symbol, userId },
       orderBy: { date: "asc" },
     });
 

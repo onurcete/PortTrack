@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
+import { prisma } from "./prisma";
 
 export const AUTH_COOKIE = "pt_session";
-const AUTH_SECRET = process.env.AUTH_SECRET ?? "porttrack-secret-key-change-me";
+const AUTH_SECRET = process.env.AUTH_SECRET || (process.env.NODE_ENV === "production" ? (() => { throw new Error("AUTH_SECRET is required in production!"); })() : "porttrack-secret-key-change-me");
 
 function arrayBufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
@@ -109,3 +110,17 @@ export async function getSessionUserIdOptional(): Promise<string | null> {
     return null;
   }
 }
+
+/** Sunucu eylemleri ve server component'leri için aktif admin kimliğini getirir. */
+export async function requireAdmin(): Promise<string> {
+  const userId = await requireUser();
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Unauthorized");
+  }
+  return userId;
+}
+

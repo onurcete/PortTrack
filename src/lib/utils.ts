@@ -73,3 +73,24 @@ export function monthLabel(key: string): string {
     year: "2-digit",
   }).format(new Date(y, m - 1, 1));
 }
+
+export function startOfDay(d: Date): Date {
+  const tzOffset = 3 * 60 * 60 * 1000;
+  const trDate = new Date(d.getTime() + tzOffset);
+  const y = trDate.getUTCFullYear();
+  const m = trDate.getUTCMonth();
+  const day = trDate.getUTCDate();
+  return new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
+}
+
+/** Turkey-time year */
+export function trYear(d: Date): number {
+  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return trDate.getUTCFullYear();
+}
+
+/** Turkey-time month (0-indexed) */
+export function trMonth(d: Date): number {
+  const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return trDate.getUTCMonth();
+}

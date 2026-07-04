@@ -28,12 +28,11 @@ export interface PortfolioData {
 }
 
 export async function getPortfolio(userId: string): Promise<PortfolioData> {
-  const [txRows, snaps, fxRows, instruments] = await Promise.all([
+  const [txRows, fxRows, instruments] = await Promise.all([
     prisma.transaction.findMany({
       where: { userId },
       orderBy: { date: "asc" },
     }),
-    prisma.priceSnapshot.findMany({ orderBy: { date: "desc" } }),
     prisma.fxRate.findMany({
       where: { pair: "USDTRY" },
       orderBy: { date: "asc" },
@@ -42,6 +41,22 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
       where: { userId },
     }),
   ]);
+
+  // Extract unique symbols to only query relevant price snapshots
+  const userSymbols = new Set<string>();
+  for (const t of txRows) {
+    userSymbols.add(t.symbol);
+  }
+  for (const inst of instruments) {
+    userSymbols.add(inst.symbol);
+  }
+
+  const snaps = userSymbols.size > 0
+    ? await prisma.priceSnapshot.findMany({
+        where: { symbol: { in: Array.from(userSymbols) } },
+        orderBy: { date: "desc" },
+      })
+    : [];
 
   // Load cache files to resolve missing instrument names
   let tefasCache: { symbol: string; name: string }[] = [];

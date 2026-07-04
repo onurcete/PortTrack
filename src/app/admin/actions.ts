@@ -1,18 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSessionUserIdOptional } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { AdminUserDTO } from "@/components/AdminClient";
 
 /** Yetki kontrolü yardımcısı */
 async function checkAdminAuth() {
-  const userId = await getSessionUserIdOptional();
-  if (!userId) {
-    throw new Error("Bu işlemi yapmaya yetkiniz yok.");
-  }
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.email !== "admin@porttrack.com") {
+  try {
+    await requireAdmin();
+  } catch {
     throw new Error("Bu işlemi yapmaya yetkiniz yok.");
   }
 }

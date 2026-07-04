@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -7,11 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     // 1. Yetki kontrolü (sadece admin)
-    const userId = await requireUser();
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.email !== "admin@porttrack.com") {
-      return new NextResponse("Yetkisiz Erişim", { status: 403 });
-    }
+    await requireAdmin();
 
     const table = req.nextUrl.searchParams.get("table");
 

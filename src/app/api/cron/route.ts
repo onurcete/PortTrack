@@ -8,7 +8,10 @@ export const maxDuration = 60;
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // secret tanimli degilse (yerel) serbest
+  if (!secret) {
+    // Yerel geliştirme ortamında secret olmasa da serbest, production'da zorunlu
+    return process.env.NODE_ENV !== "production";
+  }
   const auth = req.headers.get("authorization");
   if (auth === `Bearer ${secret}`) return true;
   return req.nextUrl.searchParams.get("key") === secret;

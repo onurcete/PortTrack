@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSessionUserIdOptional } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   AdminClient,
@@ -12,12 +12,9 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const userId = await getSessionUserIdOptional();
-  if (!userId) {
-    redirect("/");
-  }
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.email !== "admin@porttrack.com") {
+  try {
+    await requireAdmin();
+  } catch {
     redirect("/");
   }
 
