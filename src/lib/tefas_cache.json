@@ -1524,6 +1524,10 @@
     "name": "QNB PORTFÖY ENPARA DENGELİ DEĞİŞKEN ÖZEL FON"
   },
   {
+    "symbol": "EDN",
+    "name": "EMAA BLUE PORTFÖY DENGELİ DEĞİŞKEN FON"
+  },
+  {
     "symbol": "EDP",
     "name": "NEO PORTFÖY KORUNCUK EĞİTİME DESTEK PARA PİYASASI SERBEST FON"
   },
@@ -1537,11 +1541,15 @@
   },
   {
     "symbol": "EES",
-    "name": "İSTANBUL PORTFÖY EE SERBEST (DÖVİZ) ÖZEL FON"
+    "name": "ROTA PORTFÖY EE SERBEST (DÖVİZ) ÖZEL FON"
   },
   {
     "symbol": "EGP",
     "name": "GARANTİ PORTFÖY EKİM 2028 SÜRDÜRÜLEBİLİRLİK SERBEST (DÖVİZ-ABD DOLARI) FON"
+  },
+  {
+    "symbol": "EGR",
+    "name": "EMAA BLUE PORTFÖY AGRESİF DEĞİŞKEN FON"
   },
   {
     "symbol": "EHS",
@@ -1602,6 +1610,10 @@
   {
     "symbol": "ENS",
     "name": "QNB PORTFÖY ENPARA DEĞİŞKEN ÖZEL FON"
+  },
+  {
+    "symbol": "EP1",
+    "name": "EMLAK KATILIM PORTFÖY PARA PİYASASI KATILIM (TL) FONU"
   },
   {
     "symbol": "EPA",
@@ -4448,6 +4460,10 @@
     "name": "AK PORTFÖY YEDİNCİ SERBEST (DÖVİZ) FON"
   },
   {
+    "symbol": "LKF",
+    "name": "İŞ PORTFÖY ALTIN KATILIM FONU"
+  },
+  {
     "symbol": "LKT",
     "name": "AKTİF PORTFÖY İKİNCİ PARA PİYASASI (TL) FONU"
   },
@@ -4466,6 +4482,10 @@
   {
     "symbol": "LTC",
     "name": "AK PORTFÖY BİRİNCİ İSTATİSTİKSEL ARBİTRAJ HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
+  },
+  {
+    "symbol": "LTL",
+    "name": "AHLATCI PORTFÖY HİSSE SENEDİ (TL) FONU (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "LTS",
@@ -4733,7 +4753,7 @@
   },
   {
     "symbol": "MTX",
-    "name": "TEB PORTFÖY METAVERSE VE DİJİTAL TEKNOLOJİLER DEĞİŞKEN FON"
+    "name": "TEB PORTFÖY ÜÇÜNCÜ DEĞİŞKEN FON"
   },
   {
     "symbol": "MUL",
@@ -4989,7 +5009,7 @@
   },
   {
     "symbol": "NST",
-    "name": "İŞ PORTFÖY İNŞAAT SEKTÖRÜ HİSSE SENEDİ FONU (HİSSE SENEDİ YOĞUN FON)"
+    "name": "İŞ PORTFÖY EMLAK SEKTÖRÜ HİSSE SENEDİ FONU (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "NSY",
@@ -5428,6 +5448,10 @@
     "name": "A1 CAPİTAL PORTFÖY PARA PİYASASI (TL) SERBEST FON"
   },
   {
+    "symbol": "PA2",
+    "name": "PUSULA PORTFÖY ALTIN KATILIM FONU"
+  },
+  {
     "symbol": "PAB",
     "name": "A1 CAPİTAL PORTFÖY PARA PİYASASI (TL) FONU"
   },
@@ -5642,6 +5666,10 @@
   {
     "symbol": "PKL",
     "name": "PUSULA PORTFÖY KATILIM SERBEST (TL) FON"
+  },
+  {
+    "symbol": "PKM",
+    "name": "PUSULA PORTFÖY PARA PİYASASI KATILIM (TL) FONU"
   },
   {
     "symbol": "PKN",
@@ -6677,7 +6705,7 @@
   },
   {
     "symbol": "TCG",
-    "name": "TEB PORTFÖY CEMAY SERBEST ÖZEL FON"
+    "name": "TEB PORTFÖY CEMAY HİSSE SENEDİ SERBEST ÖZEL FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "TCH",
@@ -7125,7 +7153,7 @@
   },
   {
     "symbol": "UCN",
-    "name": "AK PORTFÖY FNM SERBEST ÖZEL FON"
+    "name": "AK PORTFÖY FNM HİSSE SENEDİ SERBEST ÖZEL FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "UCP",
@@ -7261,7 +7289,7 @@
   },
   {
     "symbol": "VK6",
-    "name": "ZİRAAT PORTFÖY VAKIFBANK PARA PİYASASI (TL) FONU"
+    "name": "V PORTFÖY VAKIFBANK PARA PİYASASI (TL) FONU"
   },
   {
     "symbol": "VKI",
@@ -7273,7 +7301,7 @@
   },
   {
     "symbol": "VKT",
-    "name": "ZİRAAT PORTFÖY VAKIFBANK KISA VADELİ BORÇLANMA ARAÇLARI (TL) FONU"
+    "name": "V PORTFÖY VAKIFBANK KISA VADELİ BORÇLANMA ARAÇLARI (TL) FONU"
   },
   {
     "symbol": "VKV",
@@ -7357,7 +7385,7 @@
   },
   {
     "symbol": "YBJ",
-    "name": "AKTİF PORTFÖY AYBÜKE SERBEST (DÖVİZ) ÖZEL FON"
+    "name": "DENİZ PORTFÖY AYBÜKE SERBEST (DÖVİZ) ÖZEL FON"
   },
   {
     "symbol": "YBP",
@@ -7644,6 +7672,10 @@
     "name": "YAPI KREDİ PORTFÖY SUADİYE SERBEST (DÖVİZ) FON"
   },
   {
+    "symbol": "YSH",
+    "name": "YAPI KREDİ PORTFÖY BÜYÜK ÖLÇEKLİ ŞİRKETLER DEĞİŞKEN FON"
+  },
+  {
     "symbol": "YSL",
     "name": "YAPI KREDİ PORTFÖY KAR PAYI ÖDEYEN KİRA SERTİFİKALARI KATILIM SERBEST (DÖVİZ) FON"
   },
@@ -7754,6 +7786,10 @@
   {
     "symbol": "YZL",
     "name": "YAPI KREDİ PORTFÖY PY ÇAMLICA SERBEST ÖZEL FON"
+  },
+  {
+    "symbol": "YZT",
+    "name": "AK PORTFÖY YAPAY ZEKA TEKNOLOJİLERİ ŞİRKETLERİ DEĞİŞKEN FON"
   },
   {
     "symbol": "ZA2",
@@ -8609,7 +8645,7 @@
   },
   {
     "symbol": "BSR",
-    "name": "BNP PARIBAS CARDIF EMEKLİLİK A.Ş. SÜRDÜRÜLEBİLİRLİK FON SEPETİ EMEKLİLİK YATIRIM FONU"
+    "name": "BNP PARİBAS CARDİF EMEKLİLİK A.Ş. SÜRDÜRÜLEBİLİRLİK FON SEPETİ EMEKLİLİK YATIRIM FONU"
   },
   {
     "symbol": "BZY",
@@ -8685,7 +8721,7 @@
   },
   {
     "symbol": "CHM",
-    "name": "QNB SAĞLIK HAYAT  SİGORTA VE EMEKLİLİK A.Ş. DİNAMİK DEĞİŞKEN EMEKLİLİK YATIRIM FONU"
+    "name": "QNB SAĞLIK HAYAT SİGORTA VE EMEKLİLİK A.Ş. DİNAMİK DEĞİŞKEN EMEKLİLİK YATIRIM FONU"
   },
   {
     "symbol": "CHN",
@@ -8693,11 +8729,11 @@
   },
   {
     "symbol": "CHO",
-    "name": "QNB SAĞLIK HAYAT  SİGORTA VE EMEKLİLİK A.Ş. OKS ATAK DEĞİŞKEN EMEKLİLİK YATIRIM FONU"
+    "name": "QNB SAĞLIK HAYAT SİGORTA VE EMEKLİLİK A.Ş. OKS ATAK DEĞİŞKEN EMEKLİLİK YATIRIM FONU"
   },
   {
     "symbol": "CHS",
-    "name": "QNB SAĞLIK HAYAT  SİGORTA VE EMEKLİLİK A.Ş. STANDART EMEKLİLİK YATIRIM FONU"
+    "name": "QNB SAĞLIK HAYAT SİGORTA VE EMEKLİLİK A.Ş. STANDART EMEKLİLİK YATIRIM FONU"
   },
   {
     "symbol": "CHT",
