@@ -93,6 +93,10 @@ export async function refreshPrices(): Promise<RefreshResult> {
     prevDate?: Date | null,
     investors?: number | null,
   ) {
+    // 0 veya negatif fiyatli snapshot yazmayi engelle (hafta sonu veri bozulmasi)
+    if (!Number.isFinite(priceTRY) || priceTRY <= 0) return;
+    if (!Number.isFinite(native) || native <= 0) return;
+
     if (prevPrice !== undefined && prevPrice !== null && prevDate) {
       const prevDay = startOfDay(prevDate);
 
@@ -155,8 +159,12 @@ export async function refreshPrices(): Promise<RefreshResult> {
       // TEFAS: once toplu haritadan dene
       if (assetType === "TEFAS" && tefasMap.has(symbol)) {
         const tInfo = tefasMap.get(symbol)!;
-        await writeSnapshot(symbol, tInfo.price, tInfo.price, "TRY", assetType, undefined, undefined, undefined, tInfo.investors);
-        updated++;
+        if (tInfo.price > 0) {
+          await writeSnapshot(symbol, tInfo.price, tInfo.price, "TRY", assetType, undefined, undefined, undefined, tInfo.investors);
+          updated++;
+        } else {
+          failed.push(symbol);
+        }
         return;
       }
 
