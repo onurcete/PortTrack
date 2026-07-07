@@ -214,13 +214,10 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
   const customPresets = [-5, 0, 2.5, 5, 7.5, 10, 15, 20];
 
   return (
-    <div className="card p-6 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/50 shadow-md rounded-2xl relative overflow-hidden">
-      {/* Dekoratif Glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[var(--color-brand)]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-      {/* Başlık Bölümü */}
-      <div className="flex items-center gap-3 border-b border-[var(--color-border)]/40 pb-4 mb-6">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shrink-0">
+    <div className="space-y-6">
+      {/* Başlık Bölümü (Kartların dışına taşındı) */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shrink-0 border border-[var(--color-border)]/40 shadow-xs">
           <Brain size={22} className="animate-pulse" />
         </div>
         <div>
@@ -239,9 +236,9 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       {/* Grid Layout: Sol Panel (Senaryolar & Slider) & Sağ Panel (Metrikler & Yorumlar) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Sol Sütun: Kontroller (3/12) */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1">
+        {/* Sol Sütun: Kontroller (3/12) - Kendi bağımsız kartı içinde */}
+        <div className="lg:col-span-3 card p-4.5 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/50 shadow-md rounded-2xl space-y-4">
+          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider">
             Projeksiyon Senaryosu
           </div>
           
@@ -333,9 +330,9 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
           )}
         </div>
 
-        {/* Sağ Sütun: Sonuçlar (9/12) */}
-        <div className="lg:col-span-9 space-y-4">
-          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1">
+        {/* Sağ Sütun: Sonuçlar (9/12) - Kendi bağımsız kartı içinde */}
+        <div className="lg:col-span-9 card p-4.5 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/50 shadow-md rounded-2xl space-y-5">
+          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider">
             Projeksiyon Sonuçları
           </div>
 
@@ -405,15 +402,13 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
               <p>{text.intro}</p>
               <p>{text.middle}</p>
             </div>
-            
-
           </div>
         </div>
 
       </div>
 
-      {/* Bilgilendirme Notu */}
-      <div className="flex gap-2 text-[9px] text-[var(--color-muted)] leading-normal bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/10 mt-6">
+      {/* Bilgilendirme Notu (Kartların dışına taşındı) */}
+      <div className="flex gap-2 text-[9px] text-[var(--color-muted)] leading-normal bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/10">
         <Info size={13} className="shrink-0 text-slate-400 mt-0.5" />
         <span>
           Bu analiz ve projeksiyonlar, portföyünüzün belirtilen dönemdeki getiri eğilimlerine göre doğrusal ve bileşik faiz matematik modelleri kullanılarak hesaplanmıştır. Gelecekteki piyasa dalgalanmaları, ek yatırımlarınız veya nakit çıkışlarınız bu sonuçları değiştirebilir. Yatırım tavsiyesi niteliğinde değildir.
