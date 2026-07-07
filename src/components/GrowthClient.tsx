@@ -35,6 +35,7 @@ import {
   formatPercent,
   cn,
 } from "@/lib/utils";
+import { GrowthAiCommentary } from "./GrowthAiCommentary";
 
 /** Tablo kolon sirasi (kullanici oncelikli gruplama) */
 const TABLE_TYPES: AssetType[] = [
@@ -1445,6 +1446,8 @@ export function GrowthClient({
               </table>
             </div>
           </Card>
+
+          <GrowthAiCommentary series={series} currency={currency} />
 
           <Card className="p-6">
             <h2 className="font-semibold mb-1">BES aylık bakiye</h2>
