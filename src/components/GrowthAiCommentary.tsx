@@ -239,8 +239,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       {/* Grid Layout: Sol Panel (Senaryolar & Slider) & Sağ Panel (Metrikler & Yorumlar) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Sol Sütun: Kontroller (5/12) */}
-        <div className="lg:col-span-5 space-y-4">
+        {/* Sol Sütun: Kontroller (4/12) */}
+        <div className="lg:col-span-4 space-y-4">
           <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1">
             Projeksiyon Senaryosu
           </div>
@@ -333,8 +333,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
           )}
         </div>
 
-        {/* Sağ Sütun: Sonuçlar (7/12) */}
-        <div className="lg:col-span-7 space-y-4">
+        {/* Sağ Sütun: Sonuçlar (8/12) */}
+        <div className="lg:col-span-8 space-y-4">
           <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1">
             Projeksiyon Sonuçları
           </div>
@@ -406,15 +406,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
               <p>{text.middle}</p>
             </div>
             
-            {text.conclusion && (
-              <div className="mt-3 pt-2.5 border-t border-[var(--color-brand-soft)]/30 text-[var(--color-foreground)] flex items-start gap-2 p-2.5 rounded-lg bg-[var(--color-surface)]/60">
-                <span className="shrink-0 mt-0.5">💡</span>
-                <div className="text-[11px] leading-normal">
-                  <span className="font-extrabold text-[9px] text-[var(--color-brand-strong)] block uppercase tracking-wide mb-0.5">Stratejik Öneri</span>
-                  {text.conclusion.replace(/^\s*🚀\s*|\s*🚀\s*/g, "")}
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
 
