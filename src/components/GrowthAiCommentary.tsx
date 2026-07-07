@@ -239,8 +239,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       {/* Grid Layout: Sol Panel (Senaryolar & Slider) & Sağ Panel (Metrikler & Yorumlar) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Sol Sütun: Kontroller (4/12) */}
-        <div className="lg:col-span-4 space-y-4">
+        {/* Sol Sütun: Kontroller (3/12) */}
+        <div className="lg:col-span-3 space-y-4">
           <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1">
             Projeksiyon Senaryosu
           </div>
@@ -333,8 +333,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
           )}
         </div>
 
-        {/* Sağ Sütun: Sonuçlar (8/12) */}
-        <div className="lg:col-span-8 space-y-4">
+        {/* Sağ Sütun: Sonuçlar (9/12) */}
+        <div className="lg:col-span-9 space-y-4">
           <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1">
             Projeksiyon Sonuçları
           </div>
