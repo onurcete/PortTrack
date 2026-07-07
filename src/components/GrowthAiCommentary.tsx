@@ -14,7 +14,7 @@ import {
 import { formatMoney, formatPercent, cn } from "@/lib/utils";
 import type { GrowthPointDTO } from "./GrowthClient";
 
-type Scenario = "pessimistic" | "realistic" | "optimistic";
+type Scenario = "pessimistic" | "realistic" | "optimistic" | "custom";
 
 interface GrowthAiCommentaryProps {
   series: GrowthPointDTO[];
@@ -94,6 +94,13 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
     };
   }, [series, currency, isTRY]);
 
+  const [customRate, setCustomRate] = useState<number>(() => {
+    if (stats) {
+      return Number(stats.avgMonthlyReturn.toFixed(1));
+    }
+    return 5.0;
+  });
+
   if (!stats) return null;
 
   const {
@@ -127,6 +134,13 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       desc: "Piyasaların güçlendiği ve portföy getiri ivmenizin arttığı pozitif projeksiyon.",
       color: "text-emerald-500 bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-900/30",
       indicatorColor: "bg-emerald-500",
+    },
+    custom: {
+      label: "Özel Senaryo",
+      rate: customRate,
+      desc: "Kendi belirlediğiniz tahmini aylık ortalama getiri oranına dayalı projeksiyon.",
+      color: "text-violet-500 bg-violet-500/10 border-violet-500/20",
+      indicatorColor: "bg-violet-500",
     },
   };
 
@@ -212,27 +226,60 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       </div>
 
       {/* Senaryo Seçim Sekmeleri */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider">
           <span>Projeksiyon Senaryosu</span>
           <span className="text-[10px] text-[var(--color-brand-strong)] font-semibold">Tahmini Aylık Getiri: %{projectedMonthlyRate.toFixed(2)}</span>
         </div>
-        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[var(--color-surface-muted)]/50">
-          {(["pessimistic", "realistic", "optimistic"] as Scenario[]).map((s) => (
+        <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-[var(--color-surface-muted)]/50">
+          {(["pessimistic", "realistic", "optimistic", "custom"] as Scenario[]).map((s) => (
             <button
               key={s}
               onClick={() => setScenario(s)}
               className={cn(
-                "py-2 px-3 rounded-lg text-xs font-black transition-all cursor-pointer text-center",
+                "py-2 px-1 rounded-lg text-[11px] font-black transition-all cursor-pointer text-center whitespace-nowrap",
                 scenario === s
                   ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-sm border border-[var(--color-border)]/30"
                   : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
               )}
             >
-              {s === "pessimistic" ? "📉 Kötümser" : s === "realistic" ? "📊 Gerçekçi" : "🚀 İyimser"}
+              {s === "pessimistic" ? "📉 Kötümser" : s === "realistic" ? "📊 Gerçekçi" : s === "optimistic" ? "🚀 İyimser" : "⚙️ Özel"}
             </button>
           ))}
         </div>
+
+        {/* Özel Senaryo Giriş Bölümü */}
+        {scenario === "custom" && (
+          <div className="bg-[var(--color-surface-muted)]/40 p-4 rounded-xl border border-[var(--color-border)]/20 flex flex-col sm:flex-row items-center gap-4 transition-all">
+            <div className="flex-1 w-full space-y-1.5">
+              <div className="flex justify-between text-[11px] font-bold text-[var(--color-muted)]">
+                <span>Özel Aylık Getiri Oranı</span>
+                <span className="text-[var(--color-brand-strong)] font-extrabold">% {customRate.toFixed(1)}</span>
+              </div>
+              <input
+                type="range"
+                min="-15"
+                max="30"
+                step="0.1"
+                value={customRate}
+                onChange={(e) => setCustomRate(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-brand)]"
+              />
+            </div>
+            <div className="w-24 shrink-0">
+              <input
+                type="number"
+                min="-99"
+                max="999"
+                step="0.1"
+                value={customRate}
+                onChange={(e) => setCustomRate(parseFloat(e.target.value) || 0)}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-center font-bold outline-none focus:border-[var(--color-brand)] tabular-nums"
+              />
+            </div>
+          </div>
+        )}
+
         <p className="text-[11px] text-[var(--color-muted)] leading-relaxed italic px-1">
           💡 {currentScenario.desc}
         </p>
@@ -259,16 +306,16 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
         <div className="bg-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/20 p-4 rounded-xl space-y-1 relative group hover:border-[var(--color-brand)]/20 transition-all">
           <div className="text-[10px] font-bold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
             <TrendingUp size={11} className="text-emerald-500" />
-            Yıl Sonu Getiri Oranı
+            Tahmini Yıllık Getiri (YTD)
           </div>
           <div className={cn(
             "text-xl font-black tracking-tight tabular-nums",
-            projectedReturnPct >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
+            projectedYtdReturn >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
           )}>
-            {projectedReturnPct >= 0 ? "+" : ""}{projectedReturnPct.toFixed(1)}%
+            {projectedYtdReturn >= 0 ? "+" : ""}{projectedYtdReturn.toFixed(1)}%
           </div>
           <div className="text-[10px] text-[var(--color-muted)] pt-1 border-t border-[var(--color-border)]/10">
-            Dönem İçi: {formatPercent(ytdReturn)} Getiri
+            Kalan {monthsRemaining} Ay Getirisi: {projectedReturnPct >= 0 ? "+" : ""}{projectedReturnPct.toFixed(1)}%
           </div>
         </div>
 
