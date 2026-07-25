@@ -154,51 +154,6 @@ function ReturnCell({ pct }: { pct: number | null }) {
   );
 }
 
-type TableDisplayMode = "value" | "percent";
-
-function MetricToggle({
-  value,
-  onChange,
-  id,
-}: {
-  value: TableDisplayMode;
-  onChange: (v: TableDisplayMode) => void;
-  id: string;
-}) {
-  return (
-    <div
-      className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40"
-      role="group"
-      aria-label={id}
-    >
-      <button
-        type="button"
-        onClick={() => onChange("value")}
-        className={cn(
-          "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
-          value === "value"
-            ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
-            : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
-        )}
-      >
-        Değer
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("percent")}
-        className={cn(
-          "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
-          value === "percent"
-            ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
-            : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
-        )}
-      >
-        Getiri %
-      </button>
-    </div>
-  );
-}
-
 function prevMonthKey(monthKey: string): string | null {
   const [y, m] = monthKey.split("-").map(Number);
   if (!y || !m) return null;
@@ -242,53 +197,63 @@ function changeVsPrevious(
   return periodReturnPct(previous, current);
 }
 
-function TableAmountCell({
+const tdClsStatic = "px-4 py-2 text-xs tabular-nums whitespace-nowrap";
+
+/** Tutar + altinda onceki aya gore % degisim rozeti (Aylik Dagilim). */
+function CombinedAmountCell({
   current,
   previous,
-  mode,
   currency,
   bold,
   className,
 }: {
   current: number;
   previous: number | null | undefined;
-  mode: TableDisplayMode;
   currency: "TRY" | "USD";
   bold?: boolean;
   className?: string;
 }) {
-  if (mode === "percent") {
-    const pct = changeVsPrevious(current, previous);
-    return (
-      <td
+  const hasValue = current > 0;
+  const pct = hasValue ? changeVsPrevious(current, previous) : null;
+  const neutral = pct != null && Math.abs(pct) < 0.05;
+
+  return (
+    <td className={cn(tdClsStatic, "py-1.5 text-right align-middle", className)}>
+      <div
         className={cn(
-          tdClsStatic,
-          "text-right",
+          "leading-tight",
           bold && "font-semibold",
-          pct == null && "text-[var(--color-muted)]",
-          className,
+          !hasValue && "text-[var(--color-muted)]",
         )}
       >
-        {pct != null ? <ReturnCell pct={pct} /> : "—"}
-      </td>
-    );
-  }
-  return (
-    <td
-      className={cn(
-        tdClsStatic,
-        "text-right",
-        bold && "font-semibold",
-        current <= 0 && "text-[var(--color-muted)]",
-        className,
+        {hasValue ? formatMoney(current, currency) : "—"}
+      </div>
+      {pct != null && (
+        <div
+          className={cn(
+            "mt-0.5 text-[10px] font-semibold leading-tight tabular-nums",
+            neutral
+              ? "text-[var(--color-muted)]"
+              : pct > 0
+                ? "text-[var(--color-profit)]"
+                : "text-[var(--color-loss)]",
+          )}
+        >
+          {neutral ? (
+            "%0,0"
+          ) : (
+            <>
+              <span className="text-[8px] align-middle">
+                {pct > 0 ? "▲" : "▼"}
+              </span>{" "}
+              {formatPercent(pct, 1)}
+            </>
+          )}
+        </div>
       )}
-    >
-      {current > 0 ? formatMoney(current, currency) : "—"}
     </td>
   );
 }
-
-const tdClsStatic = "px-4 py-2 text-xs tabular-nums whitespace-nowrap";
 
 export interface PeriodReturnsDTO {
   dailyTRY: number | null;
@@ -342,7 +307,6 @@ export function GrowthClient({
   const [chartYearFilter, setChartYearFilter] = useState<string>(YEAR_FILTER_ALL);
   const [chartType, setChartType] = useState<"area" | "bar">("bar");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("return");
-  const [tableMetric, setTableMetric] = useState<TableDisplayMode>("value");
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload || !payload.length) return null;
@@ -1297,13 +1261,11 @@ export function GrowthClient({
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[var(--color-border)]">
               <div>
                 <h2 className="font-semibold text-sm">Aylık Dağılım</h2>
+                <p className="text-xs text-[var(--color-muted)] mt-0.5">
+                  Tutar ve önceki aya göre değişim (%)
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <MetricToggle
-                  id="monthly-table-metric"
-                  value={tableMetric}
-                  onChange={setTableMetric}
-                />
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="growth-year"
@@ -1398,7 +1360,7 @@ export function GrowthClient({
                             {monthTableLabel(p.month)}
                           </td>
                           {activeTypes.map((t) => (
-                            <TableAmountCell
+                            <CombinedAmountCell
                               key={t}
                               current={typeValue(p, t, currency)}
                               previous={
@@ -1406,7 +1368,6 @@ export function GrowthClient({
                                   ? typeValue(prevPoint, t, currency)
                                   : null
                               }
-                              mode={tableMetric}
                               currency={currency}
                             />
                           ))}
@@ -1429,10 +1390,9 @@ export function GrowthClient({
                               </td>
                             );
                           })()}
-                          <TableAmountCell
+                          <CombinedAmountCell
                             current={total}
                             previous={prevTotal}
-                            mode={tableMetric}
                             currency={currency}
                             bold
                             className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20"
