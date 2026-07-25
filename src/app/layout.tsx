@@ -41,7 +41,7 @@ export default function RootLayout({
                 document.documentElement.dataset.theme = theme;
                 document.documentElement.classList.toggle(
                   'dark',
-                  theme === 'dark' || theme === 'harbor'
+                  theme === 'dark'
                 );
               } catch (_) {}
             `,

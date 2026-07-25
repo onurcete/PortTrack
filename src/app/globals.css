@@ -235,36 +235,36 @@ html[data-theme="solarized"] {
     0 8px 22px rgba(7, 54, 66, 0.05);
 }
 
-/* Harbor — lacivert zemin + altin vurgu (#1A3263, #547792, #EFD2B0, #FFC570) */
+/* Harbor — krem zemin + lacivert metin + celik mavi + altin (#EFD2B0, #1A3263, #547792, #FFC570) */
 html[data-theme="harbor"] {
-  color-scheme: dark;
-  --color-bg: #1a3263;
-  --color-surface: #243e72;
-  --color-surface-muted: #2d4c82;
-  --color-surface-hover: #35568f;
-  --color-table-header: #2a487c;
-  --color-inset: #1f396b;
+  color-scheme: light;
+  --color-bg: #efd2b0;
+  --color-surface: #fff6e8;
+  --color-surface-muted: #f3dcc0;
+  --color-surface-hover: #edd0a8;
+  --color-table-header: #f0d7b4;
+  --color-inset: #f7e6cf;
   --color-border: #547792;
-  --color-foreground: #efd2b0;
-  --color-text: #efd2b0;
-  --color-muted: #b7c5d4;
+  --color-foreground: #1a3263;
+  --color-text: #1a3263;
+  --color-muted: #547792;
 
   --color-brand: #ffc570;
-  --color-brand-strong: #ffd08a;
-  --color-brand-hover: #ffd08a;
-  --color-brand-soft: rgba(255, 197, 112, 0.16);
+  --color-brand-strong: #e6a84a;
+  --color-brand-hover: #e6a84a;
+  --color-brand-soft: rgba(255, 197, 112, 0.35);
   --color-on-brand: #1a3263;
 
-  --color-neutral: #b7c5d4;
-  --color-neutral-soft: rgba(84, 119, 146, 0.28);
+  --color-neutral: #547792;
+  --color-neutral-soft: rgba(84, 119, 146, 0.14);
   --color-chart-muted: #547792;
 
-  --color-profit: #8fbf88;
-  --color-profit-soft: rgba(143, 191, 136, 0.16);
-  --color-loss: #e07a6a;
-  --color-loss-soft: rgba(224, 122, 106, 0.16);
+  --color-profit: #2f7d4a;
+  --color-profit-soft: rgba(47, 125, 74, 0.12);
+  --color-loss: #b23a3a;
+  --color-loss-soft: rgba(178, 58, 58, 0.12);
 
   --shadow-card:
-    0 1px 2px rgba(10, 22, 48, 0.35),
-    0 12px 30px rgba(10, 22, 48, 0.4);
+    0 1px 2px rgba(26, 50, 99, 0.06),
+    0 10px 28px rgba(26, 50, 99, 0.1);
 }

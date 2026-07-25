@@ -36,9 +36,9 @@ const THEMES: Array<{
   {
     id: "harbor",
     label: "Harbor",
-    description: "Lacivert ve altın",
-    colors: ["#1A3263", "#FFC570", "#EFD2B0"],
-    dark: true,
+    description: "Krem, lacivert ve altın",
+    colors: ["#EFD2B0", "#1A3263", "#FFC570"],
+    dark: false,
   },
 ];
 
@@ -50,7 +50,7 @@ function resolveTheme(value: string | null): Theme {
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark" || theme === "harbor");
+  root.classList.toggle("dark", theme === "dark");
   root.dataset.theme = theme;
 }
 
