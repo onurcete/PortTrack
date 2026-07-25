@@ -55,7 +55,6 @@ export interface GrowthPointDTO {
   costTRY: number;
   costUSD: number;
   byType: GrowthByType;
-  isSyntheticBaseline?: boolean;
 }
 
 function typeValue(
@@ -305,8 +304,6 @@ export function GrowthClient({
   const [yearFilter, setYearFilter] = useState<string>(() =>
     latestDisplayYear(series),
   );
-  const [cumulativeFromYear, setCumulativeFromYear] =
-    useState<string>(YEAR_FILTER_ALL);
   const [chartYearFilter, setChartYearFilter] = useState<string>(YEAR_FILTER_ALL);
   const [chartType, setChartType] = useState<"area" | "bar">("bar");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("return");
@@ -428,35 +425,11 @@ export function GrowthClient({
     return TABLE_TYPES.filter((t) => has.has(t));
   }, [displaySeries, currency]);
 
-  const cumulativeYears = useMemo(
-    () =>
-      [
-        ...new Set(
-          series
-            .filter((point) => !point.isSyntheticBaseline)
-            .map((point) => point.month.slice(0, 4)),
-        ),
-      ].sort((a, b) => Number(a) - Number(b)),
-    [series],
-  );
-
-  const selectedCumulativeFromYear =
-    cumulativeFromYear === YEAR_FILTER_ALL ||
-    cumulativeYears.includes(cumulativeFromYear)
-      ? cumulativeFromYear
-      : YEAR_FILTER_ALL;
-
   const cumulativeYearlyRows = useMemo((): CumulativeYearRow[] => {
-    const cumulativeSeries = series.filter(
-      (point) =>
-        !point.isSyntheticBaseline &&
-        (selectedCumulativeFromYear === YEAR_FILTER_ALL ||
-          point.month.slice(0, 4) >= selectedCumulativeFromYear),
-    );
-    if (cumulativeSeries.length === 0) return [];
+    if (displaySeries.length === 0) return [];
 
     const byYear = new Map<string, GrowthPointDTO[]>();
-    for (const p of cumulativeSeries) {
+    for (const p of displaySeries) {
       const y = p.month.slice(0, 4);
       const arr = byYear.get(y) ?? [];
       arr.push(p);
@@ -490,7 +463,7 @@ export function GrowthClient({
       });
     }
 
-    const sorted = [...cumulativeSeries].sort((a, b) =>
+    const sorted = [...displaySeries].sort((a, b) =>
       a.month.localeCompare(b.month),
     );
     // For TOPLAM, also use the Dec before the first display year if available
@@ -509,7 +482,7 @@ export function GrowthClient({
     });
 
     return rows;
-  }, [series, selectedCumulativeFromYear]);
+  }, [displaySeries, series]);
 
   function handleImportBacklog() {
     setImporting(true);
@@ -1203,28 +1176,8 @@ export function GrowthClient({
           </Card>
 
           <Card className="overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[var(--color-border)]">
-              <div>
-                <h2 className="font-semibold text-sm">Kümülatif Yıllık Özet</h2>
-                <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-                  İlk işlem yılından itibaren portföy gelişimi
-                </p>
-              </div>
-              <label className="flex items-center gap-2 text-xs font-semibold text-[var(--color-muted)]">
-                Gösterim başlangıcı
-                <select
-                  value={selectedCumulativeFromYear}
-                  onChange={(event) => setCumulativeFromYear(event.target.value)}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-foreground)] outline-none focus:border-[var(--color-brand)]"
-                >
-                  <option value={YEAR_FILTER_ALL}>Tüm yıllar</option>
-                  {cumulativeYears.map((year) => (
-                    <option key={year} value={year}>
-                      {year} ve sonrası
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div className="px-6 py-4 border-b border-[var(--color-border)]">
+              <h2 className="font-semibold text-sm">Kümülatif Yıllık Özet</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
