@@ -34,7 +34,7 @@ function getColorClasses(colorKey: string) {
 }
 
 const COLOR_DOTS: { key: string; dot: string }[] = [
-  { key: "default", dot: "bg-gray-400" },
+  { key: "default", dot: "bg-[var(--color-muted)]" },
   { key: "blue", dot: "bg-blue-500" },
   { key: "green", dot: "bg-emerald-500" },
   { key: "amber", dot: "bg-amber-500" },

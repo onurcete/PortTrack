@@ -1055,7 +1055,7 @@ export function GrowthClient({
                       <Tooltip
                         content={<CustomTooltip />}
                         contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
-                        cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
+                        cursor={{ fill: "color-mix(in srgb, var(--color-muted) 12%, transparent)" }}
                       />
                       <Legend
                         formatter={(v) => {
@@ -1145,7 +1145,7 @@ export function GrowthClient({
                       <Tooltip
                         content={<CustomTooltip />}
                         contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
-                        cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
+                        cursor={{ fill: "color-mix(in srgb, var(--color-muted) 12%, transparent)" }}
                       />
                       <Legend
                         formatter={(v) => {

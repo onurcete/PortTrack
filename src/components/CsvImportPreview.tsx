@@ -69,8 +69,8 @@ export function CsvImportPreview({
       </section>
 
       {preview.requiresReview > 0 && (
-        <section className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3.5">
-          <div className="mb-3 flex gap-2 text-amber-700 dark:text-amber-400">
+        <section className="rounded-xl border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] p-3.5">
+          <div className="mb-3 flex gap-2 text-[var(--color-brand-strong)]">
             <AlertTriangle className="mt-0.5 shrink-0" size={16} />
             <div className="text-xs">
               <p className="font-bold">Tür doğrulaması gerekli</p>
@@ -80,7 +80,7 @@ export function CsvImportPreview({
               </p>
             </div>
           </div>
-          <div className="max-h-48 overflow-auto rounded-lg border border-amber-400/20 bg-[var(--color-surface)]">
+          <div className="max-h-48 overflow-auto rounded-lg border border-[var(--color-brand)]/20 bg-[var(--color-surface)]">
             {preview.unresolved.map((row) => (
               <div
                 key={row.lineNo}
@@ -153,8 +153,8 @@ export function CsvImportPreview({
       </section>
 
       {preview.errors.length > 0 && (
-        <section className="rounded-xl border border-red-400/30 bg-red-500/10 p-3">
-          <div className="flex gap-2 text-xs text-red-700 dark:text-red-400">
+        <section className="rounded-xl border border-[var(--color-loss)]/30 bg-[var(--color-loss-soft)] p-3">
+          <div className="flex gap-2 text-xs text-[var(--color-loss)]">
             <FileWarning className="mt-0.5 shrink-0" size={16} />
             <div>
               <p className="font-bold">{preview.errors.length} satır atlanacak</p>
@@ -187,7 +187,7 @@ export function CsvImportPreview({
       </section>
 
       {error && (
-        <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-700 dark:text-red-400">
+        <p className="rounded-lg border border-[var(--color-loss)]/30 bg-[var(--color-loss-soft)] px-3 py-2 text-xs font-medium text-[var(--color-loss)]">
           {error}
         </p>
       )}
@@ -209,7 +209,7 @@ export function CsvImportPreview({
           className="btn btn-primary px-3 py-2 text-xs"
         >
           {importing ? (
-            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--color-on-brand)] border-t-transparent" />
           ) : (
             <CheckCircle2 size={14} />
           )}
@@ -235,7 +235,7 @@ function SummaryCard({
       : tone === "bad"
         ? "text-[var(--color-loss)]"
         : tone === "warn"
-          ? "text-amber-700 dark:text-amber-400"
+          ? "text-[var(--color-brand-strong)]"
           : "text-[var(--color-foreground)]";
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">

@@ -1875,18 +1875,6 @@ function PositionDetailModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const checkDark = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    };
-    checkDark();
-    const observer = new MutationObserver(checkDark);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-
   const monthlyPerformances = useMemo(() => {
     // 1. Generate keys for the last 12 calendar months (ending in the current month)
     const months = [];
@@ -2216,7 +2204,7 @@ function PositionDetailModal({
                 <div
                   key={mp.monthKey}
                   className="flex flex-col items-center justify-center p-2 rounded-lg border border-[var(--color-border)]/35 text-center select-none"
-                  style={getCellStyle(mp.pct, isDark)}
+                  style={getCellStyle(mp.pct)}
                 >
                   <span className="text-[10px] opacity-75 font-semibold uppercase tracking-wider">
                     {monthLabel(mp.monthKey)}
@@ -2259,7 +2247,7 @@ function PositionDetailModal({
                   <Tooltip
                     content={<CustomTooltipInvestors />}
                     contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
-                    cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
+                    cursor={{ fill: "color-mix(in srgb, var(--color-muted) 12%, transparent)" }}
                   />
                   <Bar dataKey="investors" fill="var(--color-brand)" radius={[4, 4, 0, 0]}>
                     <LabelList

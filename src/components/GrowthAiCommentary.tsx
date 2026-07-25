@@ -125,8 +125,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       shortDesc: "Muhafazakar Projeksiyon",
       rate: avgMonthlyReturn * 0.4,
       icon: TrendingDown,
-      iconActiveBg: "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400",
-      textClass: "text-rose-600 dark:text-rose-400",
+      iconActiveBg: "bg-[var(--color-loss-soft)] border-[var(--color-loss)]/30 text-[var(--color-loss)]",
+      textClass: "text-[var(--color-loss)]",
     },
     realistic: {
       label: "Gerçekçi Senaryo",
@@ -134,8 +134,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       shortDesc: "Mevcut Trend Çizgisi",
       rate: avgMonthlyReturn * 1.0,
       icon: Activity,
-      iconActiveBg: "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400",
-      textClass: "text-amber-600 dark:text-amber-400",
+      iconActiveBg: "bg-[var(--color-brand-soft)] border-[var(--color-brand)]/30 text-[var(--color-brand-strong)]",
+      textClass: "text-[var(--color-brand-strong)]",
     },
     optimistic: {
       label: "İyimser Senaryo",
@@ -143,8 +143,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       shortDesc: "Pozitif Büyüme İvmesi",
       rate: avgMonthlyReturn * 1.4,
       icon: TrendingUp,
-      iconActiveBg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400",
-      textClass: "text-emerald-600 dark:text-emerald-400",
+      iconActiveBg: "bg-[var(--color-profit-soft)] border-[var(--color-profit)]/30 text-[var(--color-profit)]",
+      textClass: "text-[var(--color-profit)]",
     },
     custom: {
       label: "Özel Senaryo",
@@ -152,8 +152,8 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
       shortDesc: "Kişisel Getiri Oranı",
       rate: customRate,
       icon: Sliders,
-      iconActiveBg: "bg-violet-500/10 border-violet-500/30 text-violet-600 dark:text-violet-400",
-      textClass: "text-violet-600 dark:text-violet-400",
+      iconActiveBg: "bg-[var(--color-brand-soft)] border-[var(--color-brand)]/30 text-[var(--color-brand-strong)]",
+      textClass: "text-[var(--color-brand-strong)]",
     },
   };
 
@@ -228,7 +228,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
         <div>
           <div className="flex items-center gap-2">
             <h3 className="font-extrabold text-base text-[var(--color-foreground)]">Yapay Zekâ Büyüme & Gelecek Projeksiyonu</h3>
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]">
               <Sparkles size={9} /> PRO
             </span>
           </div>
@@ -257,7 +257,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
               <span>Mevcut: {formatMoney(latestVal, currency)}</span>
               <span className={cn(
                 "font-bold",
-                projectedValue >= latestVal ? "text-emerald-500" : "text-rose-500"
+                projectedValue >= latestVal ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
               )}>
                 {projectedValue >= latestVal ? "▲" : "▼"} {formatPercent(((projectedValue / latestVal) - 1) * 100)}
               </span>
@@ -267,7 +267,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
           {/* Getiri Projeksiyonu */}
           <div className="bg-[var(--color-surface-muted)]/15 border border-[var(--color-border)]/30 p-4 rounded-xl space-y-1 relative group hover:border-[var(--color-brand)]/20 transition-all">
             <div className="text-[9px] font-bold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
-              <TrendingUp size={11} className="text-emerald-500" />
+              <TrendingUp size={11} className="text-[var(--color-profit)]" />
               Tahmini Yıllık Getiri
             </div>
             <div className={cn(
@@ -285,7 +285,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
           {/* Büyüme Çarpanı */}
           <div className="bg-[var(--color-surface-muted)]/15 border border-[var(--color-border)]/30 p-4 rounded-xl space-y-1 relative group hover:border-[var(--color-brand)]/20 transition-all">
             <div className="text-[9px] font-bold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
-              <Layers size={11} className="text-violet-500" />
+              <Layers size={11} className="text-[var(--color-brand-strong)]" />
               Büyüme Çarpanı
             </div>
             <div className="text-lg font-black text-[var(--color-foreground)] tracking-tight tabular-nums">
@@ -410,7 +410,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-[10px] font-bold text-rose-500">-15%</span>
+                <span className="text-[10px] font-bold text-[var(--color-loss)]">-15%</span>
                 <input
                   type="range"
                   min="-15"
@@ -420,7 +420,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
                   onChange={(e) => setCustomRate(parseFloat(e.target.value))}
                   className="flex-1 h-1.5 bg-[var(--color-neutral-soft)] rounded-lg appearance-none cursor-pointer accent-[var(--color-brand)]"
                 />
-                <span className="text-[10px] font-bold text-emerald-500">+30%</span>
+                <span className="text-[10px] font-bold text-[var(--color-profit)]">+30%</span>
               </div>
 
               {/* Hızlı Seçim Presetleri */}
@@ -435,7 +435,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
                       className={cn(
                         "py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer",
                         customRate === val
-                          ? "bg-[var(--color-brand)] text-white border-[var(--color-brand)]"
+                          ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] border-[var(--color-brand)]"
                           : "bg-[var(--color-surface-muted)]/30 text-[var(--color-foreground)] border-[var(--color-border)]/50 hover:bg-[var(--color-surface-muted)]/80"
                       )}
                     >
@@ -450,7 +450,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] transition-colors cursor-pointer w-full text-center"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[var(--color-brand)] text-[var(--color-on-brand)] hover:bg-[var(--color-brand-hover)] transition-colors cursor-pointer w-full text-center"
               >
                 Uygula ve Kapat
               </button>

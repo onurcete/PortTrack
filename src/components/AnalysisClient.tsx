@@ -350,9 +350,9 @@ function DailySummaryCard({ summary, analyses }: { summary: DailySummaryDTO; ana
               {avgScore >= 70 ? "Güçlü" : avgScore >= 40 ? "Karışık" : "Zayıf"}
             </p>
             <div className="flex gap-1.5 mt-1">
-              <span className="text-[10px] font-bold text-emerald-500 tabular-nums">{highScoreCount}●</span>
-              <span className="text-[10px] font-bold text-amber-500 tabular-nums">{midScoreCount}●</span>
-              <span className="text-[10px] font-bold text-rose-500 tabular-nums">{lowScoreCount}●</span>
+              <span className="text-[10px] font-bold text-[var(--color-profit)] tabular-nums">{highScoreCount}●</span>
+              <span className="text-[10px] font-bold text-[var(--color-brand-strong)] tabular-nums">{midScoreCount}●</span>
+              <span className="text-[10px] font-bold text-[var(--color-loss)] tabular-nums">{lowScoreCount}●</span>
             </div>
           </div>
         </div>
@@ -383,32 +383,32 @@ function DailySummaryCard({ summary, analyses }: { summary: DailySummaryDTO; ana
           <p className="text-[10px] text-[var(--color-muted)] mb-2">varlık analiz edildi</p>
           <div className="flex flex-wrap gap-1">
             {buyCrossCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
                 {buyCrossCount} Alış Sinyali
               </span>
             )}
             {sellCrossCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-loss-soft)] text-[var(--color-loss)]">
                 {sellCrossCount} Satış Sinyali
               </span>
             )}
             {oversoldCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]">
                 {oversoldCount} Aşırı Satım
               </span>
             )}
             {overboughtCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-loss-soft)] text-[var(--color-loss)]">
                 {overboughtCount} Aşırı Alım
               </span>
             )}
             {strongUpCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
                 {strongUpCount} Güçlü Trend↑
               </span>
             )}
             {strongDownCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-loss-soft)] text-[var(--color-loss)]">
                 {strongDownCount} Güçlü Trend↓
               </span>
             )}
@@ -607,16 +607,16 @@ function SignalRadar({ analyses, dailySummary }: { analyses: AnalysisDTO[]; dail
   }, [allSignals]);
 
   const signalConfig: Record<string, { emoji: string; gradient: string; border: string; text: string }> = {
-    buy:           { emoji: "⚡", gradient: "from-emerald-500/10 to-emerald-500/0",  border: "border-emerald-500/40", text: "text-emerald-600 dark:text-emerald-400" },
-    sell:          { emoji: "⚠️",  gradient: "from-rose-500/10 to-rose-500/0",      border: "border-rose-500/40",    text: "text-rose-600 dark:text-rose-400" },
-    oversold:      { emoji: "🎯", gradient: "from-orange-500/10 to-orange-500/0",   border: "border-orange-500/40",  text: "text-orange-600 dark:text-orange-400" },
-    overbought:    { emoji: "🔴", gradient: "from-red-500/10 to-red-500/0",         border: "border-red-500/40",     text: "text-red-600 dark:text-red-400" },
-    strong_up:     { emoji: "🚀", gradient: "from-emerald-500/10 to-emerald-500/0", border: "border-emerald-500/40", text: "text-emerald-600 dark:text-emerald-400" },
-    strong_down:   { emoji: "📉", gradient: "from-rose-500/10 to-rose-500/0",       border: "border-rose-500/40",    text: "text-rose-600 dark:text-rose-400" },
-    streak_up:     { emoji: "📈", gradient: "from-green-500/10 to-green-500/0",     border: "border-green-500/40",   text: "text-green-600 dark:text-green-400" },
-    streak_down:   { emoji: "💧", gradient: "from-blue-500/10 to-blue-500/0",       border: "border-blue-500/40",    text: "text-blue-600 dark:text-blue-400" },
-    big_move_up:   { emoji: "🔥", gradient: "from-amber-500/10 to-amber-500/0",    border: "border-amber-500/40",   text: "text-amber-600 dark:text-amber-400" },
-    big_move_down: { emoji: "💥", gradient: "from-rose-500/10 to-rose-500/0",       border: "border-rose-500/40",    text: "text-rose-600 dark:text-rose-400" },
+    buy:           { emoji: "⚡", gradient: "from-[var(--color-profit)]/10 to-transparent", border: "border-[var(--color-profit)]/40", text: "text-[var(--color-profit)]" },
+    sell:          { emoji: "⚠️",  gradient: "from-[var(--color-loss)]/10 to-transparent", border: "border-[var(--color-loss)]/40", text: "text-[var(--color-loss)]" },
+    oversold:      { emoji: "🎯", gradient: "from-[var(--color-brand)]/10 to-transparent", border: "border-[var(--color-brand)]/40", text: "text-[var(--color-brand-strong)]" },
+    overbought:    { emoji: "🔴", gradient: "from-[var(--color-loss)]/10 to-transparent", border: "border-[var(--color-loss)]/40", text: "text-[var(--color-loss)]" },
+    strong_up:     { emoji: "🚀", gradient: "from-[var(--color-profit)]/10 to-transparent", border: "border-[var(--color-profit)]/40", text: "text-[var(--color-profit)]" },
+    strong_down:   { emoji: "📉", gradient: "from-[var(--color-loss)]/10 to-transparent", border: "border-[var(--color-loss)]/40", text: "text-[var(--color-loss)]" },
+    streak_up:     { emoji: "📈", gradient: "from-[var(--color-profit)]/10 to-transparent", border: "border-[var(--color-profit)]/40", text: "text-[var(--color-profit)]" },
+    streak_down:   { emoji: "💧", gradient: "from-[var(--color-brand)]/10 to-transparent", border: "border-[var(--color-brand)]/40", text: "text-[var(--color-brand-strong)]" },
+    big_move_up:   { emoji: "🔥", gradient: "from-[var(--color-brand)]/10 to-transparent", border: "border-[var(--color-brand)]/40", text: "text-[var(--color-brand-strong)]" },
+    big_move_down: { emoji: "💥", gradient: "from-[var(--color-loss)]/10 to-transparent", border: "border-[var(--color-loss)]/40", text: "text-[var(--color-loss)]" },
   };
 
   return (
@@ -624,7 +624,7 @@ function SignalRadar({ analyses, dailySummary }: { analyses: AnalysisDTO[]; dail
       {/* Başlık */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] flex items-center gap-1.5">
-          <Target size={13} className="text-violet-500" />
+          <Target size={13} className="text-[var(--color-brand-strong)]" />
           Sinyal Radar
         </h3>
         <span className="text-[10px] font-bold text-[var(--color-muted)] bg-[var(--color-surface-muted)] px-2 py-0.5 rounded-md tabular-nums">
@@ -827,32 +827,41 @@ function AnalysisCard({ analysis }: { analysis: AnalysisDTO }) {
 
 // ────────── Yardımcı Badge Bileşenleri ──────────
 
+const BADGE_PROFIT =
+  "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/25";
+const BADGE_LOSS =
+  "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/25";
+const BADGE_BRAND =
+  "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border-[var(--color-brand)]/25";
+const BADGE_NEUTRAL =
+  "bg-[var(--color-neutral-soft)] text-[var(--color-neutral)] border-[var(--color-border)]";
+
 function TrendTextBadge({ signal }: { signal: string }) {
   const config: Record<string, { label: string; cls: string; icon: any }> = {
     STRONG_UP: {
       label: "Güçlü Yükseliş",
-      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      cls: BADGE_PROFIT,
       icon: TrendingUp
     },
     UP: {
       label: "Yükseliş",
-      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      cls: BADGE_PROFIT,
       icon: TrendingUp
     },
     DOWN: {
       label: "Düşüş",
-      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      cls: BADGE_LOSS,
       icon: TrendingDown
     },
     STRONG_DOWN: {
       label: "Güçlü Düşüş",
-      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      cls: BADGE_LOSS,
       icon: TrendingDown
     },
   };
   const c = config[signal] ?? {
     label: "Nötr",
-    cls: "bg-[var(--color-neutral-soft)] text-[var(--color-neutral)] border-[var(--color-border)]",
+    cls: BADGE_NEUTRAL,
     icon: Activity
   };
   const Icon = c.icon;
@@ -868,28 +877,28 @@ function MacdTextBadge({ signal }: { signal: string }) {
   const config: Record<string, { label: string; cls: string; icon: any }> = {
     BUY_CROSS: {
       label: "Yeni Alış Sinyali",
-      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      cls: BADGE_PROFIT,
       icon: Zap
     },
     SELL_CROSS: {
       label: "Yeni Satış Sinyali",
-      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      cls: BADGE_LOSS,
       icon: AlertTriangle
     },
     POSITIVE: {
       label: "Pozitif Momentum",
-      cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+      cls: BADGE_PROFIT,
       icon: TrendingUp
     },
     NEGATIVE: {
       label: "Negatif Momentum",
-      cls: "bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+      cls: BADGE_LOSS,
       icon: TrendingDown
     },
   };
   const c = config[signal] ?? {
     label: "Nötr",
-    cls: "bg-[var(--color-neutral-soft)] text-[var(--color-neutral)] border-[var(--color-border)]",
+    cls: BADGE_NEUTRAL,
     icon: Activity
   };
   const Icon = c.icon;
@@ -904,24 +913,24 @@ function MacdTextBadge({ signal }: { signal: string }) {
 function RsiTextBadge({ value, zone }: { value: number | null; zone: string }) {
   if (value === null) return <span className="text-xs text-[var(--color-muted)]">—</span>;
   let label = `Nötr (${value})`;
-  let cls = "bg-[var(--color-neutral-soft)] text-[var(--color-neutral)] border-[var(--color-border)]";
+  let cls = BADGE_NEUTRAL;
   let Icon = Activity;
 
   if (zone === "OVERSOLD") {
     label = `Aşırı Satım / Ucuz (${value})`;
-    cls = "bg-orange-50 text-orange-700 border-orange-200/60 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30";
+    cls = BADGE_BRAND;
     Icon = Target;
   } else if (zone === "OVERBOUGHT") {
     label = `Aşırı Alım / Pahalı (${value})`;
-    cls = "bg-red-50 text-red-700 border-red-200/60 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30";
+    cls = BADGE_LOSS;
     Icon = AlertTriangle;
   } else if (value >= 60) {
     label = `Güçlü Alıcılar (${value})`;
-    cls = "bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900/30";
+    cls = BADGE_PROFIT;
     Icon = TrendingUp;
   } else if (value <= 40) {
     label = `Zayıf Seyir (${value})`;
-    cls = "bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30";
+    cls = BADGE_BRAND;
     Icon = TrendingDown;
   }
 
