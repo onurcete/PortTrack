@@ -21,17 +21,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className={`dark ${inter.variable}`}>
+    <html
+      lang="tr"
+      className={`dark ${inter.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                if (localStorage.theme === 'light') {
-                  document.documentElement.classList.remove('dark');
-                } else {
-                  document.documentElement.classList.add('dark');
-                }
+                var themes = ['light', 'dark', 'solarized', 'dracula'];
+                var theme = themes.includes(localStorage.theme)
+                  ? localStorage.theme
+                  : 'dark';
+                document.documentElement.dataset.theme = theme;
+                document.documentElement.classList.toggle(
+                  'dark',
+                  theme === 'dark' || theme === 'dracula'
+                );
               } catch (_) {}
             `,
           }}

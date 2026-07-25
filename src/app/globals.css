@@ -151,3 +151,57 @@ body {
   background: #374151;
 }
 
+/* Solarized Light — sicak, dusuk kontrastli ve uzun kullanimda goz dostu. */
+html[data-theme="solarized"] {
+  --color-bg: #fdf6e3;
+  --color-surface: #fffdf5;
+  --color-surface-muted: #eee8d5;
+  --color-border: #d8d0b8;
+  --color-foreground: #073642;
+  --color-muted: #657b83;
+
+  --color-brand: #268bd2;
+  --color-brand-strong: #006da8;
+  --color-brand-soft: #e1f1f7;
+
+  --color-profit: #718500;
+  --color-profit-soft: #eef1d2;
+  --color-loss: #dc322f;
+  --color-loss-soft: #f9e1da;
+}
+
+html[data-theme="solarized"] * {
+  scrollbar-color: #b8ad91 transparent;
+}
+
+html[data-theme="solarized"] *::-webkit-scrollbar-thumb {
+  background: #b8ad91;
+}
+
+/* Dracula — yaygin mor vurgulu koyu renk paleti. */
+html[data-theme="dracula"] {
+  --color-bg: #21222c;
+  --color-surface: #282a36;
+  --color-surface-muted: #343746;
+  --color-border: #44475a;
+  --color-foreground: #f8f8f2;
+  --color-muted: #a7a9bd;
+
+  --color-brand: #bd93f9;
+  --color-brand-strong: #d6b8ff;
+  --color-brand-soft: rgba(189, 147, 249, 0.16);
+
+  --color-profit: #50fa7b;
+  --color-profit-soft: rgba(80, 250, 123, 0.12);
+  --color-loss: #ff5555;
+  --color-loss-soft: rgba(255, 85, 85, 0.14);
+}
+
+html[data-theme="dracula"] * {
+  scrollbar-color: #6272a4 transparent;
+}
+
+html[data-theme="dracula"] *::-webkit-scrollbar-thumb {
+  background: #6272a4;
+}
+
