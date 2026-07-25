@@ -69,12 +69,34 @@ export async function refreshPrices(): Promise<RefreshResult> {
     instruments.map((i) => [i.symbol, i.manualPrice] as const),
   );
 
-  // TEFAS fonlarini tek seferde toplu cek
-  const hasTefas = symbols.some((s) => s.assetType === "TEFAS");
-  const tefasMap = hasTefas ? await fetchTefasLatestMap() : new Map();
-
   const failed: string[] = [];
   let updated = 0;
+
+  const tefasSymbols = symbols.filter((s) => s.assetType === "TEFAS");
+  const otherSymbols = symbols.filter((s) => s.assetType !== "TEFAS");
+
+  // TEFAS fiyati gunde bir kez degisir: bugunku snapshot'i olan fonlari atla
+  let pendingTefas = tefasSymbols;
+  if (tefasSymbols.length > 0) {
+    const todays = await prisma.priceSnapshot.findMany({
+      where: {
+        date: today,
+        symbol: { in: tefasSymbols.map((s) => s.symbol) },
+      },
+      select: { symbol: true },
+    });
+    const doneToday = new Set(todays.map((t) => t.symbol));
+    pendingTefas = tefasSymbols.filter((s) => !doneToday.has(s.symbol));
+    updated += tefasSymbols.length - pendingTefas.length; // zaten guncel
+  }
+
+  // TEFAS toplu cekimini paralel baslat (hiz siniri nedeniyle uzun surer);
+  // Yahoo tabanli semboller bu sirada beklemeden guncellenir.
+  const tefasMapPromise = pendingTefas.length
+    ? fetchTefasLatestMap(new Set(pendingTefas.map((s) => s.symbol))).catch(
+        () => new Map<string, { price: number; investors?: number }>(),
+      )
+    : null;
 
   function isPriceSameEnough(p1: number | null | undefined, p2: number | null | undefined): boolean {
     if (p1 === p2) return true;
@@ -154,46 +176,62 @@ export async function refreshPrices(): Promise<RefreshResult> {
   }
 
 
-  await mapLimit(symbols, 6, async ({ symbol, assetType }) => {
-    try {
-      // TEFAS: once toplu haritadan dene
-      if (assetType === "TEFAS" && tefasMap.has(symbol)) {
-        const tInfo = tefasMap.get(symbol)!;
-        if (tInfo.price > 0) {
-          await writeSnapshot(symbol, tInfo.price, tInfo.price, "TRY", assetType, undefined, undefined, undefined, tInfo.investors);
-          updated++;
-        } else {
-          failed.push(symbol);
-        }
-        return;
-      }
+  async function updateViaResolver(symbol: string, assetType: AssetType) {
+    const cp = await resolveCurrentPriceTRY(
+      assetType,
+      symbol,
+      Number.isFinite(usdTry) ? usdTry : 1,
+      manualMap.get(symbol),
+    );
+    if (!cp || !Number.isFinite(cp.priceTRY)) {
+      failed.push(symbol);
+      return;
+    }
+    await writeSnapshot(
+      symbol,
+      cp.priceTRY,
+      cp.price,
+      cp.currency,
+      assetType,
+      cp.prevPrice,
+      cp.prevPriceTRY,
+      cp.prevDate,
+      cp.investors,
+    );
+    updated++;
+  }
 
-      const cp = await resolveCurrentPriceTRY(
-        assetType,
-        symbol,
-        Number.isFinite(usdTry) ? usdTry : 1,
-        manualMap.get(symbol),
-      );
-      if (!cp || !Number.isFinite(cp.priceTRY)) {
-        failed.push(symbol);
-        return;
-      }
-      await writeSnapshot(
-        symbol,
-        cp.priceTRY,
-        cp.price,
-        cp.currency,
-        assetType,
-        cp.prevPrice,
-        cp.prevPriceTRY,
-        cp.prevDate,
-        cp.investors,
-      );
-      updated++;
+  // Yahoo tabanli semboller — TEFAS'i beklemeden hemen guncelle
+  await mapLimit(otherSymbols, 6, async ({ symbol, assetType }) => {
+    try {
+      await updateViaResolver(symbol, assetType);
     } catch {
       failed.push(symbol);
     }
   });
+
+  // TEFAS fonlari — toplu harita hazir olunca
+  if (tefasMapPromise) {
+    const tefasMap = await tefasMapPromise;
+    await mapLimit(pendingTefas, 6, async ({ symbol, assetType }) => {
+      try {
+        const tInfo = tefasMap.get(symbol);
+        if (tInfo) {
+          if (tInfo.price > 0) {
+            await writeSnapshot(symbol, tInfo.price, tInfo.price, "TRY", assetType, undefined, undefined, undefined, tInfo.investors);
+            updated++;
+          } else {
+            failed.push(symbol);
+          }
+          return;
+        }
+        // Haritada yoksa tek fon sorgusuna dus
+        await updateViaResolver(symbol, assetType);
+      } catch {
+        failed.push(symbol);
+      }
+    });
+  }
 
   return { usdTry, updated, failed };
 }

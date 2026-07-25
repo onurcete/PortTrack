@@ -353,8 +353,14 @@ export const ALL_TEFAS_KINDS = TEFAS_KINDS;
 /**
  * Tum TEFAS fonlarinin guncel fiyatlarini tek seferde (tip basina 1 istek)
  * ceker. Sembol -> { price, investors } haritasi doner.
+ *
+ * `heldCodes` verilirse tutulan tum kodlar bulundugu anda kalan fon tipi
+ * istekleri atlanir (cogu bireysel fon YAT oldugundan genelde tek istek yeter;
+ * her istek arasi ~9.5 sn hiz siniri beklemesi vardir).
  */
-export async function fetchTefasLatestMap(): Promise<Map<string, { price: number; investors?: number }>> {
+export async function fetchTefasLatestMap(
+  heldCodes?: Set<string>,
+): Promise<Map<string, { price: number; investors?: number }>> {
   const to = new Date();
   const from = new Date();
   from.setDate(from.getDate() - 10);
@@ -372,6 +378,13 @@ export async function fetchTefasLatestMap(): Promise<Map<string, { price: number
           investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
         });
       }
+    }
+    if (
+      heldCodes &&
+      heldCodes.size > 0 &&
+      [...heldCodes].every((c) => latestByCode.has(c))
+    ) {
+      break;
     }
   }
 
