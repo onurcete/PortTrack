@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Moon, Palette, Sun } from "lucide-react";
 
-type Theme = "light" | "dark" | "solarized" | "dracula";
+type Theme = "light" | "dark" | "solarized" | "nord";
 
 const THEMES: Array<{
   id: Theme;
@@ -34,17 +34,23 @@ const THEMES: Array<{
     dark: false,
   },
   {
-    id: "dracula",
-    label: "Dracula",
-    description: "Popüler mor koyu tema",
-    colors: ["#282a36", "#bd93f9", "#50fa7b"],
+    id: "nord",
+    label: "Nord",
+    description: "Soğuk arktik koyu",
+    colors: ["#2e3440", "#88c0d0", "#a3be8c"],
     dark: true,
   },
 ];
 
+function resolveTheme(value: string | null): Theme {
+  if (value === "dracula") return "nord";
+  if (THEMES.some((item) => item.id === value)) return value as Theme;
+  return "dark";
+}
+
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark" || theme === "dracula");
+  root.classList.toggle("dark", theme === "dark" || theme === "nord");
   root.dataset.theme = theme;
 }
 
@@ -54,11 +60,9 @@ export function ThemeToggle() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    const initial = THEMES.some((item) => item.id === stored)
-      ? (stored as Theme)
-      : "dark";
+    const initial = resolveTheme(localStorage.getItem("theme"));
     applyTheme(initial);
+    localStorage.setItem("theme", initial);
     setTheme(initial);
   }, []);
 

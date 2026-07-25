@@ -235,36 +235,36 @@ html[data-theme="solarized"] {
     0 8px 22px rgba(7, 54, 66, 0.05);
 }
 
-/* Dracula — mor vurgulu koyu palet */
-html[data-theme="dracula"] {
+/* Nord — soguk arktik mavi-gri koyu palet (Koyu indigodan net ayri) */
+html[data-theme="nord"] {
   color-scheme: dark;
-  --color-bg: #1e1f29;
-  --color-surface: #282a36;
-  --color-surface-muted: #343746;
-  --color-surface-hover: #3b3e50;
-  --color-table-header: #2f3140;
-  --color-inset: #21222c;
-  --color-border: #44475a;
-  --color-foreground: #f8f8f2;
-  --color-text: #f8f8f2;
-  --color-muted: #a7a9bd;
+  --color-bg: #2e3440;
+  --color-surface: #3b4252;
+  --color-surface-muted: #434c5e;
+  --color-surface-hover: #4c566a;
+  --color-table-header: #434c5e;
+  --color-inset: #353c4a;
+  --color-border: #4c566a;
+  --color-foreground: #eceff4;
+  --color-text: #eceff4;
+  --color-muted: #d8dee9;
 
-  --color-brand: #bd93f9;
-  --color-brand-strong: #d6b8ff;
-  --color-brand-hover: #d6b8ff;
-  --color-brand-soft: rgba(189, 147, 249, 0.16);
-  --color-on-brand: #282a36;
+  --color-brand: #88c0d0;
+  --color-brand-strong: #8fbcbb;
+  --color-brand-hover: #8fbcbb;
+  --color-brand-soft: rgba(136, 192, 208, 0.16);
+  --color-on-brand: #2e3440;
 
-  --color-neutral: #a7a9bd;
-  --color-neutral-soft: rgba(167, 169, 189, 0.12);
-  --color-chart-muted: #6272a4;
+  --color-neutral: #d8dee9;
+  --color-neutral-soft: rgba(216, 222, 233, 0.12);
+  --color-chart-muted: #81a1c1;
 
-  --color-profit: #50fa7b;
-  --color-profit-soft: rgba(80, 250, 123, 0.12);
-  --color-loss: #ff5555;
-  --color-loss-soft: rgba(255, 85, 85, 0.14);
+  --color-profit: #a3be8c;
+  --color-profit-soft: rgba(163, 190, 140, 0.16);
+  --color-loss: #bf616a;
+  --color-loss-soft: rgba(191, 97, 106, 0.16);
 
   --shadow-card:
-    0 1px 2px rgba(0, 0, 0, 0.3),
-    0 12px 30px rgba(0, 0, 0, 0.35);
+    0 1px 2px rgba(46, 52, 64, 0.45),
+    0 12px 30px rgba(46, 52, 64, 0.4);
 }

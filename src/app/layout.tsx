@@ -31,14 +31,17 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var themes = ['light', 'dark', 'solarized', 'dracula'];
-                var theme = themes.includes(localStorage.theme)
-                  ? localStorage.theme
-                  : 'dark';
+                var themes = ['light', 'dark', 'solarized', 'nord'];
+                var theme = localStorage.theme === 'dracula'
+                  ? 'nord'
+                  : (themes.includes(localStorage.theme)
+                    ? localStorage.theme
+                    : 'dark');
+                localStorage.theme = theme;
                 document.documentElement.dataset.theme = theme;
                 document.documentElement.classList.toggle(
                   'dark',
-                  theme === 'dark' || theme === 'dracula'
+                  theme === 'dark' || theme === 'nord'
                 );
               } catch (_) {}
             `,
