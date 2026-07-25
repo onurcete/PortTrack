@@ -2,7 +2,22 @@
 
 import { useMemo, useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Upload, Search, Download, FileSpreadsheet, RotateCcw, ArrowLeft, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Upload,
+  Search,
+  Download,
+  FileSpreadsheet,
+  RotateCcw,
+  ArrowLeft,
+  ArrowRight,
+  AlertTriangle,
+  FileText,
+  ScanSearch,
+  GitCompareArrows,
+} from "lucide-react";
 import { Modal } from "./Modal";
 import { Badge } from "./ui";
 import {
@@ -22,9 +37,7 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
-  confirmBundledCsv,
   confirmCsvImport,
-  previewBundledCsv,
   previewCsvImport,
   searchSymbols,
   getSymbolPrice,
@@ -64,9 +77,6 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [csvContent, setCsvContent] = useState<string | null>(null);
-  const [importSource, setImportSource] = useState<"bundled" | "upload" | null>(
-    null,
-  );
   const [csvPreview, setCsvPreview] = useState<CsvImportPreviewDTO | null>(
     null,
   );
@@ -179,25 +189,6 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
     });
   }
 
-  function handleImportSystemCsv() {
-    setImporting(true);
-    startTransition(async () => {
-      const result = await previewBundledCsv();
-      setImporting(false);
-      if ("error" in result) {
-        setUploadError(result.error);
-        return;
-      }
-      setImportSource("bundled");
-      setCsvContent(null);
-      setCsvPreview(result);
-      setTypeOverrides({});
-      setImportMode("replace");
-      setUploadError(null);
-      setImportStep("preview");
-    });
-  }
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -224,7 +215,6 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       startTransition(async () => {
         const preview = await previewCsvImport(text);
         setImporting(false);
-        setImportSource("upload");
         setCsvContent(text);
         setCsvPreview(preview);
         setTypeOverrides({});
@@ -241,15 +231,14 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   };
 
   function handleConfirmImport() {
-    if (!csvPreview || !importSource) return;
+    if (!csvPreview || !csvContent) return;
     setImporting(true);
     startTransition(async () => {
-      const result =
-        importSource === "bundled"
-          ? await confirmBundledCsv(importMode, typeOverrides)
-          : csvContent
-            ? await confirmCsvImport(csvContent, importMode, typeOverrides)
-            : { ok: false, message: "CSV içeriği bulunamadı." };
+      const result = await confirmCsvImport(
+        csvContent,
+        importMode,
+        typeOverrides,
+      );
       setImporting(false);
       if (result.ok) {
         setImportModalOpen(false);
@@ -278,7 +267,6 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
               setSelectedFile(null);
               setUploadError(null);
               setCsvContent(null);
-              setImportSource(null);
               setCsvPreview(null);
               setTypeOverrides({});
               setImportModalOpen(true);
@@ -503,44 +491,107 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         {importStep === "select" && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-muted)]">
-              CSV içeriği yazılmadan önce analiz edilir. Tür eşleşmelerini
-              kontrol edip her içe aktarmada kayıt yöntemini seçebilirsiniz.
+              Dosyanız veritabanına yazılmadan önce satır satır analiz edilir.
+              Tür eşleşmelerini kontrol edip kayıt yöntemini siz seçersiniz.
             </p>
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={handleImportSystemCsv}
-                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] theme-inset hover:bg-[var(--color-brand-soft)] transition-all group flex items-start gap-3"
-              >
-                <div className="rounded-lg p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-strong)] group-hover:border-[var(--color-brand)]">
-                  <FileSpreadsheet size={20} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm text-[var(--color-foreground)]">Sistemdeki transactions.csv Dosyasından</h3>
-                  <p className="text-xs text-[var(--color-muted)] mt-1">Proje dizininde yerleşik olarak bulunan default CSV dosyasını içeri aktarır.</p>
-                </div>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => setImportStep("format_info")}
-                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] theme-inset hover:bg-[var(--color-brand-soft)] transition-all group flex items-start gap-3"
-              >
-                <div className="rounded-lg p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-strong)] group-hover:border-[var(--color-brand)]">
-                  <Upload size={20} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5">
+                <div className="mb-3 flex items-center gap-2 text-[var(--color-brand-strong)]">
+                  <ScanSearch size={16} />
+                  <h3 className="text-xs font-bold uppercase tracking-wide">
+                    1. Dosya analizi
+                  </h3>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-sm text-[var(--color-foreground)]">Bilgisayardan Yeni CSV Dosyası Yükle</h3>
-                  <p className="text-xs text-[var(--color-muted)] mt-1">Kendi hazırladığınız veya dışarıdan aldığınız bir CSV dosyasını yükler.</p>
+                <div className="overflow-hidden rounded-lg border border-[var(--color-border)] theme-inset">
+                  <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-b border-[var(--color-border)] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">
+                    <span>Sembol</span>
+                    <span>Tür</span>
+                    <span>Durum</span>
+                  </div>
+                  {[
+                    { symbol: "VPG", type: "Nasdaq", ok: true },
+                    { symbol: "PHE", type: "TEFAS", ok: true },
+                    { symbol: "???", type: "Diğer", ok: false },
+                  ].map((row) => (
+                    <div
+                      key={row.symbol}
+                      className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-[var(--color-border)] px-2.5 py-1.5 text-[11px] last:border-0"
+                    >
+                      <span className="font-semibold text-[var(--color-foreground)]">
+                        {row.symbol}
+                      </span>
+                      <span className="text-[var(--color-muted)]">{row.type}</span>
+                      <span
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                          row.ok
+                            ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
+                            : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
+                        )}
+                      >
+                        {row.ok ? "OK" : "Kontrol"}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              </button>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-[var(--color-muted)]">
+                  Geçerli / hatalı satırlar sayılır; eksik veya bozuk alanlar
+                  işaretlenir.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5">
+                <div className="mb-3 flex items-center gap-2 text-[var(--color-brand-strong)]">
+                  <GitCompareArrows size={16} />
+                  <h3 className="text-xs font-bold uppercase tracking-wide">
+                    2. Tür eşleştirme
+                  </h3>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { from: "Nasdaq", to: "Yabancı Borsa" },
+                    { from: "TEFAS", to: "TEFAS Fon" },
+                    { from: "Kripto", to: "Kripto" },
+                  ].map((pair) => (
+                    <div
+                      key={pair.from}
+                      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] theme-inset px-2.5 py-2"
+                    >
+                      <span className="rounded-md bg-[var(--color-surface)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-muted)]">
+                        {pair.from}
+                      </span>
+                      <ArrowRight
+                        size={12}
+                        className="shrink-0 text-[var(--color-brand)]"
+                      />
+                      <span className="rounded-md bg-[var(--color-brand-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--color-brand-strong)]">
+                        {pair.to}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2.5 text-[11px] leading-relaxed text-[var(--color-muted)]">
+                  CSV’deki tür etiketleri PortTrack varlık türlerine eşlenir;
+                  belirsiz olanları siz seçersiniz.
+                </p>
+              </div>
             </div>
-            <div className="flex justify-end pt-2">
+
+            <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]">
               <button
                 onClick={() => setImportModalOpen(false)}
                 className="btn btn-outline text-xs py-2 px-4"
               >
                 Kapat
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportStep("format_info")}
+                className="btn btn-primary text-xs py-2 px-4 flex items-center gap-1.5"
+              >
+                <Upload size={13} />
+                Dosya yüklemeye geç
               </button>
             </div>
           </div>
@@ -696,7 +747,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             }
             onBack={() => {
               setUploadError(null);
-              setImportStep(importSource === "bundled" ? "select" : "upload");
+              setImportStep("upload");
             }}
             onConfirm={handleConfirmImport}
           />

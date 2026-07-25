@@ -118,34 +118,6 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Proje kökündeki örnek CSV'yi DB'ye yazmadan analiz eder. */
-export async function previewBundledCsv(): Promise<
-  CsvImportPreview | { error: string }
-> {
-  await requireUser();
-  try {
-    const filePath = path.join(process.cwd(), "transactions.csv");
-    const content = await fs.readFile(filePath, "utf-8");
-    return parseTransactionsCsvDetailed(content).preview;
-  } catch (err) {
-    return { error: `Dosya okunamadı: ${(err as Error).message}` };
-  }
-}
-
-/** Proje kökündeki örnek CSV'yi kullanıcı onayıyla içe aktarır. */
-export async function confirmBundledCsv(
-  mode: CsvImportMode,
-  overrides: Record<number, AssetType> = {},
-): Promise<CsvImportResult> {
-  try {
-    const filePath = path.join(process.cwd(), "transactions.csv");
-    const content = await fs.readFile(filePath, "utf-8");
-    return confirmCsvImport(content, mode, overrides);
-  } catch (err) {
-    return { ok: false, message: `Dosya okunamadı: ${(err as Error).message}` };
-  }
-}
-
 /** CSV'yi DB'ye yazmadan analiz eder ve önizleme verisini döner. */
 export async function previewCsvImport(
   content: string,
