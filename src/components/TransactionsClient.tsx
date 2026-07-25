@@ -5,15 +5,27 @@ import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Upload, Search, Download, FileSpreadsheet, RotateCcw, ArrowLeft, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
 import { Modal } from "./Modal";
 import { Badge } from "./ui";
-import { ASSET_META, ASSET_TYPES, type AssetType } from "@/lib/assets";
+import {
+  CsvImportPreview,
+  type CsvImportMode,
+} from "./CsvImportPreview";
+import {
+  ASSET_META,
+  ASSET_TYPE_ALIASES,
+  ASSET_TYPES,
+  type AssetType,
+} from "@/lib/assets";
+import type { CsvImportPreview as CsvImportPreviewDTO } from "@/lib/csv";
 import { formatDate, formatNumber, cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
-  importBundledCsv,
-  importCsvContent,
+  confirmBundledCsv,
+  confirmCsvImport,
+  previewBundledCsv,
+  previewCsvImport,
   searchSymbols,
   getSymbolPrice,
 } from "@/app/transactions/actions";
@@ -46,9 +58,32 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   const [toast, setToast] = useState<string | null>(null);
 
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importStep, setImportStep] = useState<"select" | "format_info" | "upload">("select");
+  const [importStep, setImportStep] = useState<
+    "select" | "format_info" | "upload" | "preview"
+  >("select");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [csvContent, setCsvContent] = useState<string | null>(null);
+  const [importSource, setImportSource] = useState<"bundled" | "upload" | null>(
+    null,
+  );
+  const [csvPreview, setCsvPreview] = useState<CsvImportPreviewDTO | null>(
+    null,
+  );
+  const [importMode, setImportMode] = useState<CsvImportMode>("replace");
+  const [typeOverrides, setTypeOverrides] = useState<Record<number, AssetType>>(
+    {},
+  );
+  const acceptedTypeLabels = useMemo(
+    () =>
+      ASSET_TYPES.map(
+        (assetType) =>
+          `${ASSET_META[assetType].label} (${ASSET_TYPE_ALIASES[assetType]
+            .slice(0, 2)
+            .join(", ")})`,
+      ).join(" · "),
+    [],
+  );
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
@@ -145,20 +180,21 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   }
 
   function handleImportSystemCsv() {
-    if (
-      !confirm(
-        "transactions.csv içeri aktarılacak. Mevcut tüm işlemler silinip yeniden yüklenecek. Devam edilsin mi?",
-      )
-    )
-      return;
     setImporting(true);
     startTransition(async () => {
-      const res = await importBundledCsv();
+      const result = await previewBundledCsv();
       setImporting(false);
-      setImportModalOpen(false);
-      setToast(res.message ?? (res.ok ? "Sistem CSV başarıyla içe aktarıldı." : "Hata."));
-      router.refresh();
-      setTimeout(() => setToast(null), 4000);
+      if ("error" in result) {
+        setUploadError(result.error);
+        return;
+      }
+      setImportSource("bundled");
+      setCsvContent(null);
+      setCsvPreview(result);
+      setTypeOverrides({});
+      setImportMode("replace");
+      setUploadError(null);
+      setImportStep("preview");
     });
   }
 
@@ -174,7 +210,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
     setUploadError(null);
   };
 
-  const handleUploadAndImport = () => {
+  const handleUploadAndPreview = () => {
     if (!selectedFile) return;
     setImporting(true);
     const reader = new FileReader();
@@ -186,16 +222,15 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         return;
       }
       startTransition(async () => {
-        const res = await importCsvContent(text);
+        const preview = await previewCsvImport(text);
         setImporting(false);
-        if (res.ok) {
-          setImportModalOpen(false);
-          setToast("CSV başarıyla içe aktarıldı.");
-          router.refresh();
-        } else {
-          setUploadError(res.message ?? "İçe aktarım sırasında bir hata oluştu.");
-        }
-        setTimeout(() => setToast(null), 4000);
+        setImportSource("upload");
+        setCsvContent(text);
+        setCsvPreview(preview);
+        setTypeOverrides({});
+        setImportMode("replace");
+        setUploadError(null);
+        setImportStep("preview");
       });
     };
     reader.onerror = () => {
@@ -204,6 +239,28 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
     };
     reader.readAsText(selectedFile, "utf-8");
   };
+
+  function handleConfirmImport() {
+    if (!csvPreview || !importSource) return;
+    setImporting(true);
+    startTransition(async () => {
+      const result =
+        importSource === "bundled"
+          ? await confirmBundledCsv(importMode, typeOverrides)
+          : csvContent
+            ? await confirmCsvImport(csvContent, importMode, typeOverrides)
+            : { ok: false, message: "CSV içeriği bulunamadı." };
+      setImporting(false);
+      if (result.ok) {
+        setImportModalOpen(false);
+        setToast(result.message ?? "CSV başarıyla içe aktarıldı.");
+        router.refresh();
+        setTimeout(() => setToast(null), 5000);
+      } else {
+        setUploadError(result.message ?? "İçe aktarım sırasında bir hata oluştu.");
+      }
+    });
+  }
 
   return (
     <div>
@@ -220,6 +277,10 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
               setImportStep("select");
               setSelectedFile(null);
               setUploadError(null);
+              setCsvContent(null);
+              setImportSource(null);
+              setCsvPreview(null);
+              setTypeOverrides({});
               setImportModalOpen(true);
             }}
             disabled={importing || pending}
@@ -434,13 +495,16 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             ? "CSV İçe Aktarma"
             : importStep === "format_info"
             ? "Veri Formatı ve Kurallar"
-            : "Yeni CSV Yükle"
+            : importStep === "upload"
+              ? "Yeni CSV Yükle"
+              : "CSV Önizleme ve Onay"
         }
       >
         {importStep === "select" && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-muted)]">
-              Lütfen işlemlerinizi içe aktarmak için bir yöntem seçin. Her iki işlem de mevcut işlemlerin tamamını silip yeniden yükleyecektir.
+              CSV içeriği yazılmadan önce analiz edilir. Tür eşleşmelerini
+              kontrol edip her içe aktarmada kayıt yöntemini seçebilirsiniz.
             </p>
             <div className="grid grid-cols-1 gap-3">
               <button
@@ -487,7 +551,9 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             <div className="p-3.5 rounded-xl border border-amber-200/50 bg-amber-50/15 text-amber-600 dark:text-amber-500 text-xs flex items-start gap-2.5">
               <AlertTriangle className="shrink-0 mt-0.5" size={16} />
               <div>
-                <span className="font-bold">Önemli Uyarı:</span> Yeni dosya yüklendiğinde, sistemde kayıtlı olan tüm işlemler silinecek ve dosyadaki işlemler yazılacaktır.
+                Dosya önce analiz edilir. Sonraki adımda tüm işlemleri
+                değiştirme veya yalnızca yeni satırları ekleme seçeneklerinden
+                birini seçersiniz.
               </div>
             </div>
 
@@ -510,7 +576,12 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
                   <span className="font-medium text-[var(--color-foreground)]">Tarih:</span> <code className="font-mono">GG.AA.YYYY</code> formatında olmalıdır (Örn: <code className="font-mono">29.05.2026</code>).
                 </li>
                 <li>
-                  <span className="font-medium text-[var(--color-foreground)]">Tür:</span> Varlık sınıfı: <code className="font-mono">Hisse</code>, <code className="font-mono">Fon</code>, <code className="font-mono">Nasdaq</code>, <code className="font-mono">Döviz</code>, <code className="font-mono">Altın</code>, <code className="font-mono">Kripto</code>, <code className="font-mono">Bes</code>.
+                  <span className="font-medium text-[var(--color-foreground)]">Tür:</span>{" "}
+                  <span>
+                    Kabul edilen etiketler: {acceptedTypeLabels}. Dosya
+                    yüklendikten sonra tüm tür eşleşmeleri ayrıca
+                    doğrulanabilir.
+                  </span>
                 </li>
                 <li>
                   <span className="font-medium text-[var(--color-foreground)]">İşlem Tipi:</span> İşlem yönü: <code className="font-mono">Alış</code> veya <code className="font-mono">Satış</code>.
@@ -595,17 +666,40 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
                 Geri
               </button>
               <button
-                onClick={handleUploadAndImport}
+                onClick={handleUploadAndPreview}
                 disabled={!selectedFile || importing}
                 className="btn btn-primary text-xs py-2 px-4 flex items-center gap-1.5"
               >
                 {importing && (
                   <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 )}
-                {importing ? "Yükleniyor..." : "Yükle ve İçe Aktar"}
+                {importing ? "Analiz ediliyor..." : "Yükle ve Analiz Et"}
               </button>
             </div>
           </div>
+        )}
+
+        {importStep === "preview" && csvPreview && (
+          <CsvImportPreview
+            preview={csvPreview}
+            currentTransactionCount={transactions.length}
+            mode={importMode}
+            overrides={typeOverrides}
+            importing={importing}
+            error={uploadError}
+            onModeChange={setImportMode}
+            onOverrideChange={(lineNo, assetType) =>
+              setTypeOverrides((current) => ({
+                ...current,
+                [lineNo]: assetType,
+              }))
+            }
+            onBack={() => {
+              setUploadError(null);
+              setImportStep(importSource === "bundled" ? "select" : "upload");
+            }}
+            onConfirm={handleConfirmImport}
+          />
         )}
       </Modal>
 

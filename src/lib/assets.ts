@@ -28,6 +28,117 @@ export const ASSET_META: Record<AssetType, AssetMeta> = {
 
 export const ASSET_TYPES = Object.keys(ASSET_META) as AssetType[];
 
+export type AssetTypeResolutionConfidence =
+  | "exact"
+  | "alias"
+  | "symbol"
+  | "fallback";
+
+export interface AssetTypeResolution {
+  assetType: AssetType;
+  rawType: string;
+  confidence: AssetTypeResolutionConfidence;
+  reason: string;
+}
+
+/** CSV ile kabul edilen tür etiketleri; export etiketleri de bu sözlükte yer alır. */
+export const ASSET_TYPE_ALIASES: Record<AssetType, readonly string[]> = {
+  BIST: ["bist", "bıst", "borsa istanbul", "hisse", "hisse senedi"],
+  TEFAS: ["fon", "tefas", "tefas fon", "tefas fonu"],
+  FOREIGN: [
+    "nasdaq",
+    "nyse",
+    "yabanci borsa",
+    "yabancı borsa",
+    "yurt disi",
+    "yurt dışı",
+  ],
+  FX: ["doviz", "döviz", "fx", "para birimi"],
+  METAL: [
+    "altin",
+    "altın",
+    "gumus",
+    "gümüş",
+    "metal",
+    "kiymetli maden",
+    "kıymetli maden",
+  ],
+  CRYPTO: ["kripto", "crypto", "kripto para", "cryptocurrency"],
+  BES: ["bes", "bireysel emeklilik", "bireysel emeklilik sistemi"],
+};
+
+/** Türkçe/ASCII farklarını kaldırarak CSV tür etiketlerini karşılaştırılabilir yapar. */
+export function normalizeAssetTypeInput(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/ı/g, "i")
+    .replace(/\s+/g, " ");
+}
+
+const CRYPTO_SYMBOL = /^(BTC|ETH|SOL|XRP|ADA|DOGE|AVAX|BNB|DOT|LTC)(?:\b|[\/-])/;
+const METAL_SYMBOL = /^(XAU|XAG|XPT|XPD|GAU|GUMUS|ALTIN)(?:\b|[\/-])/;
+
+/** CSV tür/simge kombinasyonunu güven seviyesiyle çözer. */
+export function resolveAssetTypeDetailed(
+  tur: string,
+  symbol: string,
+): AssetTypeResolution {
+  const rawType = tur.trim();
+  const normalized = normalizeAssetTypeInput(rawType);
+  const s = symbol.trim().toUpperCase();
+
+  // Sembol sinyali, genel "Döviz" gibi belirsiz etiketlerden daha güçlüdür.
+  if (CRYPTO_SYMBOL.test(s)) {
+    return {
+      assetType: "CRYPTO",
+      rawType,
+      confidence: "symbol",
+      reason: "Sembol kripto para olarak tanındı.",
+    };
+  }
+  if (METAL_SYMBOL.test(s)) {
+    return {
+      assetType: "METAL",
+      rawType,
+      confidence: "symbol",
+      reason: "Sembol kıymetli maden olarak tanındı.",
+    };
+  }
+  if (s.endsWith(".IS")) {
+    return {
+      assetType: "BIST",
+      rawType,
+      confidence: "symbol",
+      reason: ".IS uzantısı BIST sembolünü gösteriyor.",
+    };
+  }
+
+  for (const assetType of ASSET_TYPES) {
+    const aliases = ASSET_TYPE_ALIASES[assetType].map(normalizeAssetTypeInput);
+    if (aliases.includes(normalized)) {
+      return {
+        assetType,
+        rawType,
+        confidence:
+          normalized === normalizeAssetTypeInput(ASSET_META[assetType].label)
+            ? "exact"
+            : "alias",
+        reason: `${ASSET_META[assetType].label} etiketiyle eşleşti.`,
+      };
+    }
+  }
+
+  return {
+    assetType: "FOREIGN",
+    rawType,
+    confidence: "fallback",
+    reason: `"${rawType || "boş"}" türü tanınmadı; seçim yapılması gerekiyor.`,
+  };
+}
+
 /** Portföy gelişimi tablolarında ay sonu değer kırılımı */
 export type GrowthByType = Record<
   AssetType,
@@ -36,22 +147,7 @@ export type GrowthByType = Record<
 
 /** CSV'deki "Tur" ve sembolden ic varlik turunu belirler. */
 export function resolveAssetType(tur: string, symbol: string): AssetType {
-  const t = tur.trim().toLowerCase();
-  const s = symbol.trim().toUpperCase();
-
-  if (t === "fon") return "TEFAS";
-  if (t === "bes") return "BES";
-  if (t === "bist" || t === "bıst") return "BIST";
-  if (t === "doviz" || t.includes("dov") || t.includes("döv")) {
-    if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|AVAX|BNB|LTC)\b|\/TRY$/.test(s) === false) {
-      // pariteye gore ayristir
-    }
-    if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|AVAX|BNB|DOT|LTC)/.test(s)) return "CRYPTO";
-    if (/^(XAU|XAG|XPT|XPD|GAU|GUMUS|ALTIN)/.test(s)) return "METAL";
-    return "FX";
-  }
-  // Nasdaq, NYSE, SP500, Avrupa borsalari vb.
-  return "FOREIGN";
+  return resolveAssetTypeDetailed(tur, symbol).assetType;
 }
 
 export interface PriceMapping {

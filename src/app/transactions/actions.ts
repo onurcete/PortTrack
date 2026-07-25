@@ -5,7 +5,11 @@ import path from "path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { parseTransactionsCsv } from "@/lib/csv";
+import {
+  parseTransactionsCsvDetailed,
+  type CsvImportPreview,
+  type ParsedCsvTransaction,
+} from "@/lib/csv";
 import { resolveAssetType, ASSET_TYPES, type AssetType } from "@/lib/assets";
 import { resolveCurrentPriceTRY, getUsdTryRate } from "@/lib/prices";
 import { requireUser } from "@/lib/auth";
@@ -25,6 +29,14 @@ const txSchema = z.object({
 export interface ActionResult {
   ok: boolean;
   message?: string;
+}
+
+export type CsvImportMode = "replace" | "append";
+
+export interface CsvImportResult extends ActionResult {
+  added?: number;
+  duplicates?: number;
+  replaced?: number;
 }
 
 function revalidateAll() {
@@ -106,46 +118,66 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Proje kokundeki transactions.csv dosyasini iceri aktarir. */
-export async function importBundledCsv(): Promise<ActionResult> {
+/** Proje kökündeki örnek CSV'yi DB'ye yazmadan analiz eder. */
+export async function previewBundledCsv(): Promise<
+  CsvImportPreview | { error: string }
+> {
+  await requireUser();
   try {
     const filePath = path.join(process.cwd(), "transactions.csv");
     const content = await fs.readFile(filePath, "utf-8");
-    return await importCsvContent(content);
+    return parseTransactionsCsvDetailed(content).preview;
+  } catch (err) {
+    return { error: `Dosya okunamadı: ${(err as Error).message}` };
+  }
+}
+
+/** Proje kökündeki örnek CSV'yi kullanıcı onayıyla içe aktarır. */
+export async function confirmBundledCsv(
+  mode: CsvImportMode,
+  overrides: Record<number, AssetType> = {},
+): Promise<CsvImportResult> {
+  try {
+    const filePath = path.join(process.cwd(), "transactions.csv");
+    const content = await fs.readFile(filePath, "utf-8");
+    return confirmCsvImport(content, mode, overrides);
   } catch (err) {
     return { ok: false, message: `Dosya okunamadı: ${(err as Error).message}` };
   }
 }
 
-/** Verilen CSV metnini iceri aktarir (mevcut kayitlari silip yeniden yukler). */
-export async function importCsvContent(content: string): Promise<ActionResult> {
-  const userId = await requireUser();
-  const { rows, errors } = parseTransactionsCsv(content);
-  if (rows.length === 0) {
-    return {
-      ok: false,
-      message: `Hiç satır okunamadı. ${errors.slice(0, 2).join(" ")}`,
-    };
-  }
+/** CSV'yi DB'ye yazmadan analiz eder ve önizleme verisini döner. */
+export async function previewCsvImport(
+  content: string,
+): Promise<CsvImportPreview> {
+  await requireUser();
+  return parseTransactionsCsvDetailed(content).preview;
+}
 
-  await prisma.$transaction([
-    prisma.transaction.deleteMany({ where: { userId } }),
-    prisma.transaction.createMany({
-      data: rows.map((r) => ({
-        userId,
-        date: r.date,
-        assetType: r.assetType,
-        symbol: r.symbol,
-        side: r.side,
-        unitPrice: r.unitPrice,
-        quantity: r.quantity,
-        total: r.total,
-        currency: r.currency,
-      })),
-    }),
-  ]);
+function transactionFingerprint(row: {
+  date: Date;
+  symbol: string;
+  side: string;
+  unitPrice: number;
+  quantity: number;
+  total: number;
+  currency: string;
+}) {
+  return [
+    row.date.toISOString().slice(0, 10),
+    row.symbol,
+    row.side,
+    row.unitPrice,
+    row.quantity,
+    row.total,
+    row.currency,
+  ].join("|");
+}
 
-  // Enstruman kayitlarini olustur/guncelle
+async function upsertImportedInstruments(
+  rows: ParsedCsvTransaction[],
+  userId: string,
+) {
   const seen = new Set<string>();
   for (const r of rows) {
     if (seen.has(r.symbol)) continue;
@@ -157,26 +189,117 @@ export async function importCsvContent(content: string): Promise<ActionResult> {
         userId,
         assetType: r.assetType,
         currency: r.currency,
-        priceSource: r.assetType === "TEFAS" ? "tefas" : "yahoo",
+        priceSource:
+          r.assetType === "TEFAS"
+            ? "tefas"
+            : r.assetType === "BES"
+              ? "manual"
+              : "yahoo",
       },
-      update: { assetType: r.assetType },
+      update: {
+        assetType: r.assetType,
+        currency: r.currency,
+        priceSource:
+          r.assetType === "TEFAS"
+            ? "tefas"
+            : r.assetType === "BES"
+              ? "manual"
+              : "yahoo",
+      },
     });
   }
-
-  revalidateAll();
-  const note = errors.length
-    ? ` (${errors.length} satır atlandı)`
-    : "";
-  return {
-    ok: true,
-    message: `${rows.length} işlem içeri aktarıldı${note}.`,
-  };
 }
 
-export async function importFromText(formData: FormData): Promise<ActionResult> {
-  const text = String(formData.get("csv") || "");
-  if (!text.trim()) return { ok: false, message: "Boş içerik." };
-  return importCsvContent(text);
+/** Kullanıcının onayladığı CSV'yi seçilen modda içeri aktarır. */
+export async function confirmCsvImport(
+  content: string,
+  mode: CsvImportMode,
+  overrides: Record<number, AssetType> = {},
+): Promise<CsvImportResult> {
+  const userId = await requireUser();
+  const { rows, errors, preview } = parseTransactionsCsvDetailed(
+    content,
+    overrides,
+  );
+  if (rows.length === 0) {
+    return {
+      ok: false,
+      message: `Hiç satır okunamadı. ${errors.slice(0, 2).join(" ")}`,
+    };
+  }
+  if (preview.requiresReview > 0) {
+    return {
+      ok: false,
+      message: "Belirsiz türleri seçmeden içe aktarma yapılamaz.",
+    };
+  }
+
+  let rowsToCreate = rows;
+  let replaced = 0;
+  let duplicates = 0;
+
+  if (mode === "append") {
+    const existing = await prisma.transaction.findMany({
+      where: { userId },
+      select: {
+        date: true,
+        symbol: true,
+        side: true,
+        unitPrice: true,
+        quantity: true,
+        total: true,
+        currency: true,
+      },
+    });
+    const existingKeys = new Set(existing.map(transactionFingerprint));
+    const newKeys = new Set<string>();
+    rowsToCreate = rows.filter((row) => {
+      const key = transactionFingerprint(row);
+      if (existingKeys.has(key) || newKeys.has(key)) {
+        duplicates++;
+        return false;
+      }
+      newKeys.add(key);
+      return true;
+    });
+  } else {
+    replaced = await prisma.transaction.count({ where: { userId } });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (mode === "replace") {
+      await tx.transaction.deleteMany({ where: { userId } });
+    }
+    if (rowsToCreate.length > 0) {
+      await tx.transaction.createMany({
+        data: rowsToCreate.map((r) => ({
+          userId,
+          date: r.date,
+          assetType: r.assetType,
+          symbol: r.symbol,
+          side: r.side,
+          unitPrice: r.unitPrice,
+          quantity: r.quantity,
+          total: r.total,
+          currency: r.currency,
+        })),
+      });
+    }
+  });
+
+  await upsertImportedInstruments(rowsToCreate, userId);
+  revalidateAll();
+  const skipped = errors.length + duplicates;
+  return {
+    ok: true,
+    added: rowsToCreate.length,
+    duplicates,
+    replaced,
+    message:
+      mode === "replace"
+        ? `${replaced} mevcut işlem silindi, ${rowsToCreate.length} işlem içeri aktarıldı${skipped ? ` (${skipped} satır atlandı)` : ""}.`
+        : `${rowsToCreate.length} işlem eklendi${duplicates ? `, ${duplicates} mükerrer satır atlandı` : ""}${errors.length ? `, ${errors.length} hatalı satır atlandı` : ""}.`,
+  };
 }
 
 export interface SearchResult {
