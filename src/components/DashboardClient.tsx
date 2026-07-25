@@ -253,7 +253,7 @@ function CombinedReturnCell({
   const negative = pct < 0;
 
   return (
-    <div className={cn("theme-inset p-5 flex justify-between items-center gap-4", borderClasses)}>
+    <div className={cn("p-5 flex justify-between items-center gap-4", borderClasses)}>
       {/* Sol Kısım: Ana İstatistikler */}
       <div className="flex flex-col justify-between flex-1 min-w-0">
         <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] truncate block">
@@ -457,7 +457,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
       {/* Kombine Portföy Değeri & Getiriler Kartı */}
       <div className="grid grid-cols-1 lg:grid-cols-5 card overflow-hidden">
         {/* Sol Kısım: Toplam Portföy Değeri ve Günlük Getiri */}
-        <div className="lg:col-span-2 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--color-border)]/70 bg-[var(--color-surface)]">
+        <div className="lg:col-span-2 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--color-border)]/70">
           <div>
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
               TOPLAM PORTFÖY
@@ -518,7 +518,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
         </div>
 
         {/* Sağ Kısım: 2x2 Dönemsel Getiri Gridi */}
-        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 theme-inset">
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2">
           <CombinedReturnCell
             label="HAFTA (SON 5 İŞLEM GÜNÜ)"
             pct={weeklyPct ?? null}
