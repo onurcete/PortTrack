@@ -249,29 +249,24 @@ function Header({
 
 function BesPanel({ holdings }: { holdings: HoldingDTO[] }) {
   return (
-    <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b border-[var(--color-border)]">
+    <div className="space-y-3">
+      <div>
         <h3 className="text-sm font-semibold">BES bakiyesi</h3>
         <p className="text-xs text-[var(--color-muted)] mt-0.5">
           BES için teknik skor üretilmez; değer manuel / işlem bakiyesinden gelir.
         </p>
       </div>
-      <div className="divide-y divide-[var(--color-border)]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {holdings.map((h) => (
-          <div
-            key={h.symbol}
-            className="flex items-center justify-between px-4 py-3"
-          >
-            <div>
-              <p className="font-bold">{h.symbol}</p>
-              <p className="text-xs text-[var(--color-muted)]">
-                Ağırlık {h.weightPct.toFixed(1)}%
-              </p>
-            </div>
-            <p className="text-lg font-black tabular-nums">
+          <article key={h.symbol} className="card p-4">
+            <p className="text-base font-black tracking-tight">{h.symbol}</p>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">
+              Ağırlık {h.weightPct.toFixed(1)}%
+            </p>
+            <p className="mt-3 text-xl font-black tabular-nums">
               {formatMoney(h.valueTRY, "TRY")}
             </p>
-          </div>
+          </article>
         ))}
       </div>
     </div>
@@ -296,89 +291,82 @@ function HoldingsTable({
   }
 
   return (
-    <div className="card overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="theme-table-head text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
-            <tr>
-              <th className="px-4 py-2.5 text-left font-semibold">Sembol</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Ağırlık</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Günlük</th>
-              {!compact && (
-                <th className="px-3 py-2.5 text-right font-semibold">Değer</th>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {holdings.map((h) => (
+        <article
+          key={h.symbol}
+          className="card flex flex-col gap-3 p-4 transition-colors hover:bg-[var(--color-surface-hover)]"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-base font-black tracking-tight">{h.symbol}</p>
+              {h.name && (
+                <p className="mt-0.5 text-[11px] text-[var(--color-muted)] line-clamp-2">
+                  {h.name}
+                </p>
               )}
-              {showTechnical && (
-                <>
-                  <th className="px-3 py-2.5 text-right font-semibold">Skor</th>
-                  <th className="px-3 py-2.5 text-left font-semibold">Sinyaller</th>
-                </>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {holdings.map((h) => (
-              <tr
-                key={h.symbol}
-                className="border-b border-[var(--color-border)] last:border-0 theme-surface-hover"
+            </div>
+            {showTechnical && h.analysis && (
+              <ScoreBadge score={h.analysis.score} />
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg theme-inset border border-[var(--color-border)]/60 px-2.5 py-2">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">
+                Ağırlık
+              </span>
+              <p className="mt-1 text-sm font-bold tabular-nums">
+                {h.weightPct.toFixed(1)}%
+              </p>
+            </div>
+            <div className="rounded-lg theme-inset border border-[var(--color-border)]/60 px-2.5 py-2">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">
+                Günlük
+              </span>
+              <p
+                className={cn(
+                  "mt-1 text-sm font-bold tabular-nums",
+                  (h.dailyChangePct ?? 0) > 0 && "text-[var(--color-profit)]",
+                  (h.dailyChangePct ?? 0) < 0 && "text-[var(--color-loss)]",
+                )}
               >
-                <td className="px-4 py-2.5">
-                  <p className="font-bold">{h.symbol}</p>
-                  {h.name && (
-                    <p className="text-[11px] text-[var(--color-muted)] truncate max-w-[180px]">
-                      {h.name}
-                    </p>
-                  )}
-                </td>
-                <td className="px-3 py-2.5 text-right tabular-nums text-xs">
-                  {h.weightPct.toFixed(1)}%
-                </td>
-                <td
-                  className={cn(
-                    "px-3 py-2.5 text-right tabular-nums text-xs font-semibold",
-                    (h.dailyChangePct ?? 0) > 0 && "text-[var(--color-profit)]",
-                    (h.dailyChangePct ?? 0) < 0 && "text-[var(--color-loss)]",
-                  )}
-                >
-                  {h.dailyChangePct != null
-                    ? formatPercent(h.dailyChangePct)
-                    : "—"}
-                </td>
-                {!compact && (
-                  <td className="px-3 py-2.5 text-right tabular-nums text-xs">
-                    {formatMoney(h.valueTRY, "TRY")}
-                    {h.currentPriceNative != null && (
-                      <p className="text-[10px] text-[var(--color-muted)]">
-                        {h.nativeCurrency === "USD" ? "$" : "₺"}
-                        {formatNumber(h.currentPriceNative)}
-                      </p>
-                    )}
-                  </td>
+                {h.dailyChangePct != null
+                  ? formatPercent(h.dailyChangePct)
+                  : "—"}
+              </p>
+            </div>
+            {!compact && (
+              <div className="rounded-lg theme-inset border border-[var(--color-border)]/60 px-2.5 py-2 col-span-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted)]">
+                  Değer
+                </span>
+                <p className="mt-1 text-sm font-bold tabular-nums">
+                  {formatMoney(h.valueTRY, "TRY")}
+                </p>
+                {h.currentPriceNative != null && (
+                  <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">
+                    {h.nativeCurrency === "USD" ? "$" : "₺"}
+                    {formatNumber(h.currentPriceNative)}
+                  </p>
                 )}
-                {showTechnical && (
-                  <>
-                    <td className="px-3 py-2.5 text-right">
-                      {h.analysis ? (
-                        <ScoreBadge score={h.analysis.score} />
-                      ) : (
-                        <span className="text-xs text-[var(--color-muted)]">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {h.analysis ? (
-                        <SignalBadges analysis={h.analysis} />
-                      ) : (
-                        <span className="text-xs text-[var(--color-muted)]">
-                          Teknik yok
-                        </span>
-                      )}
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </div>
+            )}
+          </div>
+
+          {showTechnical && (
+            <div className="pt-1 border-t border-[var(--color-border)]/50">
+              {h.analysis ? (
+                <SignalBadges analysis={h.analysis} />
+              ) : (
+                <span className="text-xs text-[var(--color-muted)]">
+                  Teknik veri yok
+                </span>
+              )}
+            </div>
+          )}
+        </article>
+      ))}
     </div>
   );
 }
