@@ -55,6 +55,10 @@ export interface GrowthPointDTO {
   costTRY: number;
   costUSD: number;
   byType: GrowthByType;
+  /** Backlog kapsami oncesi, yalnizca islemlerden hesaplanan (eksik olabilecek) ay */
+  partialData?: boolean;
+  /** Yuzde hesabi icin eklenen sentetik baz ayi */
+  isSyntheticBaseline?: boolean;
 }
 
 function typeValue(
@@ -152,6 +156,20 @@ function ReturnCell({ pct }: { pct: number | null }) {
       {formatPercent(pct)}
     </span>
   );
+}
+
+/**
+ * Onceki nokta yalnizca ayni veri kapsamindan geliyorsa (backlog oncesi /
+ * sonrasi) karsilastirmada kullanilir; kaynak sinirini asan kiyaslar
+ * yaniltici sicramalar uretir.
+ */
+function comparablePoint(
+  current: GrowthPointDTO,
+  previous: GrowthPointDTO | null | undefined,
+): GrowthPointDTO | null {
+  if (!previous) return null;
+  if (Boolean(previous.partialData) !== Boolean(current.partialData)) return null;
+  return previous;
 }
 
 function prevMonthKey(monthKey: string): string | null {
@@ -425,32 +443,60 @@ export function GrowthClient({
     return TABLE_TYPES.filter((t) => has.has(t));
   }, [displaySeries, currency]);
 
+  /** Kumulatif tabloda secilebilir yillar (sentetik baz ayi haric, tum gecmis). */
+  const cumulativeYears = useMemo(() => {
+    const set = new Set(
+      series
+        .filter((p) => !p.isSyntheticBaseline)
+        .map((p) => p.month.slice(0, 4)),
+    );
+    return [...set].sort((a, b) => Number(a) - Number(b));
+  }, [series]);
+
+  const [cumulativeFromYear, setCumulativeFromYear] =
+    useState<string>(YEAR_FILTER_ALL);
+  const cumulativeFromValue =
+    cumulativeFromYear === YEAR_FILTER_ALL ||
+    cumulativeYears.includes(cumulativeFromYear)
+      ? cumulativeFromYear
+      : YEAR_FILTER_ALL;
+
   const cumulativeYearlyRows = useMemo((): CumulativeYearRow[] => {
-    if (displaySeries.length === 0) return [];
+    const pts = series
+      .filter(
+        (p) =>
+          !p.isSyntheticBaseline &&
+          (cumulativeFromValue === YEAR_FILTER_ALL ||
+            p.month.slice(0, 4) >= cumulativeFromValue),
+      )
+      .sort((a, b) => a.month.localeCompare(b.month));
+    if (pts.length === 0) return [];
 
     const byYear = new Map<string, GrowthPointDTO[]>();
-    for (const p of displaySeries) {
+    for (const p of pts) {
       const y = p.month.slice(0, 4);
       const arr = byYear.get(y) ?? [];
       arr.push(p);
       byYear.set(y, arr);
     }
 
-    // Build a lookup from the full series (including baseline years) for prev-Dec
+    // Onceki Aralik icin tum seriden (filtre disi yillar dahil) lookup
     const fullByMonth = new Map<string, GrowthPointDTO>();
-    for (const p of series) fullByMonth.set(p.month, p);
+    for (const p of series) {
+      if (!p.isSyntheticBaseline) fullByMonth.set(p.month, p);
+    }
 
     const rows: CumulativeYearRow[] = [];
+    let totalStartPoint: GrowthPointDTO | null = null;
     for (const year of [...byYear.keys()].sort()) {
-      const months = byYear
-        .get(year)!
-        .slice()
-        .sort((a, b) => a.month.localeCompare(b.month));
+      const months = byYear.get(year)!;
       const last = months[months.length - 1];
 
-      // Use previous year's December end as the start of this year (= year-start value)
+      // Onceki yilin Aralik degeri yalnizca ayni veri kaynagindan geliyorsa
+      // yil baslangici olarak kullanilir; aksi halde yilin ilk ayi baz alinir.
       const prevDec = fullByMonth.get(`${Number(year) - 1}-12`);
-      const startPoint = prevDec ?? months[0]; // fallback to first month if no prev Dec
+      const startPoint = comparablePoint(months[0], prevDec) ?? months[0];
+      if (!totalStartPoint) totalStartPoint = startPoint;
 
       rows.push({
         label: year,
@@ -463,26 +509,21 @@ export function GrowthClient({
       });
     }
 
-    const sorted = [...displaySeries].sort((a, b) =>
-      a.month.localeCompare(b.month),
-    );
-    // For TOPLAM, also use the Dec before the first display year if available
-    const firstYear = sorted[0].month.slice(0, 4);
-    const totalStartPoint = fullByMonth.get(`${Number(firstYear) - 1}-12`) ?? sorted[0];
-    const totalLast = sorted[sorted.length - 1];
+    const totalLast = pts[pts.length - 1];
+    const totalStart = totalStartPoint ?? pts[0];
     rows.push({
       label: "TOPLAM",
-      startTRY: totalStartPoint.valueTRY,
+      startTRY: totalStart.valueTRY,
       endTRY: totalLast.valueTRY,
-      startUSD: totalStartPoint.valueUSD,
+      startUSD: totalStart.valueUSD,
       endUSD: totalLast.valueUSD,
-      returnTRY: periodReturnPct(totalStartPoint.valueTRY, totalLast.valueTRY),
-      returnUSD: periodReturnPct(totalStartPoint.valueUSD, totalLast.valueUSD),
+      returnTRY: periodReturnPct(totalStart.valueTRY, totalLast.valueTRY),
+      returnUSD: periodReturnPct(totalStart.valueUSD, totalLast.valueUSD),
       isTotal: true,
     });
 
     return rows;
-  }, [displaySeries, series]);
+  }, [series, cumulativeFromValue]);
 
   function handleImportBacklog() {
     setImporting(true);
@@ -539,6 +580,7 @@ export function GrowthClient({
         const pk = prevMonthKey(p.month);
         prev = pk ? (seriesByMonth.get(pk) ?? null) : null;
       }
+      prev = comparablePoint(p, prev);
       const prevVal = prev
         ? isTRY
           ? prev.valueTRY
@@ -608,10 +650,11 @@ export function GrowthClient({
     if (filtered.length === 0) return null;
     const first = filtered[0];
     const last = filtered[filtered.length - 1];
-    const baseline =
+    const baselineRaw =
       chartYearValue === YEAR_FILTER_ALL
         ? null
         : yearEndFromSeries(series, Number(chartYearValue) - 1);
+    const baseline = comparablePoint(first, baselineRaw);
     const startTRY = baseline?.valueTRY ?? first.valueTRY;
     const startUSD = baseline?.valueUSD ?? first.valueUSD;
     const pnlTRY = last.valueTRY - startTRY;
@@ -642,7 +685,9 @@ export function GrowthClient({
     const lastMonth = sortedMonths[sortedMonths.length - 1];
 
     const prevDecKey = `${Number(year) - 1}-12`;
-    const startMonth = seriesByMonth.get(prevDecKey) ?? sortedMonths[0];
+    const startMonth =
+      comparablePoint(sortedMonths[0], seriesByMonth.get(prevDecKey)) ??
+      sortedMonths[0];
 
     const totalStart = totalValue(startMonth, currency);
     const totalEnd = totalValue(lastMonth, currency);
@@ -1176,8 +1221,31 @@ export function GrowthClient({
           </Card>
 
           <Card className="overflow-hidden">
-            <div className="px-6 py-4 border-b border-[var(--color-border)]">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[var(--color-border)]">
               <h2 className="font-semibold text-sm">Kümülatif Yıllık Özet</h2>
+              {cumulativeYears.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="cumulative-from-year"
+                    className="text-xs font-semibold text-[var(--color-muted)]"
+                  >
+                    Gösterim başlangıcı
+                  </label>
+                  <select
+                    id="cumulative-from-year"
+                    value={cumulativeFromValue}
+                    onChange={(e) => setCumulativeFromYear(e.target.value)}
+                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] transition-colors duration-200"
+                  >
+                    <option value={YEAR_FILTER_ALL}>Tüm yıllar</option>
+                    {cumulativeYears.map((y) => (
+                      <option key={y} value={y}>
+                        {y} ve sonrası
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -1323,9 +1391,10 @@ export function GrowthClient({
                   )}
                   {monthlyRows.map((p, idx) => {
                     const prevKey = prevMonthKey(p.month);
-                    const prevPoint = prevKey
-                      ? seriesByMonth.get(prevKey)
-                      : null;
+                    const prevPoint = comparablePoint(
+                      p,
+                      prevKey ? seriesByMonth.get(prevKey) : null,
+                    );
                     const total = totalValue(p, currency);
                     const prevTotal = prevPoint
                       ? totalValue(prevPoint, currency)

@@ -367,6 +367,14 @@ export interface GrowthPoint {
   costTRY: number;
   costUSD: number;
   byType: GrowthByType;
+  /**
+   * Backlog (manuel snapshot) kapsami baslamadan onceki ay: yalnizca
+   * islemlerden hesaplanir, BES gibi kalemler eksik olabilir. Yil
+   * karsilastirmalarinda bu sinir asilmamalidir.
+   */
+  partialData?: boolean;
+  /** Yuzde hesabi icin eklenen sentetik baz ayi (grafikte gosterilmez). */
+  isSyntheticBaseline?: boolean;
 }
 
 function emptyByType(): GrowthByType {
@@ -400,7 +408,11 @@ function ensureBaselineYearEnd(series: GrowthPoint[]): GrowthPoint[] {
     series.find((p) => p.month === `${GROWTH_DISPLAY_FROM_YEAR}-01`);
   if (!anchor) return series;
 
-  const baseline: GrowthPoint = { ...anchor, month: baselineKey };
+  const baseline: GrowthPoint = {
+    ...anchor,
+    month: baselineKey,
+    isSyntheticBaseline: true,
+  };
   return [...series, baseline].sort((a, b) => a.month.localeCompare(b.month));
 }
 
@@ -440,19 +452,14 @@ export async function getGrowthSeries(userId: string): Promise<GrowthPoint[]> {
   const current = fxHist.length ? fxHist[fxHist.length - 1].rate : 40;
   const fx = buildFxLookup(fxHist, current);
 
-  const growthFrom = new Date(GROWTH_DISPLAY_FROM_YEAR, 0, 1);
-
   let rangeStart = txRows.length
     ? new Date(txRows[0].date)
     : new Date();
   for (const row of manualSnaps.values()) {
     if (row.month < rangeStart) rangeStart = new Date(row.month);
   }
-  if (rangeStart < growthFrom) rangeStart = growthFrom;
 
-  const ends = monthEnds(rangeStart, new Date()).filter(
-    (end) => end.getFullYear() >= GROWTH_DISPLAY_FROM_YEAR,
-  );
+  const ends = monthEnds(rangeStart, new Date());
   const series: GrowthPoint[] = [];
 
   for (const end of ends) {
@@ -494,7 +501,17 @@ export async function getGrowthSeries(userId: string): Promise<GrowthPoint[]> {
     series.push(point);
   }
 
-  return ensureBaselineYearEnd(series);
+  // Manuel snapshot kapsami baslamadan onceki aylar eksik veri icerebilir;
+  // kaynak sinirini asan yil kiyaslarini engellemek icin isaretlenir.
+  const snapMonths = [...manualSnaps.keys()].sort();
+  const firstSnapMonth = snapMonths[0];
+  const tagged = firstSnapMonth
+    ? series.map((p) =>
+        p.month < firstSnapMonth ? { ...p, partialData: true } : p,
+      )
+    : series;
+
+  return ensureBaselineYearEnd(tagged);
 }
 
 export interface PeriodReturnsDTO {
@@ -694,7 +711,10 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
   }
 
   const series = await getGrowthSeries(userId);
-  const firstPoint = series.length > 0 ? series[0] : null;
+  // Tum zamanlar getirisi guvenilir (tam kapsamli) ilk noktadan baslar;
+  // backlog oncesi kismi aylar baz alinirsa yuzde yaniltici siser.
+  const firstPoint =
+    series.find((p) => !p.partialData) ?? (series.length > 0 ? series[0] : null);
 
   return {
     dailyTRY: calcPct(t0.valueTRY, t1.valueTRY),
