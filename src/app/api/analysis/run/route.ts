@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { resolvePriceMapping, type AssetType } from "@/lib/assets";
 import { fetchYahooHistory } from "@/lib/prices";
 import { computeIndicators, type PriceBar } from "@/lib/technical";
-import { generateAnalysis, generateDailySummary, type DailySummaryItem } from "@/lib/commentary";
+import {
+  generateAnalysis,
+  generateDailySummary,
+  type DailySummaryItem,
+} from "@/lib/commentary";
 import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -25,10 +29,9 @@ export async function POST(req: NextRequest) {
 
 /** Tüm aktif pozisyonlar için teknik analiz hesaplar. */
 export async function runTechnicalAnalysis(userId?: string) {
-  // 1. Tüm işlemleri çekip aktif (açık) pozisyonu olan sembolleri bul
   const transactions = await prisma.transaction.findMany({
     where: userId ? { userId } : undefined,
-    select: { symbol: true, quantity: true, side: true }
+    select: { symbol: true, quantity: true, side: true },
   });
 
   const quantities = new Map<string, number>();
@@ -45,12 +48,11 @@ export async function runTechnicalAnalysis(userId?: string) {
     .filter(([_, qty]) => qty > 0.0001)
     .map(([symbol]) => symbol);
 
-  // Sadece açık pozisyonların enstrüman detaylarını çek
   const instruments = await prisma.instrument.findMany({
     where: {
       symbol: { in: openSymbols },
       userId: userId ? userId : undefined,
-    }
+    },
   });
 
   if (instruments.length === 0) return { analyzed: 0, skipped: 0 };
@@ -62,17 +64,14 @@ export async function runTechnicalAnalysis(userId?: string) {
   let skipped = 0;
   const summaryItems: DailySummaryItem[] = [];
 
-  // 2. Her enstrüman için analiz çalıştır
   for (const inst of instruments) {
     try {
       const assetType = inst.assetType as AssetType;
       const mapping = resolvePriceMapping(assetType, inst.symbol);
 
       let bars: PriceBar[] = [];
-      let investorAlerts: string[] = [];
 
       if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
-        // Yahoo Finance'tan geçmiş çek
         const fromDate = new Date();
         fromDate.setDate(fromDate.getDate() - 370);
 
@@ -89,7 +88,6 @@ export async function runTechnicalAnalysis(userId?: string) {
           close: h.close,
         }));
       } else if (mapping.source === "tefas") {
-        // TEFAS: DB'deki PriceSnapshot'lardan
         const snapshots = await prisma.priceSnapshot.findMany({
           where: { symbol: inst.symbol },
           orderBy: { date: "asc" },
@@ -104,48 +102,20 @@ export async function runTechnicalAnalysis(userId?: string) {
           date: s.date,
           close: s.native ?? s.close,
         }));
-
-        // Yatırımcı sayısı değişim tespiti (son 1 haftalık değişim)
-        const snapsWithInvestors = snapshots.filter((s) => s.investors != null);
-        if (snapsWithInvestors.length >= 2) {
-          const latest = snapsWithInvestors[snapsWithInvestors.length - 1];
-          // Yaklaşık 7 gün önceki (5-10 gün arası) en yakın kaydı bul, yoksa bir öncekini al
-          const prior = snapsWithInvestors.find((s) => {
-            const diffDays = (latest.date.getTime() - s.date.getTime()) / (1000 * 60 * 60 * 24);
-            return diffDays >= 5 && diffDays <= 10;
-          }) || snapsWithInvestors[snapsWithInvestors.length - 2];
-
-          if (latest.investors && prior.investors && prior.investors > 0) {
-            const diff = latest.investors - prior.investors;
-            const pct = (diff / prior.investors) * 100;
-            // %0.5 veya daha fazla değişim varsa kullanıcıya bildir
-            if (Math.abs(pct) >= 0.5) {
-              const direction = pct > 0 ? "artış" : "azalış";
-              const emoji = pct > 0 ? "📈" : "📉";
-              investorAlerts.push(
-                `${emoji} Yatırımcı Sayısı: Son 1 haftada yatırımcı sayısı %${Math.abs(pct).toFixed(1)} ${direction} gösterdi (Son: ${latest.investors.toLocaleString()}, Önceki: ${prior.investors.toLocaleString()}).`
-              );
-            }
-          }
-        }
       } else {
-        // Manuel (BES vb.) — analiz yapılamaz
+        // Manuel (BES vb.) — teknik analiz yok
         skipped++;
         continue;
       }
 
-      // 3. Göstergeleri hesapla
       const indicators = computeIndicators(bars);
       if (!indicators) {
         skipped++;
         continue;
       }
 
-      // 4. Yorum üret
       const analysis = generateAnalysis(inst.symbol, indicators);
-      const combinedAlerts = [...analysis.alerts, ...investorAlerts];
 
-      // 5. DB'ye kaydet (upsert)
       await prisma.technicalAnalysis.upsert({
         where: {
           symbol_date: {
@@ -157,26 +127,25 @@ export async function runTechnicalAnalysis(userId?: string) {
           symbol: inst.symbol,
           assetType: inst.assetType,
           date: today,
-          indicators: indicators as any,
+          indicators: indicators as object,
           score: analysis.score,
           commentary: analysis.commentary,
           trendSignal: analysis.trendSignal,
           macdSignal: analysis.macdSignal,
           rsiZone: analysis.rsiZone,
-          alerts: combinedAlerts,
+          alerts: analysis.alerts,
         },
         update: {
-          indicators: indicators as any,
+          indicators: indicators as object,
           score: analysis.score,
           commentary: analysis.commentary,
           trendSignal: analysis.trendSignal,
           macdSignal: analysis.macdSignal,
           rsiZone: analysis.rsiZone,
-          alerts: combinedAlerts,
+          alerts: analysis.alerts,
         },
       });
 
-      // Günlük özet için veri topla
       summaryItems.push({
         symbol: inst.symbol,
         assetType: inst.assetType,
@@ -193,8 +162,9 @@ export async function runTechnicalAnalysis(userId?: string) {
     }
   }
 
-  // 6. Günlük özeti de özel bir kayıt olarak sakla
-  const summarySymbol = userId ? `__DAILY_SUMMARY__:${userId}` : "__DAILY_SUMMARY__";
+  const summarySymbol = userId
+    ? `__DAILY_SUMMARY__:${userId}`
+    : "__DAILY_SUMMARY__";
   const summary = generateDailySummary(summaryItems);
   await prisma.technicalAnalysis.upsert({
     where: {
@@ -207,7 +177,7 @@ export async function runTechnicalAnalysis(userId?: string) {
       symbol: summarySymbol,
       assetType: "SUMMARY",
       date: today,
-      indicators: summary as any,
+      indicators: summary as object,
       score: 0,
       commentary: "",
       trendSignal: "UP",
@@ -216,7 +186,7 @@ export async function runTechnicalAnalysis(userId?: string) {
       alerts: [],
     },
     update: {
-      indicators: summary as any,
+      indicators: summary as object,
     },
   });
 
