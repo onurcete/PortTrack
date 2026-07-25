@@ -17,11 +17,8 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { FileSpreadsheet, History, TrendingUp } from "lucide-react";
-import {
-  importBacklogXlsx,
-  updateBesBalance,
-} from "@/app/growth/actions";
+import { History, TrendingUp } from "lucide-react";
+import { updateBesBalance } from "@/app/growth/actions";
 import {
   BACKLOG_FULL_UNTIL_YEAR,
   BES_MANUAL_FROM_YEAR,
@@ -297,7 +294,6 @@ export function GrowthClient({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [building, setBuilding] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState<string>("");
   const [toast, setToast] = useState<string | null>(null);
   const isTRY = currency === "TRY";
@@ -525,17 +521,6 @@ export function GrowthClient({
     return rows;
   }, [series, cumulativeFromValue]);
 
-  function handleImportBacklog() {
-    setImporting(true);
-    startTransition(async () => {
-      const res = await importBacklogXlsx();
-      setImporting(false);
-      setToast(res.message ?? (res.ok ? "Tamamlandı." : "Hata."));
-      if (res.ok) router.refresh();
-      setTimeout(() => setToast(null), 5000);
-    });
-  }
-
   async function buildHistory() {
     setBuilding(true);
     setProgress("Kur ve borsa verileri çekiliyor...");
@@ -753,15 +738,6 @@ export function GrowthClient({
             <span className="text-xs text-[var(--color-muted)]">{progress}</span>
           )}
           <button
-            onClick={handleImportBacklog}
-            disabled={importing || pending}
-            className="btn btn-outline"
-            title="Proje kökündeki transactions.csv ve backlog.xlsx dosyalarını içe aktararak geçmiş portföy verilerini yükler."
-          >
-            <FileSpreadsheet size={15} />
-            {importing ? "Aktarılıyor..." : "Backlog İçe Aktar"}
-          </button>
-          <button
             onClick={buildHistory}
             disabled={building || pending}
             className="btn btn-outline"
@@ -778,18 +754,9 @@ export function GrowthClient({
           <TrendingUp className="text-[var(--color-muted)]" size={32} />
           <p className="font-semibold">Geçmiş veri henüz yok</p>
           <p className="text-sm text-[var(--color-muted)] max-w-md">
-            Önce <strong>Backlog İçe Aktar</strong> ile 2023–2024 verisini
-            yükleyin; ardından gerekirse geçmiş fiyatları oluşturun.
+            İşlemleriniz üzerinden geçmiş fiyatları çekerek portföy gelişimini
+            oluşturabilirsiniz.
           </p>
-          <button
-            onClick={handleImportBacklog}
-            disabled={importing || pending}
-            className="btn btn-outline mt-2"
-            title="Proje kökündeki transactions.csv ve backlog.xlsx dosyalarını içe aktararak geçmiş portföy verilerini yükler."
-          >
-            <FileSpreadsheet size={16} />
-            {importing ? "Aktarılıyor..." : "Backlog İçe Aktar"}
-          </button>
           <button
             onClick={buildHistory}
             disabled={building || pending}

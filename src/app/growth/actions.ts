@@ -1,38 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  readBacklogFile,
-  importBacklogToDb,
-  upsertBesMonth,
-} from "@/lib/backlog";
+import { upsertBesMonth } from "@/lib/backlog";
 import { BES_MANUAL_FROM_YEAR } from "@/lib/backlog.constants";
 import { requireUser } from "@/lib/auth";
 
 export interface ActionResult {
   ok: boolean;
   message?: string;
-}
-
-export async function importBacklogXlsx(): Promise<ActionResult> {
-  try {
-    const userId = await requireUser();
-    const rows = await readBacklogFile();
-    if (rows.length === 0) {
-      return { ok: false, message: "backlog.xlsx okunamadı veya boş." };
-    }
-    const n = await importBacklogToDb(rows, userId);
-    revalidatePath("/growth");
-    return {
-      ok: true,
-      message: `${n} ay içe aktarıldı: 2023–2024 tam satır, 2025+ yalnızca BES (Excel).`,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      message: `İçe aktarma hatası: ${(err as Error).message}`,
-    };
-  }
 }
 
 export async function updateBesBalance(
@@ -53,7 +28,7 @@ export async function updateBesBalance(
   if (Number(month.slice(0, 4)) < BES_MANUAL_FROM_YEAR) {
     return {
       ok: false,
-      message: `${BES_MANUAL_FROM_YEAR} öncesi BES için Backlog İçe Aktar kullanın.`,
+      message: `${BES_MANUAL_FROM_YEAR} öncesi BES bakiyesi düzenlenemez.`,
     };
   }
   if (!Number.isFinite(besTRY) || besTRY < 0) {

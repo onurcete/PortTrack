@@ -1,9 +1,6 @@
 // import "server-only";
-import { readFile } from "fs/promises";
-import path from "path";
-import * as XLSX from "xlsx";
 import { prisma, assertPortfolioMonthSnapshot } from "./prisma";
-import type { AssetType, GrowthByType } from "./assets";
+import type { GrowthByType } from "./assets";
 import { ASSET_TYPES } from "./assets";
 
 import {
@@ -27,112 +24,9 @@ export interface MonthSnapshotRow {
   usdTryRate: number;
 }
 
-/** Turkce binlik ayiricili sayi: 1.027.045 veya 18,846 */
-export function parseTrAmount(raw: unknown): number {
-  if (raw == null || raw === "" || raw === "-") return 0;
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-  const s = String(raw).trim();
-  if (!s || s === "-") return 0;
-  const cleaned = s.replace(/\./g, "").replace(",", ".");
-  const n = parseFloat(cleaned);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function parseTrDate(raw: unknown): Date | null {
-  if (raw == null) return null;
-  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
-    return new Date(raw.getFullYear(), raw.getMonth(), 1);
-  }
-  const s = String(raw).trim();
-  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s);
-  if (!m) return null;
-  const day = Number(m[1]);
-  const mon = Number(m[2]) - 1;
-  const year = Number(m[3]);
-  return new Date(year, mon, day);
-}
-
 function monthKey(d: Date): string {
   const trDate = new Date(d.getTime() + 3 * 60 * 60 * 1000);
   return `${trDate.getUTCFullYear()}-${String(trDate.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-function colIndex(headers: string[], ...names: string[]): number {
-  const norm = (h: string) =>
-    h
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .replace(/[₺$%()]/g, "")
-      .trim();
-  const normalized = headers.map(norm);
-  for (const name of names) {
-    const target = norm(name);
-    const idx = normalized.findIndex((h) => h.includes(target) || target.includes(h));
-    if (idx >= 0) return idx;
-  }
-  return -1;
-}
-
-/** Excel/CSV satirlarini ay sonu snapshot listesine cevirir. */
-export function parseBacklogRows(rows: unknown[][]): MonthSnapshotRow[] {
-  if (rows.length < 2) return [];
-
-  const headers = rows[0].map((c) => String(c ?? ""));
-  const iDate = colIndex(headers, "tarih");
-  const iBes = colIndex(headers, "bes");
-  const iBist = colIndex(headers, "bist");
-  const iFon = colIndex(headers, "fon");
-  const iNasdaq = colIndex(headers, "nasdaq");
-  const iDoviz = colIndex(headers, "doviz");
-  const iTotalTry = headers.findIndex((h) => {
-    const n = String(h).toLowerCase();
-    return n.includes("toplam") && (n.includes("₺") || n.includes("try"));
-  });
-  const iTotalUsd = headers.findIndex((h) => {
-    const n = String(h).toLowerCase();
-    return n.includes("toplam") && (n.includes("$") || n.includes("usd"));
-  });
-  const iKur = colIndex(headers, "kur");
-
-  const out: MonthSnapshotRow[] = [];
-
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
-    if (!row?.length) continue;
-    const month = parseTrDate(row[iDate >= 0 ? iDate : 0]);
-    if (!month) continue;
-
-    const besTRY = parseTrAmount(iBes >= 0 ? row[iBes] : 0);
-    const bistTRY = parseTrAmount(iBist >= 0 ? row[iBist] : 0);
-    const tefasTRY = parseTrAmount(iFon >= 0 ? row[iFon] : 0);
-    const foreignTRY = parseTrAmount(iNasdaq >= 0 ? row[iNasdaq] : 0);
-    const fxTRY = parseTrAmount(iDoviz >= 0 ? row[iDoviz] : 0);
-    const totalTRY = parseTrAmount(iTotalTry >= 0 ? row[iTotalTry] : 0);
-    const totalUSD = parseTrAmount(iTotalUsd >= 0 ? row[iTotalUsd] : 0);
-    const usdTryRate = parseTrAmount(iKur >= 0 ? row[iKur] : 0);
-
-    const sumParts = besTRY + bistTRY + tefasTRY + foreignTRY + fxTRY;
-    const total =
-      totalTRY > 0 ? totalTRY : sumParts > 0 ? sumParts : 0;
-
-    out.push({
-      month,
-      monthKey: monthKey(month),
-      besTRY,
-      bistTRY,
-      tefasTRY,
-      foreignTRY,
-      fxTRY,
-      metalTRY: 0,
-      cryptoTRY: 0,
-      totalTRY: total,
-      totalUSD,
-      usdTryRate: usdTryRate > 0 ? usdTryRate : totalUSD > 0 ? total / totalUSD : 0,
-    });
-  }
-
-  return out;
 }
 
 export function snapshotToByType(
@@ -193,82 +87,6 @@ export function growthPointFromSnapshot(
   };
 }
 
-/** backlog.xlsx dosyasini okur ve parse eder. */
-export async function readBacklogFile(
-  filePath?: string,
-): Promise<MonthSnapshotRow[]> {
-  const p = filePath ?? path.join(process.cwd(), "backlog.xlsx");
-  const buf = await readFile(p);
-  const wb = XLSX.read(buf, { type: "buffer", cellDates: true });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: "",
-    raw: false,
-  }) as unknown[][];
-  return parseBacklogRows(rows);
-}
-
-/** Veritabanina backlog satirlarini yazar (upsert). */
-export async function importBacklogToDb(
-  rows: MonthSnapshotRow[],
-  userId: string,
-): Promise<number> {
-  assertPortfolioMonthSnapshot();
-  let n = 0;
-  for (const row of rows) {
-    const year = row.month.getFullYear();
-
-    if (year <= BACKLOG_FULL_UNTIL_YEAR) {
-      await prisma.portfolioMonthSnapshot.upsert({
-        where: { userId_month: { userId, month: row.month } },
-        create: {
-          userId,
-          month: row.month,
-          besTRY: row.besTRY,
-          bistTRY: row.bistTRY,
-          tefasTRY: row.tefasTRY,
-          foreignTRY: row.foreignTRY,
-          fxTRY: row.fxTRY,
-          metalTRY: row.metalTRY,
-          cryptoTRY: row.cryptoTRY,
-          totalTRY: row.totalTRY,
-          totalUSD: row.totalUSD > 0 ? row.totalUSD : null,
-          usdTryRate: row.usdTryRate > 0 ? row.usdTryRate : null,
-          source: "backlog",
-        },
-        update: {
-          besTRY: row.besTRY,
-          bistTRY: row.bistTRY,
-          tefasTRY: row.tefasTRY,
-          foreignTRY: row.foreignTRY,
-          fxTRY: row.fxTRY,
-          metalTRY: row.metalTRY,
-          cryptoTRY: row.cryptoTRY,
-          totalTRY: row.totalTRY,
-          totalUSD: row.totalUSD > 0 ? row.totalUSD : null,
-          usdTryRate: row.usdTryRate > 0 ? row.usdTryRate : null,
-          source: "backlog",
-        },
-      });
-    } else {
-      // 2025+: yalnizca BES kolonu excel'den; diger kolonlar hesaplanir
-      await prisma.portfolioMonthSnapshot.upsert({
-        where: { userId_month: { userId, month: row.month } },
-        create: {
-          userId,
-          month: row.month,
-          besTRY: row.besTRY,
-          source: "backlog",
-        },
-        update: { besTRY: row.besTRY, source: "backlog" },
-      });
-    }
-    n++;
-  }
-  return n;
-}
-
 export async function upsertBesMonth(
   monthKey: string,
   besTRY: number,
@@ -278,7 +96,7 @@ export async function upsertBesMonth(
   const [y, m] = monthKey.split("-").map(Number);
   if (y < BES_MANUAL_FROM_YEAR) {
     throw new Error(
-      `${BES_MANUAL_FROM_YEAR} oncesi BES degerleri backlog import ile gelir.`,
+      `${BES_MANUAL_FROM_YEAR} öncesi BES bakiyesi düzenlenemez.`,
     );
   }
   const month = new Date(y, m - 1, 1);
