@@ -367,6 +367,8 @@ export interface GrowthPoint {
   costTRY: number;
   costUSD: number;
   byType: GrowthByType;
+  /** Yüzde hesabı için eklenen, gerçek işleme dayanmayan baz ay. */
+  isSyntheticBaseline?: boolean;
 }
 
 function emptyByType(): GrowthByType {
@@ -400,7 +402,11 @@ function ensureBaselineYearEnd(series: GrowthPoint[]): GrowthPoint[] {
     series.find((p) => p.month === `${GROWTH_DISPLAY_FROM_YEAR}-01`);
   if (!anchor) return series;
 
-  const baseline: GrowthPoint = { ...anchor, month: baselineKey };
+  const baseline: GrowthPoint = {
+    ...anchor,
+    month: baselineKey,
+    isSyntheticBaseline: true,
+  };
   return [...series, baseline].sort((a, b) => a.month.localeCompare(b.month));
 }
 
@@ -440,19 +446,15 @@ export async function getGrowthSeries(userId: string): Promise<GrowthPoint[]> {
   const current = fxHist.length ? fxHist[fxHist.length - 1].rate : 40;
   const fx = buildFxLookup(fxHist, current);
 
-  const growthFrom = new Date(GROWTH_DISPLAY_FROM_YEAR, 0, 1);
-
   let rangeStart = txRows.length
     ? new Date(txRows[0].date)
     : new Date();
   for (const row of manualSnaps.values()) {
     if (row.month < rangeStart) rangeStart = new Date(row.month);
   }
-  if (rangeStart < growthFrom) rangeStart = growthFrom;
-
-  const ends = monthEnds(rangeStart, new Date()).filter(
-    (end) => end.getFullYear() >= GROWTH_DISPLAY_FROM_YEAR,
-  );
+  // Kümülatif yıllık özet, kullanıcının ilk işleminden itibaren filtrelenebilir.
+  // 2023 sınırı yalnızca diğer görünümlerin istemci tarafı varsayılanıdır.
+  const ends = monthEnds(rangeStart, new Date());
   const series: GrowthPoint[] = [];
 
   for (const end of ends) {
