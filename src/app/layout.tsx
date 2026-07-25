@@ -31,9 +31,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var themes = ['light', 'dark', 'solarized', 'nord'];
-                var theme = localStorage.theme === 'dracula'
-                  ? 'nord'
+                var themes = ['light', 'dark', 'solarized', 'harbor'];
+                var theme = (localStorage.theme === 'dracula' || localStorage.theme === 'nord')
+                  ? 'harbor'
                   : (themes.includes(localStorage.theme)
                     ? localStorage.theme
                     : 'dark');
@@ -41,7 +41,7 @@ export default function RootLayout({
                 document.documentElement.dataset.theme = theme;
                 document.documentElement.classList.toggle(
                   'dark',
-                  theme === 'dark' || theme === 'nord'
+                  theme === 'dark' || theme === 'harbor'
                 );
               } catch (_) {}
             `,

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Moon, Palette, Sun } from "lucide-react";
 
-type Theme = "light" | "dark" | "solarized" | "nord";
+type Theme = "light" | "dark" | "solarized" | "harbor";
 
 const THEMES: Array<{
   id: Theme;
@@ -34,23 +34,23 @@ const THEMES: Array<{
     dark: false,
   },
   {
-    id: "nord",
-    label: "Nord",
-    description: "Soğuk arktik koyu",
-    colors: ["#2e3440", "#88c0d0", "#a3be8c"],
+    id: "harbor",
+    label: "Harbor",
+    description: "Lacivert ve altın",
+    colors: ["#1A3263", "#FFC570", "#EFD2B0"],
     dark: true,
   },
 ];
 
 function resolveTheme(value: string | null): Theme {
-  if (value === "dracula") return "nord";
+  if (value === "dracula" || value === "nord") return "harbor";
   if (THEMES.some((item) => item.id === value)) return value as Theme;
   return "dark";
 }
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark" || theme === "nord");
+  root.classList.toggle("dark", theme === "dark" || theme === "harbor");
   root.dataset.theme = theme;
 }
 

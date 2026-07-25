@@ -21,7 +21,7 @@ export interface ProductPerformanceDTO {
   rows: ProductPerfRowDTO[];
 }
 
-/** Tema token'larina dayali isi haritasi hucresi (Solarized/Dracula dahil). */
+/** Tema token'larina dayali isi haritasi hucresi (Solarized/Harbor dahil). */
 export function getCellStyle(v: number | null): React.CSSProperties {
   if (v == null) {
     return {

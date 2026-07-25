@@ -235,36 +235,36 @@ html[data-theme="solarized"] {
     0 8px 22px rgba(7, 54, 66, 0.05);
 }
 
-/* Nord — soguk arktik mavi-gri koyu palet (Koyu indigodan net ayri) */
-html[data-theme="nord"] {
+/* Harbor — lacivert zemin + altin vurgu (#1A3263, #547792, #EFD2B0, #FFC570) */
+html[data-theme="harbor"] {
   color-scheme: dark;
-  --color-bg: #2e3440;
-  --color-surface: #3b4252;
-  --color-surface-muted: #434c5e;
-  --color-surface-hover: #4c566a;
-  --color-table-header: #434c5e;
-  --color-inset: #353c4a;
-  --color-border: #4c566a;
-  --color-foreground: #eceff4;
-  --color-text: #eceff4;
-  --color-muted: #d8dee9;
+  --color-bg: #1a3263;
+  --color-surface: #243e72;
+  --color-surface-muted: #2d4c82;
+  --color-surface-hover: #35568f;
+  --color-table-header: #2a487c;
+  --color-inset: #1f396b;
+  --color-border: #547792;
+  --color-foreground: #efd2b0;
+  --color-text: #efd2b0;
+  --color-muted: #b7c5d4;
 
-  --color-brand: #88c0d0;
-  --color-brand-strong: #8fbcbb;
-  --color-brand-hover: #8fbcbb;
-  --color-brand-soft: rgba(136, 192, 208, 0.16);
-  --color-on-brand: #2e3440;
+  --color-brand: #ffc570;
+  --color-brand-strong: #ffd08a;
+  --color-brand-hover: #ffd08a;
+  --color-brand-soft: rgba(255, 197, 112, 0.16);
+  --color-on-brand: #1a3263;
 
-  --color-neutral: #d8dee9;
-  --color-neutral-soft: rgba(216, 222, 233, 0.12);
-  --color-chart-muted: #81a1c1;
+  --color-neutral: #b7c5d4;
+  --color-neutral-soft: rgba(84, 119, 146, 0.28);
+  --color-chart-muted: #547792;
 
-  --color-profit: #a3be8c;
-  --color-profit-soft: rgba(163, 190, 140, 0.16);
-  --color-loss: #bf616a;
-  --color-loss-soft: rgba(191, 97, 106, 0.16);
+  --color-profit: #8fbf88;
+  --color-profit-soft: rgba(143, 191, 136, 0.16);
+  --color-loss: #e07a6a;
+  --color-loss-soft: rgba(224, 122, 106, 0.16);
 
   --shadow-card:
-    0 1px 2px rgba(46, 52, 64, 0.45),
-    0 12px 30px rgba(46, 52, 64, 0.4);
+    0 1px 2px rgba(10, 22, 48, 0.35),
+    0 12px 30px rgba(10, 22, 48, 0.4);
 }
