@@ -376,7 +376,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
 
       {/* Bilgilendirme Notu */}
       <div className="flex gap-2 text-[9px] text-[var(--color-muted)] leading-normal bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/10 mt-6">
-        <Info size={13} className="shrink-0 text-slate-400 mt-0.5" />
+        <Info size={13} className="shrink-0 text-[var(--color-muted)] mt-0.5" />
         <span>
           Bu analiz ve projeksiyonlar, portföyünüzün belirtilen dönemdeki getiri eğilimlerine göre doğrusal ve bileşik faiz matematik modelleri kullanılarak hesaplanmıştır. Gelecekteki piyasa dalgalanmaları, ek yatırımlarınız veya nakit çıkışlarınız bu sonuçları değiştirebilir. Yatırım tavsiyesi niteliğinde değildir.
         </span>
@@ -394,7 +394,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
             </button>
 
             <div className="flex items-center gap-2 border-b border-[var(--color-border)]/40 pb-3">
-              <div className="h-8 w-8 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-lg bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] flex items-center justify-center">
                 <Sliders size={16} />
               </div>
               <div>
@@ -406,7 +406,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
             <div className="space-y-4 py-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold text-[var(--color-foreground)]">Tahmini Aylık Ortalama Getiri</span>
-                <span className="text-sm font-black text-violet-600 dark:text-violet-400">% {customRate.toFixed(1)}</span>
+                <span className="text-sm font-black text-[var(--color-brand-strong)]">% {customRate.toFixed(1)}</span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -418,7 +418,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
                   step="0.1"
                   value={customRate}
                   onChange={(e) => setCustomRate(parseFloat(e.target.value))}
-                  className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-violet-600 dark:accent-violet-500"
+                  className="flex-1 h-1.5 bg-[var(--color-neutral-soft)] rounded-lg appearance-none cursor-pointer accent-[var(--color-brand)]"
                 />
                 <span className="text-[10px] font-bold text-emerald-500">+30%</span>
               </div>
@@ -435,7 +435,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
                       className={cn(
                         "py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer",
                         customRate === val
-                          ? "bg-violet-600 text-white border-violet-600 dark:bg-violet-500 dark:border-violet-500"
+                          ? "bg-[var(--color-brand)] text-white border-[var(--color-brand)]"
                           : "bg-[var(--color-surface-muted)]/30 text-[var(--color-foreground)] border-[var(--color-border)]/50 hover:bg-[var(--color-surface-muted)]/80"
                       )}
                     >
@@ -450,7 +450,7 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-violet-600 text-white dark:bg-violet-500 hover:opacity-90 transition-opacity cursor-pointer w-full text-center"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] transition-colors cursor-pointer w-full text-center"
               >
                 Uygula ve Kapat
               </button>

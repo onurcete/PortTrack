@@ -4,18 +4,32 @@
   --color-bg: #f7f8fc;
   --color-surface: #ffffff;
   --color-surface-muted: #f1f3f9;
+  --color-surface-hover: #e9ecf5;
+  --color-table-header: #eef0f6;
+  --color-inset: #f7f8fc;
   --color-border: #e6e8f0;
   --color-foreground: #1a1d2b;
+  --color-text: #1a1d2b;
   --color-muted: #6b7280;
 
   --color-brand: #6366f1;
   --color-brand-strong: #4f46e5;
+  --color-brand-hover: #4f46e5;
   --color-brand-soft: #eef0ff;
+  --color-on-brand: #ffffff;
+
+  --color-neutral: #64748b;
+  --color-neutral-soft: #f1f5f9;
+  --color-chart-muted: #94a3b8;
 
   --color-profit: #16a34a;
   --color-profit-soft: #e7f7ee;
   --color-loss: #e11d48;
   --color-loss-soft: #fdeaf0;
+
+  --shadow-card:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 24px rgba(16, 24, 40, 0.04);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
@@ -34,17 +48,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html {
+  color-scheme: light;
+}
+
+input,
+select,
+textarea {
+  color: var(--color-foreground);
+  background-color: var(--color-surface);
+}
+
 /* Ince, modern kaydirma cubugu */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #d1d5e0 transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #d1d5e0;
+  background: var(--color-border);
   border-radius: 9999px;
 }
 
@@ -53,9 +78,7 @@ body {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-card);
-    box-shadow:
-      0 1px 2px rgba(16, 24, 40, 0.04),
-      0 8px 24px rgba(16, 24, 40, 0.04);
+    box-shadow: var(--shadow-card);
   }
 
   .btn {
@@ -79,7 +102,7 @@ body {
   }
   .btn-primary {
     background: var(--color-brand);
-    color: #fff;
+    color: var(--color-on-brand);
   }
   .btn-primary:hover {
     background: var(--color-brand-strong);
@@ -125,83 +148,123 @@ body {
   .input::placeholder {
     color: var(--color-muted);
   }
+
+  .theme-table-head {
+    background: var(--color-table-header);
+  }
+
+  .theme-surface-hover:hover {
+    background: var(--color-surface-hover);
+  }
+
+  /* Sticky hucreler hover'da da ayni zeminle kalsin */
+  .theme-surface-hover:hover > [class*="sticky"] {
+    background: var(--color-surface-hover);
+  }
+
+  .theme-inset {
+    background: var(--color-inset);
+  }
 }
 
+/* Koyu (indigo) */
 .dark {
+  color-scheme: dark;
   --color-bg: #090d16;
   --color-surface: #111726;
   --color-surface-muted: #1b2234;
+  --color-surface-hover: #202940;
+  --color-table-header: #171e2e;
+  --color-inset: #0c1220;
   --color-border: #242d42;
   --color-foreground: #f8fafc;
+  --color-text: #f8fafc;
   --color-muted: #94a3b8;
 
+  --color-brand: #6366f1;
   --color-brand-strong: #818cf8;
+  --color-brand-hover: #818cf8;
   --color-brand-soft: rgba(99, 102, 241, 0.15);
+  --color-on-brand: #ffffff;
+
+  --color-neutral: #94a3b8;
+  --color-neutral-soft: rgba(148, 163, 184, 0.1);
+  --color-chart-muted: #94a3b8;
 
   --color-profit: #22c55e;
   --color-profit-soft: rgba(34, 197, 94, 0.12);
   --color-loss: #f43f5e;
   --color-loss-soft: rgba(244, 63, 94, 0.12);
+
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
-.dark * {
-  scrollbar-color: #374151 transparent;
-}
-.dark *::-webkit-scrollbar-thumb {
-  background: #374151;
-}
-
-/* Solarized Light — sicak, dusuk kontrastli ve uzun kullanimda goz dostu. */
+/* Solarized Light — krem zemin + daha acik kartlar */
 html[data-theme="solarized"] {
+  color-scheme: light;
   --color-bg: #fdf6e3;
   --color-surface: #fffdf5;
   --color-surface-muted: #eee8d5;
-  --color-border: #d8d0b8;
+  --color-surface-hover: #f3ecda;
+  --color-table-header: #eee8d5;
+  --color-inset: #f7f0dc;
+  --color-border: #d6cdb4;
   --color-foreground: #073642;
+  --color-text: #073642;
   --color-muted: #657b83;
 
   --color-brand: #268bd2;
-  --color-brand-strong: #006da8;
-  --color-brand-soft: #e1f1f7;
+  --color-brand-strong: #1a6ea8;
+  --color-brand-hover: #1a6ea8;
+  --color-brand-soft: #dceff8;
+  --color-on-brand: #ffffff;
 
-  --color-profit: #718500;
-  --color-profit-soft: #eef1d2;
+  --color-neutral: #657b83;
+  --color-neutral-soft: #eee8d5;
+  --color-chart-muted: #93a1a1;
+
+  --color-profit: #859900;
+  --color-profit-soft: #eef2d4;
   --color-loss: #dc322f;
-  --color-loss-soft: #f9e1da;
+  --color-loss-soft: #f9e2da;
+
+  --shadow-card:
+    0 1px 2px rgba(7, 54, 66, 0.05),
+    0 10px 28px rgba(7, 54, 66, 0.06);
 }
 
-html[data-theme="solarized"] * {
-  scrollbar-color: #b8ad91 transparent;
-}
-
-html[data-theme="solarized"] *::-webkit-scrollbar-thumb {
-  background: #b8ad91;
-}
-
-/* Dracula — yaygin mor vurgulu koyu renk paleti. */
+/* Dracula — mor vurgulu koyu palet */
 html[data-theme="dracula"] {
-  --color-bg: #21222c;
+  color-scheme: dark;
+  --color-bg: #1e1f29;
   --color-surface: #282a36;
   --color-surface-muted: #343746;
+  --color-surface-hover: #3b3e50;
+  --color-table-header: #2f3140;
+  --color-inset: #21222c;
   --color-border: #44475a;
   --color-foreground: #f8f8f2;
+  --color-text: #f8f8f2;
   --color-muted: #a7a9bd;
 
   --color-brand: #bd93f9;
   --color-brand-strong: #d6b8ff;
+  --color-brand-hover: #d6b8ff;
   --color-brand-soft: rgba(189, 147, 249, 0.16);
+  --color-on-brand: #282a36;
+
+  --color-neutral: #a7a9bd;
+  --color-neutral-soft: rgba(167, 169, 189, 0.12);
+  --color-chart-muted: #6272a4;
 
   --color-profit: #50fa7b;
   --color-profit-soft: rgba(80, 250, 123, 0.12);
   --color-loss: #ff5555;
   --color-loss-soft: rgba(255, 85, 85, 0.14);
-}
 
-html[data-theme="dracula"] * {
-  scrollbar-color: #6272a4 transparent;
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 12px 30px rgba(0, 0, 0, 0.35);
 }
-
-html[data-theme="dracula"] *::-webkit-scrollbar-thumb {
-  background: #6272a4;
-}
-

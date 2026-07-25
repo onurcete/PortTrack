@@ -261,9 +261,9 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
             </p>
           ) : (
             <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="text-xs uppercase tracking-wide text-[var(--color-muted)] border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]/10">
-                  <th className="px-4 py-3 text-left font-semibold sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/80">
+              <thead className="theme-table-head">
+                <tr className="text-xs uppercase tracking-wide text-[var(--color-muted)] border-b border-[var(--color-border)]">
+                  <th className="px-4 py-3 text-left font-semibold sticky left-0 bg-[var(--color-table-header)] z-10 border-r border-[var(--color-border)]/80">
                     <button
                       onClick={() => {
                         if (sortField === "symbol") {
@@ -316,9 +316,9 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
                 {processedRows.map((r) => (
                   <tr
                     key={r.symbol}
-                    className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-muted)]/20 transition-colors group"
+                    className="theme-surface-hover border-b border-[var(--color-border)] last:border-0 transition-colors group"
                   >
-                    <td className="px-4 py-2.5 sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/80 group-hover:bg-[var(--color-surface-muted)]/20 transition-colors">
+                    <td className="px-4 py-2.5 sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/80 group-hover:bg-[var(--color-surface-hover)] transition-colors">
                       <div className="flex items-center gap-2">
                         <span
                           className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm"
@@ -341,7 +341,7 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
                     ))}
                     <td
                       className={cn(
-                        "px-4 py-2.5 text-right font-bold tabular-nums border-l border-[var(--color-border)] bg-[var(--color-surface)] group-hover:bg-[var(--color-surface-muted)]/20 transition-colors",
+                        "px-4 py-2.5 text-right font-bold tabular-nums border-l border-[var(--color-border)] bg-[var(--color-surface)] group-hover:bg-[var(--color-surface-hover)] transition-colors",
                         r.total == null
                           ? "text-[var(--color-muted)]"
                           : r.total >= 0

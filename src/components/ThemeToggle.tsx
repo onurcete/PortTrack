@@ -30,7 +30,7 @@ const THEMES: Array<{
     id: "solarized",
     label: "Solarized Light",
     description: "Sıcak ve göz dostu",
-    colors: ["#fdf6e3", "#268bd2", "#859900"],
+    colors: ["#fffdf5", "#268bd2", "#859900"],
     dark: false,
   },
   {

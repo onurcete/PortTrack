@@ -600,7 +600,7 @@ export function NotesDrawer({
                           {note.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-white/60 dark:bg-black/20 text-[var(--color-muted)] border border-[var(--color-border)]/30"
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-[var(--color-surface)] text-[var(--color-muted)] border border-[var(--color-border)]/30"
                             >
                               #{tag}
                             </span>

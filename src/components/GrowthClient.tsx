@@ -377,7 +377,7 @@ export function GrowthClient({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[var(--color-muted)]">Toplam Maliyet</span>
-            <span className="font-semibold tabular-nums text-slate-500">
+            <span className="font-semibold tabular-nums text-[var(--color-muted)]">
               {formatMoney(row.cost, currency)}
             </span>
           </div>
@@ -673,7 +673,7 @@ export function GrowthClient({
   const accent = "var(--color-brand)";
 
   const thCls =
-    "px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700";
+    "px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]";
   const tdCls = "px-4 py-2 text-xs tabular-nums whitespace-nowrap";
   const tdMuted = cn(tdCls, "text-[var(--color-muted)]");
 
@@ -723,7 +723,7 @@ export function GrowthClient({
         })}
         <td className={cn(
           tdClsStatic,
-          "text-right font-bold border-l border-[var(--color-border)]/20 bg-[var(--color-surface-muted)]/10",
+          "theme-inset text-right font-bold border-l border-[var(--color-border)]/20",
           totalChange === 0 && "text-[var(--color-muted)]",
           totalChange > 0 && "text-[var(--color-profit)]",
           totalChange < 0 && "text-[var(--color-loss)]"
@@ -907,7 +907,7 @@ export function GrowthClient({
 
             {periodSummary && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Card className="p-4 shadow-none bg-[var(--color-surface-muted)]/20 border border-[var(--color-border)]/40">
+                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
                     Toplam Portföy
                   </p>
@@ -918,7 +918,7 @@ export function GrowthClient({
                     {formatPeriodDate(periodSummary.last.month)}
                   </p>
                 </Card>
-                <Card className="p-4 shadow-none bg-[var(--color-surface-muted)]/20 border border-[var(--color-border)]/40">
+                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
                     Dönem Getirisi
                   </p>
@@ -946,7 +946,7 @@ export function GrowthClient({
                     </p>
                   )}
                 </Card>
-                <Card className="p-4 shadow-none bg-[var(--color-surface-muted)]/20 border border-[var(--color-border)]/40">
+                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
                     Dönem Başlangıç
                   </p>
@@ -957,7 +957,7 @@ export function GrowthClient({
                     {formatPeriodDate(periodSummary.first.month)}
                   </p>
                 </Card>
-                <Card className="p-4 shadow-none bg-[var(--color-surface-muted)]/20 border border-[var(--color-border)]/40">
+                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
                     Toplam Portföy ($)
                   </p>
@@ -1249,7 +1249,7 @@ export function GrowthClient({
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-[var(--color-surface-muted)]/30">
+                <thead className="theme-table-head">
                   <tr className="border-b border-[var(--color-border)] text-left">
                     <th className={thCls}>Yıl</th>
                     <th className={cn(thCls, "text-right")}>
@@ -1295,7 +1295,7 @@ export function GrowthClient({
                     <tr
                       key={row.label}
                       className={cn(
-                        "border-b border-[var(--color-border)]/40 last:border-0 hover:bg-[var(--color-surface-muted)]/40 transition-colors duration-150",
+                        "theme-surface-hover border-b border-[var(--color-border)]/40 last:border-0 transition-colors duration-150",
                         row.isTotal && "bg-[var(--color-brand-soft)]/20 font-bold border-t border-b-2 border-t-[var(--color-border)]/80 border-b-[var(--color-border)]/80 text-[var(--color-brand-strong)]",
                       )}
                     >
@@ -1359,9 +1359,9 @@ export function GrowthClient({
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-[var(--color-surface-muted)]/30">
+                <thead className="theme-table-head">
                   <tr className="border-b border-[var(--color-border)] text-left">
-                    <th className={cn(thCls, "sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/40")}>
+                    <th className={cn(thCls, "sticky left-0 bg-[var(--color-table-header)] z-10 border-r border-[var(--color-border)]/40")}>
                       Ay
                     </th>
                     {activeTypes.map((t) => (
@@ -1372,7 +1372,7 @@ export function GrowthClient({
                         </span>
                       </th>
                     ))}
-                    <th className={cn(thCls, "text-right border-l border-[var(--color-border)]/40 bg-[var(--color-surface-muted)]/20")}>Değişim</th>
+                    <th className={cn(thCls, "text-right border-l border-[var(--color-border)]/40 bg-[var(--color-table-header)]")}>Değişim</th>
                     <th className={cn(thCls, "text-right border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40")}>Toplam</th>
                   </tr>
                 </thead>
@@ -1423,7 +1423,7 @@ export function GrowthClient({
                           </tr>
                         )}
                         <tr
-                          className="border-b border-[var(--color-border)]/40 last:border-0 hover:bg-[var(--color-surface-muted)]/40 transition-colors duration-150"
+                          className="theme-surface-hover border-b border-[var(--color-border)]/40 last:border-0 transition-colors duration-150"
                         >
                           <td className="px-4 py-2 font-semibold whitespace-nowrap sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/20">
                             {monthTableLabel(p.month)}

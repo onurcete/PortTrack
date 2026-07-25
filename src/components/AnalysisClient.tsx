@@ -360,7 +360,7 @@ function DailySummaryCard({ summary, analyses }: { summary: DailySummaryDTO; ana
         {/* 3. Boğa / Ayı Oranı Çubuğu */}
         <div className="card p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-muted)] mb-2">Boğa / Ayı Oranı</p>
-          <div className="h-2.5 w-full rounded-full bg-slate-200/50 dark:bg-slate-800/50 overflow-hidden flex">
+          <div className="h-2.5 w-full rounded-full bg-[var(--color-neutral-soft)] overflow-hidden flex">
             <div
               className="h-full bg-[var(--color-profit)] transition-all rounded-l-full"
               style={{ width: `${upPct}%` }}
@@ -852,7 +852,7 @@ function TrendTextBadge({ signal }: { signal: string }) {
   };
   const c = config[signal] ?? {
     label: "Nötr",
-    cls: "bg-slate-50 text-slate-700 border-slate-200/60 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
+    cls: "bg-[var(--color-neutral-soft)] text-[var(--color-neutral)] border-[var(--color-border)]",
     icon: Activity
   };
   const Icon = c.icon;
@@ -889,7 +889,7 @@ function MacdTextBadge({ signal }: { signal: string }) {
   };
   const c = config[signal] ?? {
     label: "Nötr",
-    cls: "bg-slate-50 text-slate-700 border-slate-200/60 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30",
+    cls: "bg-[var(--color-neutral-soft)] text-[var(--color-neutral)] border-[var(--color-border)]",
     icon: Activity
   };
   const Icon = c.icon;
@@ -904,7 +904,7 @@ function MacdTextBadge({ signal }: { signal: string }) {
 function RsiTextBadge({ value, zone }: { value: number | null; zone: string }) {
   if (value === null) return <span className="text-xs text-[var(--color-muted)]">—</span>;
   let label = `Nötr (${value})`;
-  let cls = "bg-slate-50 text-slate-700 border-slate-200/60 dark:bg-slate-900/20 dark:text-slate-400 dark:border-slate-800/30";
+  let cls = "bg-[var(--color-neutral-soft)] text-[var(--color-neutral)] border-[var(--color-border)]";
   let Icon = Activity;
 
   if (zone === "OVERSOLD") {

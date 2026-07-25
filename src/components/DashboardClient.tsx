@@ -253,7 +253,7 @@ function CombinedReturnCell({
   const negative = pct < 0;
 
   return (
-    <div className={cn("p-5 flex justify-between items-center gap-4 bg-[var(--color-surface-muted)]/20", borderClasses)}>
+    <div className={cn("theme-inset p-5 flex justify-between items-center gap-4", borderClasses)}>
       {/* Sol Kısım: Ana İstatistikler */}
       <div className="flex flex-col justify-between flex-1 min-w-0">
         <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] truncate block">
@@ -518,7 +518,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
         </div>
 
         {/* Sağ Kısım: 2x2 Dönemsel Getiri Gridi */}
-        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 bg-[var(--color-surface-muted)]/10">
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 theme-inset">
           <CombinedReturnCell
             label="HAFTA (SON 5 İŞLEM GÜNÜ)"
             pct={weeklyPct ?? null}
@@ -623,7 +623,7 @@ function AllocationStrip({
       </div>
 
       {/* Yatay segment barı */}
-      <div className="flex h-3 rounded-full overflow-hidden gap-[2px] mb-4">
+      <div className="flex h-3 rounded-full overflow-hidden gap-[2px] mb-4 bg-[var(--color-surface-muted)] p-[2px]">
         {data.map((d) => (
           <div
             key={d.assetType}
@@ -638,17 +638,19 @@ function AllocationStrip({
       </div>
 
       {/* Detay satırları — grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-2.5">
         {data.map((d) => (
           <div key={d.assetType} className="flex items-center gap-2 min-w-0">
             <span
-              className="h-2.5 w-2.5 rounded-full shrink-0"
+              className="h-2.5 w-2.5 rounded-full shrink-0 ring-2 ring-[var(--color-surface-muted)]"
               style={{ backgroundColor: d.color }}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium truncate">{d.label}</p>
+              <p className="text-xs font-medium truncate text-[var(--color-foreground)]">
+                {d.label}
+              </p>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-[11px] font-bold tabular-nums">
+                <span className="text-[11px] font-bold tabular-nums text-[var(--color-foreground)]">
                   {formatMoney(d.value, currency)}
                 </span>
                 <span className="text-[10px] text-[var(--color-muted)] tabular-nums">
@@ -1025,7 +1027,7 @@ function PositionsTable({
                 </div>
 
                 {/* Tablo başlıkları */}
-                <div className="grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40 bg-[var(--color-surface-muted)]/30" style={gridStyle}>
+                <div className="theme-table-head grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40" style={gridStyle}>
                   {showClosed ? (
                     <>
                       <SortHeader
@@ -1182,7 +1184,7 @@ function PositionsTable({
                       <div
                         key={`${p.assetType}-${p.symbol}`}
                         onClick={() => onSelectPosition?.(p)}
-                        className="grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors hover:bg-[var(--color-surface-muted)]/40 cursor-pointer"
+                        className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
                         style={gridStyle}
                       >
                         {/* Sembol */}
@@ -1294,7 +1296,7 @@ function PositionsTable({
                     <div
                       key={`${p.assetType}-${p.symbol}`}
                       onClick={() => onSelectPosition?.(p)}
-                      className="grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors hover:bg-[var(--color-surface-muted)]/40 cursor-pointer"
+                      className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
                       style={gridStyle}
                     >
                       {/* Sembol */}
@@ -1684,7 +1686,7 @@ function PortfolioProjection({
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-[var(--color-muted)]">Anapara:</span>
-            <span className="font-semibold text-slate-500 tabular-nums">
+            <span className="font-semibold text-[var(--color-muted)] tabular-nums">
               {formatMoney(data["Yatırılan Anapara"], currency)}
             </span>
           </div>
@@ -1779,7 +1781,7 @@ function PortfolioProjection({
                 <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
                   Yatırılan Anapara
                 </p>
-                <p className="text-xs font-bold text-slate-600 tabular-nums mt-0.5">
+                <p className="text-xs font-bold text-[var(--color-muted)] tabular-nums mt-0.5">
                   {formatMoney(projectionData.finalInvested, currency)}
                 </p>
               </div>
@@ -1809,8 +1811,8 @@ function PortfolioProjection({
                 <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0.0} />
               </linearGradient>
               <linearGradient id="colorInvested" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.0} />
+                <stop offset="5%" stopColor="var(--color-chart-muted)" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="var(--color-chart-muted)" stopOpacity={0.0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} vertical={false} />
@@ -1841,7 +1843,7 @@ function PortfolioProjection({
             <Area
               type="monotone"
               dataKey="Yatırılan Anapara"
-              stroke="#94a3b8"
+              stroke="var(--color-chart-muted)"
               strokeWidth={1.5}
               strokeDasharray="4 4"
               fillOpacity={1}
@@ -2037,7 +2039,7 @@ function PositionDetailModal({
           cy={cy}
           r={5}
           fill="var(--color-profit)"
-          stroke="#fff"
+          stroke="var(--color-surface)"
           strokeWidth={1.5}
         />
       );
@@ -2049,7 +2051,7 @@ function PositionDetailModal({
           cy={cy}
           r={5}
           fill="var(--color-loss)"
-          stroke="#fff"
+          stroke="var(--color-surface)"
           strokeWidth={1.5}
         />
       );
@@ -2233,7 +2235,7 @@ function PositionDetailModal({
           <div className="border border-[var(--color-border)]/40 rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-sm text-[var(--color-text)]">Yatırımcı Sayısı (Son 1 Hafta)</h3>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/40">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/25">
                 TEFAS
               </span>
             </div>
@@ -2259,7 +2261,7 @@ function PositionDetailModal({
                     contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
                     cursor={{ fill: "rgba(128, 128, 128, 0.1)" }}
                   />
-                  <Bar dataKey="investors" fill="#8b5cf6" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="investors" fill="var(--color-brand)" radius={[4, 4, 0, 0]}>
                     <LabelList
                       dataKey="investors"
                       position="top"
@@ -2280,7 +2282,7 @@ function PositionDetailModal({
             <div className="overflow-x-auto border border-[var(--color-border)]/55 rounded-xl">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-[var(--color-surface-muted)]/40 text-[var(--color-muted)] font-bold border-b border-[var(--color-border)]/50">
+                  <tr className="theme-table-head text-[var(--color-muted)] font-bold border-b border-[var(--color-border)]/50">
                     <th className="px-4 py-2.5">Tarih</th>
                     <th className="px-4 py-2.5">İşlem</th>
                     <th className="px-4 py-2.5 text-right">Adet</th>
@@ -2290,7 +2292,7 @@ function PositionDetailModal({
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)]/40 font-medium">
                   {data.transactions.map((t: any) => (
-                    <tr key={t.id} className="hover:bg-[var(--color-surface-muted)]/20 transition-colors">
+                    <tr key={t.id} className="theme-surface-hover transition-colors">
                       <td className="px-4 py-2">{new Date(t.date).toLocaleDateString("tr-TR")}</td>
                       <td className="px-4 py-2">
                         <span

@@ -70,11 +70,11 @@ export function Topbar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md">
       <div className="mx-auto w-full max-w-[1400px] px-4 md:px-8 flex h-16 items-center justify-between gap-4">
         {/* Sol Taraf: Logo ve İsim */}
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand)] text-white shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand)] text-[var(--color-on-brand)] shadow-sm">
             <Wallet size={18} />
           </div>
           <div className="hidden sm:block">

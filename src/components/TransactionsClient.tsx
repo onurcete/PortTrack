@@ -391,7 +391,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
+            <thead className="theme-table-head">
               <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase tracking-wide text-[var(--color-muted)]">
                 <th className="px-4 py-3 font-semibold">Tarih</th>
                 <th className="px-4 py-3 font-semibold">Tür</th>
@@ -417,7 +417,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
               {filtered.map((t) => (
                 <tr
                   key={t.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-muted)]/60"
+                  className="theme-surface-hover border-b border-[var(--color-border)] last:border-0"
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-[var(--color-muted)]">
                     {formatDate(t.date)}
@@ -510,7 +510,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
               <button
                 type="button"
                 onClick={handleImportSystemCsv}
-                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] bg-[var(--color-surface-muted)]/20 hover:bg-[var(--color-brand-soft)]/20 transition-all group flex items-start gap-3"
+                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] theme-inset hover:bg-[var(--color-brand-soft)] transition-all group flex items-start gap-3"
               >
                 <div className="rounded-lg p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-strong)] group-hover:border-[var(--color-brand)]">
                   <FileSpreadsheet size={20} />
@@ -524,7 +524,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
               <button
                 type="button"
                 onClick={() => setImportStep("format_info")}
-                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] bg-[var(--color-surface-muted)]/20 hover:bg-[var(--color-brand-soft)]/20 transition-all group flex items-start gap-3"
+                className="w-full text-left p-4 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-brand)] theme-inset hover:bg-[var(--color-brand-soft)] transition-all group flex items-start gap-3"
               >
                 <div className="rounded-lg p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-brand-strong)] group-hover:border-[var(--color-brand)]">
                   <Upload size={20} />
@@ -548,7 +548,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
 
         {importStep === "format_info" && (
           <div className="space-y-4">
-            <div className="p-3.5 rounded-xl border border-amber-200/50 bg-amber-50/15 text-amber-600 dark:text-amber-500 text-xs flex items-start gap-2.5">
+            <div className="p-3.5 rounded-xl border border-[var(--color-brand)]/25 bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] text-xs flex items-start gap-2.5">
               <AlertTriangle className="shrink-0 mt-0.5" size={16} />
               <div>
                 Dosya önce analiz edilir. Sonraki adımda tüm işlemleri
@@ -559,7 +559,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
 
             <div className="space-y-2">
               <h4 className="font-semibold text-xs text-[var(--color-foreground)]">Gerekli CSV Sütun Yapısı ve Örnek Satır:</h4>
-              <div className="overflow-x-auto text-[11px] font-mono bg-[var(--color-surface-muted)]/30 border border-[var(--color-border)] p-2.5 rounded-lg text-[var(--color-muted)] whitespace-nowrap">
+              <div className="overflow-x-auto text-[11px] font-mono theme-inset border border-[var(--color-border)] p-2.5 rounded-lg text-[var(--color-muted)] whitespace-nowrap">
                 <div className="text-[var(--color-foreground)] font-semibold mb-1">
                   Tarih,Tür,Sembol,İşlem Tipi,Birim Fiyat (₺),Adet,Toplam (₺)
                 </div>
@@ -620,7 +620,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
                 CSV Dosyası Seçin
               </label>
               
-              <div className="relative border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-brand)] rounded-xl p-6 transition-all bg-[var(--color-surface-muted)]/10 text-center">
+              <div className="relative border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-brand)] rounded-xl p-6 transition-all theme-inset text-center">
                 <input
                   type="file"
                   accept=".csv"
@@ -648,7 +648,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             </div>
 
             {uploadError && (
-              <div className="p-3 rounded-xl border border-red-200/50 bg-red-50/15 text-red-600 dark:text-red-500 text-xs font-medium">
+              <div className="p-3 rounded-xl border border-[var(--color-loss)]/30 bg-[var(--color-loss-soft)] text-[var(--color-loss)] text-xs font-medium">
                 {uploadError}
               </div>
             )}

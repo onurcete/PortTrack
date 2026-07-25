@@ -237,8 +237,8 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
               <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+                    <thead className="theme-table-head">
+                      <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
                         <th className="px-6 py-4">Kullanıcı Bilgileri</th>
                         <th className="px-6 py-4">Kayıt Tarihi</th>
                         <th className="px-6 py-4 text-center">İşlem</th>
@@ -387,8 +387,8 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
               <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+                    <thead className="theme-table-head">
+                      <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
                         <th className="px-6 py-4">Tablo Adı</th>
                         <th className="px-6 py-4 text-center">Kayıt Sayısı</th>
                         <th className="px-6 py-4 text-center">Veri Boyutu</th>
@@ -469,7 +469,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
             {/* Modal İçerik (Kolon Listesi) */}
             <div className="p-6 overflow-y-auto flex-1">
               <table className="w-full text-left border-collapse">
-                <thead>
+                <thead className="theme-table-head">
                   <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
                     <th className="pb-3">Kolon Adı</th>
                     <th className="pb-3">Veri Tipi</th>
@@ -478,7 +478,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)] text-sm">
                   {selectedSchemaTable.columns.map((c) => (
-                    <tr key={c.name} className="hover:bg-[var(--color-surface-hover)]/30">
+                    <tr key={c.name} className="theme-surface-hover">
                       <td className="py-3 font-mono font-medium text-[var(--color-brand)] text-xs">
                         {c.name}
                       </td>

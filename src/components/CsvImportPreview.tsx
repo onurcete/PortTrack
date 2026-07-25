@@ -124,7 +124,7 @@ export function CsvImportPreview({
         </p>
         <div className="max-h-48 overflow-auto rounded-xl border border-[var(--color-border)]">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-[var(--color-surface-muted)] text-[var(--color-muted)]">
+            <thead className="theme-table-head sticky top-0 text-[var(--color-muted)]">
               <tr>
                 <th className="px-3 py-2 font-semibold">Satır</th>
                 <th className="px-3 py-2 font-semibold">Sembol</th>
