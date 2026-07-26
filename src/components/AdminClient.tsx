@@ -335,7 +335,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                 {/* 4. Teknik Analiz Tetikleme */}
                 <TriggerCard
                   title="Teknik Analizleri Yenile (Run Analysis)"
-                  description="Açık pozisyonu olan tüm hisse ve fonların RSI, MACD ve hareketli ortalama indikatörlerini hesaplar, yapay zeka günlük teknik analiz özetlerini yeniden yazar."
+                  description="Açık pozisyonu olan tüm hisse ve fonların RSI, MACD ve hareketli ortalama göstergelerini hesaplar (kural tabanlı teknik skor). AI briefing ayrıca Analiz sayfasından üretilir."
                   btnText="Analizleri Yeniden Hesapla"
                   onClick={() => runSystemAction("analysis", "/api/analysis/run")}
                   isRunning={runningAction === "analysis"}

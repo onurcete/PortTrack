@@ -24,6 +24,7 @@ model User {
   instruments             Instrument[]
   portfolioMonthSnapshots PortfolioMonthSnapshot[]
   notes                   Note[]
+  analysisBriefings       AnalysisBriefing[]
 }
 
 /// Her alis/satis islemi (kendi para biriminde saklanir)
@@ -142,6 +143,23 @@ model TechnicalAnalysis {
 
   @@unique([symbol, date])
   @@index([symbol])
+  @@index([date])
+}
+
+/// AI analiz briefing (günlük, kullanıcı bazlı cache)
+model AnalysisBriefing {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime // günün 00:00'ı
+  contextHash String
+  payload     Json
+  model       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
   @@index([date])
 }
 
