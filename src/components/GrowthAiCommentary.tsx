@@ -11,7 +11,12 @@ import {
   Sliders,
   TrendingDown,
   Activity,
-  X,
+  Target,
+  ChevronRight,
+  ShieldCheck,
+  Zap,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import { formatMoney, formatPercent, cn } from "@/lib/utils";
 import type { GrowthPointDTO } from "./GrowthClient";
@@ -25,10 +30,9 @@ interface GrowthAiCommentaryProps {
 
 export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps) {
   const [scenario, setScenario] = useState<Scenario>("realistic");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const isTRY = currency === "TRY";
 
-  // Ayıklama mantığı: Serideki son yılı bul (genelde 2026)
+  // Ayıklama mantığı: Serideki son yılı bul
   const stats = useMemo(() => {
     if (!series || series.length === 0) return null;
 
@@ -70,11 +74,11 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
     // İstatiksel metrikler
     const returns = monthlyReturns.map((r) => r.returnPct);
     const avgMonthlyReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-    
-    // YTD (Yıl Başından Beri) Hesapla: Yılın ilk ayının başı referans alınır
+
+    // YTD Hesapla
     const prevYearDecKey = `${Number(latestYear) - 1}-12`;
     const prevYearDec = seriesByMonth.get(prevYearDecKey);
-    const startVal = prevYearDec 
+    const startVal = prevYearDec
       ? prevDecValue(prevYearDec, isTRY)
       : (isTRY ? yearPoints[0].valueTRY : yearPoints[0].valueUSD);
 
@@ -117,43 +121,43 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
     currentMonthNum,
   } = stats;
 
-  // Senaryo çarpanları ve oranları
+  // Senaryo konfigürasyonu
   const scenarioConfig = {
     pessimistic: {
       label: "Kötümser Senaryo",
       shortLabel: "Kötümser",
-      shortDesc: "Muhafazakar Projeksiyon",
+      shortDesc: "Muhafazakar Yaklaşım",
       rate: avgMonthlyReturn * 0.4,
       icon: TrendingDown,
-      iconActiveBg: "bg-[var(--color-loss-soft)] border-[var(--color-loss)]/30 text-[var(--color-loss)]",
+      badgeColor: "bg-rose-500/10 text-[var(--color-loss)] border-rose-500/20",
       textClass: "text-[var(--color-loss)]",
     },
     realistic: {
       label: "Gerçekçi Senaryo",
       shortLabel: "Gerçekçi",
-      shortDesc: "Mevcut Trend Çizgisi",
+      shortDesc: "Mevcut Ort. Trend",
       rate: avgMonthlyReturn * 1.0,
       icon: Activity,
-      iconActiveBg: "bg-[var(--color-brand-soft)] border-[var(--color-brand)]/30 text-[var(--color-brand-strong)]",
+      badgeColor: "bg-indigo-500/10 text-[var(--color-brand-strong)] border-indigo-500/20",
       textClass: "text-[var(--color-brand-strong)]",
     },
     optimistic: {
       label: "İyimser Senaryo",
       shortLabel: "İyimser",
-      shortDesc: "Pozitif Büyüme İvmesi",
+      shortDesc: "Yüksek Büyüme İvmesi",
       rate: avgMonthlyReturn * 1.4,
       icon: TrendingUp,
-      iconActiveBg: "bg-[var(--color-profit-soft)] border-[var(--color-profit)]/30 text-[var(--color-profit)]",
+      badgeColor: "bg-emerald-500/10 text-[var(--color-profit)] border-emerald-500/20",
       textClass: "text-[var(--color-profit)]",
     },
     custom: {
       label: "Özel Senaryo",
-      shortLabel: "Özel",
-      shortDesc: "Kişisel Getiri Oranı",
+      shortLabel: "Özel Oran",
+      shortDesc: "Kişisel Getiri Tahmini",
       rate: customRate,
       icon: Sliders,
-      iconActiveBg: "bg-[var(--color-brand-soft)] border-[var(--color-brand)]/30 text-[var(--color-brand-strong)]",
-      textClass: "text-[var(--color-brand-strong)]",
+      badgeColor: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+      textClass: "text-amber-600",
     },
   };
 
@@ -165,299 +169,326 @@ export function GrowthAiCommentary({ series, currency }: GrowthAiCommentaryProps
   const growthMultiplier = latestVal > 0 ? projectedValue / latestVal : 1;
   const projectedReturnPct = latestVal > 0 ? ((projectedValue / latestVal) - 1) * 100 : 0;
   const projectedYtdReturn = stats.startVal > 0 ? ((projectedValue / stats.startVal) - 1) * 100 : 0;
+  const netValueDiff = projectedValue - latestVal;
 
-  // Kilometre taşları (Milestones) kontrolü
+  // Kilometre taşları (Milestones)
   const milestones = isTRY
     ? [100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000, 25000000, 50000000]
     : [5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
 
-  // Özel senaryo preset oranları
-  const customPresets = [-5, 0, 2.5, 5, 7.5, 10, 15, 20];
+  const nextMilestone = milestones.find((m) => m > latestVal) ?? milestones[milestones.length - 1];
+  const milestoneProgressPct = Math.min(100, Math.max(0, (projectedValue / nextMilestone) * 100));
+
+  const customPresets = [-10, -5, 0, 2.5, 5, 7.5, 10, 15, 20, 25];
 
   const text = getCommentaryText();
 
-  // Dinamik Türkçe Yorum Oluşturucu
   function getCommentaryText() {
     const isProfitable = avgMonthlyReturn > 0;
-    
+
     if (monthsRemaining === 0) {
       return {
-        intro: `${latestYear} yılı tamamlanmış bulunuyor. Bu yıl elde ettiğiniz toplam getiri oranı ${formatPercent(ytdReturn)} olarak gerçekleşti.`,
-        middle: "Gelecek yılın analizleri için yeni yılın veri akışı beklenecektir.",
-        conclusion: "",
+        trendText: `${latestYear} yılı tamamlandı. Yıllık toplam portföy getirisiniz %${ytdReturn.toFixed(1)} olarak gerçekleşti.`,
+        projectionText: "Yeni yıl verileri eklendikçe projeksiyon modeli otomatik olarak güncellenecektir.",
+        strategyText: "Gelecek dönem hedeflerinizi belirlemek için varlık dağılımınızı inceleyebilirsiniz.",
       };
     }
 
-    let intro = `${latestYear} yılının ilk ${currentMonthNum} ayında (Ocak - ${latestMonthName}) portföyünüzün sergilediği performans incelendiğinde; `;
-    
+    let trendText = `${latestYear} yılının ilk ${currentMonthNum} ayında (Ocak - ${latestMonthName}) `;
     if (isProfitable) {
-      intro += `aylık ortalama %${avgMonthlyReturn.toFixed(2)}'lik istikrarlı bir getiri ivmesi yakaladığınız görülüyor. Bu başarılı gidişat, portföyünüzün büyüme trendini koruduğunu gösteriyor.`;
+      trendText += `aylık ortalama %${avgMonthlyReturn.toFixed(2)}'lik istikrarlı bir büyüme performansı sergilendi. Portföyünüz pozitif ivmesini koruyor.`;
     } else {
-      intro += `zorlu piyasa şartları veya portföy dağılımından ötürü aylık ortalama %${avgMonthlyReturn.toFixed(2)} düzeyinde bir seyir izlendiği gözlemleniyor.`;
+      trendText += `aylık ortalama %${avgMonthlyReturn.toFixed(2)} seviyesinde bir seyir izlendi. Piyasa dalgalanmaları nedeniyle dikkatli takip önerilir.`;
     }
 
-    let middle = ` Önümüzdeki ${monthsRemaining} aylık süreç için seçilen **${currentScenario.label}** temel alındığında (%${projectedMonthlyRate.toFixed(2)} tahmini aylık getiri oranı); `;
-    
+    let projectionText = `Önümüzdeki ${monthsRemaining} ay için seçilen ${currentScenario.label} (%${projectedMonthlyRate.toFixed(2)} / ay getiri) temel alındığında; `;
     if (projectedMonthlyRate > 0) {
-      middle += `portföyünüzün yıl sonuna doğru ${formatPercent(projectedReturnPct)} oranında ek bir büyüme kaydederek **${formatMoney(projectedValue, currency)}** seviyesine ulaşabileceği öngörülmektedir. Bu senaryoda yıl sonundaki kümülatif getiri oranınızın %${projectedYtdReturn.toFixed(1)} seviyesine çıkması beklenmektedir.`;
+      projectionText += `portföyünüzün yıl sonuna kadar %${projectedReturnPct.toFixed(1)} ek büyüme ile ${formatMoney(projectedValue, currency)} seviyesine ulaşması beklenmektedir. Yıl sonu kümülatif getiri oranınız %${projectedYtdReturn.toFixed(1)} olarak tahmin ediliyor.`;
     } else {
-      middle += `portföy değerinizin yıl sonunda **${formatMoney(projectedValue, currency)}** civarında dengeleneceği tahmin edilmektedir. Portföyünüzün değer kayıplarını minimumda tutmak adına varlık çeşitliliğini ve risk dağılımını optimize etmeyi düşünebilirsiniz.`;
+      projectionText += `portföy değerinizin yıl sonunda ${formatMoney(projectedValue, currency)} seviyesinde dengelenmesi öngörülmektedir.`;
     }
 
-    let conclusion = "";
-    const crossedMilestone = milestones.find(m => latestVal < m && projectedValue >= m);
+    let strategyText = "";
+    const crossedMilestone = milestones.find((m) => latestVal < m && projectedValue >= m);
     if (crossedMilestone) {
-      conclusion = `Mevcut getiri momentumunuz bu şekilde devam ederse, portföyünüzün yıl bitmeden **${formatMoney(crossedMilestone, currency)}** kritik sınırını aşarak yeni bir finansal seviyeye ulaşması yüksek ihtimal dahilindedir.`;
+      strategyText = `Mevcut getiri momentumu devam ederse, portföyünüz yıl bitmeden **${formatMoney(crossedMilestone, currency)}** kritik kilometre taşını aşacaktır!`;
     } else {
-      conclusion = `Portföyünüzün yıl sonuna kadar yaklaşık **${growthMultiplier.toFixed(2)}x** kat büyümesi hedeflenmektedir. Yatırımlarınızı düzenli artırarak ve piyasa fırsatlarını takip ederek bu büyüme hızını daha da yukarı taşıyabilirsiniz.`;
+      strategyText = `Portföyünüzün yıl sonuna kadar yaklaşık **${growthMultiplier.toFixed(2)}x** büyümesi hedeflenmektedir. Düzenli ek yatırımlarla bu hedef daha yukarı taşınabilir.`;
     }
 
-    return { intro, middle, conclusion };
+    return { trendText, projectionText, strategyText };
   }
 
   return (
-    <div className="card p-6 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/50 shadow-md rounded-2xl relative overflow-hidden">
-      {/* Dekoratif Glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[var(--color-brand)]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+    <div className="card p-6 sm:p-7 bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/20 to-[var(--color-brand-soft)]/20 border border-[var(--color-border)]/60 shadow-xl rounded-2xl relative overflow-hidden space-y-6">
+      {/* Decorative Blur Ambient Glow */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[var(--color-brand)]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-      {/* Başlık Bölümü */}
-      <div className="flex items-center gap-3 border-b border-[var(--color-border)]/40 pb-4 mb-6">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shrink-0">
-          <Brain size={22} className="animate-pulse" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-extrabold text-base text-[var(--color-foreground)]">Yapay Zekâ Büyüme & Gelecek Projeksiyonu</h3>
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)]">
-              <Sparkles size={9} /> PRO
-            </span>
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-[var(--color-border)]/50">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-brand-strong)] text-white shadow-md shrink-0">
+            <Brain size={24} className="animate-pulse" />
           </div>
-          <p className="text-xs text-[var(--color-muted)] mt-0.5">
-            Geçmiş aylık performansınıza dayanarak {latestYear} yıl sonu portföy tahminleri
-          </p>
-        </div>
-      </div>
-
-      {/* Projeksiyon Sonuçları - Metrik Kartları (Üst Bölüm) */}
-      <div className="space-y-2 mb-6">
-        <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider">
-          Projeksiyon Sonuçları
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Değer Projeksiyonu */}
-          <div className="bg-[var(--color-surface-muted)]/15 border border-[var(--color-border)]/30 p-4 rounded-xl space-y-1 relative group hover:border-[var(--color-brand)]/20 transition-all">
-            <div className="text-[9px] font-bold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
-              <DollarSign size={11} className={currentScenario.textClass} />
-              Yıl Sonu Beklenen
-            </div>
-            <div className="text-lg font-black text-[var(--color-foreground)] tracking-tight tabular-nums">
-              {formatMoney(projectedValue, currency)}
-            </div>
-            <div className="text-[9px] text-[var(--color-muted)] flex justify-between items-center pt-1.5 border-t border-[var(--color-border)]/10">
-              <span>Mevcut: {formatMoney(latestVal, currency)}</span>
-              <span className={cn(
-                "font-bold",
-                projectedValue >= latestVal ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
-              )}>
-                {projectedValue >= latestVal ? "▲" : "▼"} {formatPercent(((projectedValue / latestVal) - 1) * 100)}
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-lg sm:text-xl tracking-tight text-[var(--color-foreground)]">
+                Yapay Zekâ Büyüme & Gelecek Projeksiyonu
+              </h3>
+              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/20">
+                <Sparkles size={10} /> PRO BÜYÜME MOTORU
               </span>
             </div>
+            <p className="text-xs text-[var(--color-muted)] mt-0.5">
+              Ocak - {latestMonthName} ({latestYear}) gerçekleşen getiri verileriyle yıl sonu projeksiyonları
+            </p>
           </div>
+        </div>
 
-          {/* Getiri Projeksiyonu */}
-          <div className="bg-[var(--color-surface-muted)]/15 border border-[var(--color-border)]/30 p-4 rounded-xl space-y-1 relative group hover:border-[var(--color-brand)]/20 transition-all">
-            <div className="text-[9px] font-bold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
-              <TrendingUp size={11} className="text-[var(--color-profit)]" />
-              Tahmini Yıllık Getiri
-            </div>
-            <div className={cn(
-              "text-lg font-black tracking-tight tabular-nums",
-              projectedYtdReturn >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
-            )}>
-              {projectedYtdReturn >= 0 ? "+" : ""}{projectedYtdReturn.toFixed(1)}%
-            </div>
-            <div className="text-[9px] text-[var(--color-muted)] pt-1.5 border-t border-[var(--color-border)]/10 flex justify-between">
-              <span>Kalan {monthsRemaining} Ay:</span>
-              <span className="font-bold text-[var(--color-foreground)]">{projectedReturnPct >= 0 ? "+" : ""}{projectedReturnPct.toFixed(1)}%</span>
-            </div>
-          </div>
-
-          {/* Büyüme Çarpanı */}
-          <div className="bg-[var(--color-surface-muted)]/15 border border-[var(--color-border)]/30 p-4 rounded-xl space-y-1 relative group hover:border-[var(--color-brand)]/20 transition-all">
-            <div className="text-[9px] font-bold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
-              <Layers size={11} className="text-[var(--color-brand-strong)]" />
-              Büyüme Çarpanı
-            </div>
-            <div className="text-lg font-black text-[var(--color-foreground)] tracking-tight tabular-nums">
-              {growthMultiplier.toFixed(2)}x
-            </div>
-            <div className="text-[9px] text-[var(--color-muted)] pt-1.5 border-t border-[var(--color-border)]/10 flex justify-between">
-              <span>Kalan Artış:</span>
-              <span className="font-bold text-[var(--color-brand-strong)]">{(growthMultiplier - 1 >= 0 ? "+" : "") + ((growthMultiplier - 1) * 100).toFixed(0)}%</span>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-extrabold px-3 py-1.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/60 text-[var(--color-foreground)] shadow-2xs">
+            Para Birimi: <strong className="text-[var(--color-brand-strong)]">{currency} ({isTRY ? "₺" : "$"})</strong>
+          </span>
+          {monthsRemaining > 0 && (
+            <span className="text-xs font-extrabold px-3 py-1.5 rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/20">
+              Yılın Bitmesine {monthsRemaining} Ay Kaldı
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Grid Layout: Sol Panel (Senaryolar) & Sağ Panel (AI Analiz Raporu) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Sol Sütun: Kontroller (3/12) */}
-        <div className="lg:col-span-3 space-y-3">
-          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider">
-            Projeksiyon Senaryosu
+      {/* Milestone Target Progress Gauge */}
+      <div className="card p-5 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl space-y-3 shadow-2xs">
+        <div className="flex flex-wrap justify-between items-center text-xs gap-2">
+          <div className="flex items-center gap-1.5 font-extrabold text-[var(--color-foreground)]">
+            <Target size={15} className="text-[var(--color-brand)]" />
+            <span>Gelecek Hedef & Kilometre Taşı İlerlemesi</span>
           </div>
-          
-          <div className="space-y-2">
-            {(["pessimistic", "realistic", "optimistic", "custom"] as Scenario[]).map((s) => {
-              const active = scenario === s;
-              const cfg = scenarioConfig[s];
-              const IconComponent = cfg.icon;
-              return (
+          <div className="text-[11px] font-semibold text-[var(--color-muted)]">
+            Sonraki Hedef: <strong className="text-[var(--color-brand-strong)]">{formatMoney(nextMilestone, currency)}</strong>
+          </div>
+        </div>
+
+        {/* Visual Progress Bar */}
+        <div className="relative h-4 w-full bg-[var(--color-surface-muted)] rounded-full overflow-hidden p-0.5 border border-[var(--color-border)]/40">
+          <div
+            className="h-full bg-gradient-to-r from-[var(--color-brand)] via-indigo-500 to-emerald-500 rounded-full transition-all duration-500 relative"
+            style={{ width: `${milestoneProgressPct}%` }}
+          >
+            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full shadow-md animate-ping" />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center text-[11px] font-bold tabular-nums">
+          <span className="text-[var(--color-muted)]">Mevcut Değer: {formatMoney(latestVal, currency)}</span>
+          <span className="text-[var(--color-brand-strong)]">
+            Beklenen Ulaşma Oranı: %{milestoneProgressPct.toFixed(0)}
+          </span>
+          <span className={cn(projectedValue >= latestVal ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
+            Tahmini Yıl Sonu: {formatMoney(projectedValue, currency)}
+          </span>
+        </div>
+      </div>
+
+      {/* Scenario Selector Tabs */}
+      <div className="space-y-3">
+        <div className="flex justify-between items-center text-xs">
+          <span className="font-extrabold uppercase tracking-wider text-[var(--color-muted)] text-[10px] flex items-center gap-1">
+            <Sliders size={12} className="text-[var(--color-brand)]" /> Projeksiyon Senaryosu Seçin
+          </span>
+          <span className="text-[11px] text-[var(--color-muted)] font-medium">
+            Seçili Mod: <strong className="text-[var(--color-foreground)]">{currentScenario.label}</strong> (%{projectedMonthlyRate.toFixed(1)} / ay)
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {(["pessimistic", "realistic", "optimistic", "custom"] as Scenario[]).map((s) => {
+            const active = scenario === s;
+            const cfg = scenarioConfig[s];
+            const IconComponent = cfg.icon;
+
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setScenario(s)}
+                className={cn(
+                  "p-3.5 rounded-xl border transition-all text-left cursor-pointer flex flex-col justify-between space-y-2 relative group",
+                  active
+                    ? "bg-[var(--color-surface)] border-[var(--color-brand)] shadow-sm ring-2 ring-[var(--color-brand)]/20"
+                    : "bg-[var(--color-surface)]/70 border-[var(--color-border)]/50 hover:bg-[var(--color-surface)] hover:border-[var(--color-border)]"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={cn("text-xs font-black", active ? "text-[var(--color-brand-strong)]" : "text-[var(--color-foreground)]")}>
+                    {cfg.shortLabel}
+                  </span>
+                  <div className={cn("p-1 rounded-lg border", cfg.badgeColor)}>
+                    <IconComponent size={14} />
+                  </div>
+                </div>
+
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-[var(--color-muted)] block line-clamp-1">{cfg.shortDesc}</span>
+                  <span className={cn("text-xs font-black tracking-tight tabular-nums block", active ? cfg.textClass : "text-[var(--color-foreground)]")}>
+                    %{s === "custom" ? customRate.toFixed(1) : cfg.rate.toFixed(1)} <span className="text-[10px] font-normal text-[var(--color-muted)]">/ ay</span>
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Custom Scenario Inline Controls */}
+        {scenario === "custom" && (
+          <div className="p-4 bg-[var(--color-surface)] border border-amber-500/30 rounded-xl space-y-3 animate-in fade-in duration-200 shadow-2xs">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-extrabold text-[var(--color-foreground)] flex items-center gap-1.5">
+                <Sliders size={13} className="text-amber-500" />
+                Özel Tahmini Aylık Getiri Oranı
+              </span>
+              <span className="font-black text-sm text-amber-600 tabular-nums">%{customRate.toFixed(1)} / ay</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-[var(--color-loss)]">-15%</span>
+              <input
+                type="range"
+                min="-15"
+                max="30"
+                step="0.5"
+                value={customRate}
+                onChange={(e) => setCustomRate(parseFloat(e.target.value))}
+                className="flex-1 h-2 bg-[var(--color-surface-muted)] rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
+              <span className="text-[10px] font-bold text-[var(--color-profit)]">+30%</span>
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-bold text-[var(--color-muted)] mr-1">Hızlı Seçim:</span>
+              {customPresets.map((val) => (
                 <button
-                  key={s}
-                  onClick={() => {
-                    setScenario(s);
-                    if (s === "custom") {
-                      setIsModalOpen(true);
-                    }
-                  }}
+                  key={val}
+                  type="button"
+                  onClick={() => setCustomRate(val)}
                   className={cn(
-                    "w-full text-left p-2.5 rounded-xl border transition-all flex items-center gap-3 cursor-pointer",
-                    active
-                      ? "bg-[var(--color-surface)] border-[var(--color-brand)]/40 shadow-xs ring-1 ring-[var(--color-brand)]/20"
-                      : "bg-[var(--color-surface-muted)]/10 border-[var(--color-border)]/40 hover:bg-[var(--color-surface-muted)]/30"
+                    "px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer tabular-nums",
+                    customRate === val
+                      ? "bg-amber-500 text-white border-amber-500 shadow-2xs"
+                      : "bg-[var(--color-surface-muted)]/40 border-[var(--color-border)]/40 text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)]"
                   )}
                 >
-                  <div className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg border shrink-0",
-                    active ? cfg.iconActiveBg : "bg-[var(--color-surface-muted)]/30 border-[var(--color-border)]/30 text-[var(--color-muted)]"
-                  )}>
-                    <IconComponent size={15} />
-                  </div>
-                  <div className="min-w-0 flex-1 flex justify-between items-center pr-1">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-[var(--color-foreground)]">{cfg.shortLabel}</span>
-                      <span className="text-[9px] text-[var(--color-muted)] line-clamp-1">{cfg.shortDesc}</span>
-                    </div>
-                    <span className={cn(
-                      "text-[10px] font-extrabold tracking-tight tabular-nums",
-                      active ? cfg.textClass : "text-[var(--color-muted)]"
-                    )}>
-                      {s === "custom" ? `%${customRate.toFixed(1)}` : `%${cfg.rate.toFixed(1)}`} / ay
-                    </span>
-                  </div>
+                  {val > 0 ? `+${val}` : val}%
                 </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Sağ Sütun: AI Raporu (9/12) */}
-        <div className="lg:col-span-9 space-y-3">
-          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider">
-            Yapay Zekâ Analiz Raporu
-          </div>
-          
-          <div className="bg-gradient-to-br from-[var(--color-brand-soft)]/20 to-[var(--color-brand-soft)]/5 p-4.5 rounded-2xl border border-[var(--color-brand-soft)]/35 text-xs leading-relaxed space-y-3 relative overflow-hidden h-[178px] flex flex-col justify-center">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--color-brand-strong)] uppercase tracking-wider border-b border-[var(--color-brand-soft)]/20 pb-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              PRO Analiz Raporu
-            </div>
-            
-            <div className="space-y-2 text-[var(--color-foreground)]/90 overflow-y-auto pr-1">
-              <p>{text.intro}</p>
-              <p>{text.middle}</p>
+              ))}
             </div>
           </div>
-        </div>
-
+        )}
       </div>
 
-      {/* Bilgilendirme Notu */}
-      <div className="flex gap-2 text-[9px] text-[var(--color-muted)] leading-normal bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/10 mt-6">
-        <Info size={13} className="shrink-0 text-[var(--color-muted)] mt-0.5" />
+      {/* Projeksiyon Sonuçları — 3 Metrik Kartı */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Yıl Sonu Beklenen Değer */}
+        <div className="card p-4.5 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl space-y-1.5 relative group hover:border-[var(--color-brand)]/40 transition-all shadow-2xs">
+          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
+            <DollarSign size={13} className={currentScenario.textClass} />
+            Yıl Sonu Beklenen Portföy
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-[var(--color-foreground)] tracking-tight tabular-nums">
+            {formatMoney(projectedValue, currency)}
+          </div>
+          <div className="text-[11px] flex justify-between items-center pt-2 border-t border-[var(--color-border)]/30 font-medium">
+            <span className="text-[var(--color-muted)]">Net Fark:</span>
+            <span className={cn("font-bold tabular-nums flex items-center gap-0.5", netValueDiff >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
+              {netValueDiff >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+              {netValueDiff >= 0 ? `+${formatMoney(netValueDiff, currency)}` : formatMoney(netValueDiff, currency)}
+            </span>
+          </div>
+        </div>
+
+        {/* Tahmini Yıllık Getiri */}
+        <div className="card p-4.5 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl space-y-1.5 relative group hover:border-[var(--color-brand)]/40 transition-all shadow-2xs">
+          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
+            <TrendingUp size={13} className="text-[var(--color-profit)]" />
+            Tahmini Yıllık Toplam Getiri (YTD)
+          </div>
+          <div className={cn("text-xl sm:text-2xl font-black tracking-tight tabular-nums", projectedYtdReturn >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
+            {projectedYtdReturn >= 0 ? "+" : ""}{projectedYtdReturn.toFixed(1)}%
+          </div>
+          <div className="text-[11px] text-[var(--color-muted)] pt-2 border-t border-[var(--color-border)]/30 flex justify-between font-medium">
+            <span>Kalan {monthsRemaining} Ay Katkısı:</span>
+            <span className="font-bold text-[var(--color-foreground)] tabular-nums">{projectedReturnPct >= 0 ? "+" : ""}{projectedReturnPct.toFixed(1)}%</span>
+          </div>
+        </div>
+
+        {/* Büyüme Çarpanı */}
+        <div className="card p-4.5 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl space-y-1.5 relative group hover:border-[var(--color-brand)]/40 transition-all shadow-2xs">
+          <div className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider flex items-center gap-1">
+            <Layers size={13} className="text-[var(--color-brand-strong)]" />
+            Bileşik Büyüme Çarpanı
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-[var(--color-foreground)] tracking-tight tabular-nums">
+            {growthMultiplier.toFixed(2)}x
+          </div>
+          <div className="text-[11px] text-[var(--color-muted)] pt-2 border-t border-[var(--color-border)]/30 flex justify-between font-medium">
+            <span>Net Oransal Artış:</span>
+            <span className="font-bold text-[var(--color-brand-strong)] tabular-nums">
+              {(growthMultiplier - 1 >= 0 ? "+" : "") + ((growthMultiplier - 1) * 100).toFixed(0)}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Yapay Zekâ Analiz Rapor Kartları (3 Yapılandırılmış Kart) */}
+      <div className="space-y-3">
+        <span className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider block">
+          Yapay Zekâ Analiz Raporu & Stratejik Değerlendirme
+        </span>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Trend kartı */}
+          <div className="card p-4 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-[var(--color-brand-strong)]">
+              <Zap size={14} className="text-amber-500" />
+              1. Büyüme İvmesi
+            </div>
+            <p className="text-xs leading-relaxed text-[var(--color-foreground)]/90">
+              {text.trendText}
+            </p>
+          </div>
+
+          {/* Projeksiyon kartı */}
+          <div className="card p-4 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-[var(--color-brand-strong)]">
+              <TrendingUp size={14} className="text-[var(--color-profit)]" />
+              2. Projeksiyon Tablosu
+            </div>
+            <p className="text-xs leading-relaxed text-[var(--color-foreground)]/90">
+              {text.projectionText}
+            </p>
+          </div>
+
+          {/* Strateji kartı */}
+          <div className="card p-4 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-[var(--color-brand-strong)]">
+              <ShieldCheck size={14} className="text-[var(--color-brand-strong)]" />
+              3. Stratejik Tavsiye
+            </div>
+            <p className="text-xs leading-relaxed text-[var(--color-foreground)]/90">
+              {text.strategyText}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footnote */}
+      <div className="flex items-start gap-2 text-[10px] text-[var(--color-muted)] leading-relaxed bg-[var(--color-surface)] p-3 rounded-xl border border-[var(--color-border)]/40">
+        <Info size={14} className="shrink-0 text-[var(--color-muted)] mt-0.5" />
         <span>
-          Bu analiz ve projeksiyonlar, portföyünüzün belirtilen dönemdeki getiri eğilimlerine göre doğrusal ve bileşik faiz matematik modelleri kullanılarak hesaplanmıştır. Gelecekteki piyasa dalgalanmaları, ek yatırımlarınız veya nakit çıkışlarınız bu sonuçları değiştirebilir. Yatırım tavsiyesi niteliğinde değildir.
+          Bu tahmin ve projeksiyonlar, portföyünüzün belirtilen dönemdeki getiri eğilimlerine göre doğrusal ve bileşik faiz matematiksel modelleri kullanılarak hesaplanmıştır. Gelecekteki piyasa dalgalanmaları, varlık tercihleri veya nakit akışlarınız bu sonuçları değiştirebilir. Yatırım tavsiyesi niteliğinde değildir.
         </span>
       </div>
-
-      {/* Modal / Popup (Özel Senaryo Sürgüsü) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-border)]/80 shadow-2xl rounded-2xl max-w-sm w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200 relative">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex items-center gap-2 border-b border-[var(--color-border)]/40 pb-3">
-              <div className="h-8 w-8 rounded-lg bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] flex items-center justify-center">
-                <Sliders size={16} />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-sm text-[var(--color-foreground)]">Özel Projeksiyon Oranı</h4>
-                <p className="text-[10px] text-[var(--color-muted)]">Aylık bazda portföy büyüme getiri tahmini</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 py-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[var(--color-foreground)]">Tahmini Aylık Ortalama Getiri</span>
-                <span className="text-sm font-black text-[var(--color-brand-strong)]">% {customRate.toFixed(1)}</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-bold text-[var(--color-loss)]">-15%</span>
-                <input
-                  type="range"
-                  min="-15"
-                  max="30"
-                  step="0.1"
-                  value={customRate}
-                  onChange={(e) => setCustomRate(parseFloat(e.target.value))}
-                  className="flex-1 h-1.5 bg-[var(--color-neutral-soft)] rounded-lg appearance-none cursor-pointer accent-[var(--color-brand)]"
-                />
-                <span className="text-[10px] font-bold text-[var(--color-profit)]">+30%</span>
-              </div>
-
-              {/* Hızlı Seçim Presetleri */}
-              <div className="space-y-1.5">
-                <span className="text-[9px] font-bold text-[var(--color-muted)] uppercase tracking-wider">Hızlı Presetler</span>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {customPresets.map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setCustomRate(val)}
-                      className={cn(
-                        "py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer",
-                        customRate === val
-                          ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] border-[var(--color-brand)]"
-                          : "bg-[var(--color-surface-muted)]/30 text-[var(--color-foreground)] border-[var(--color-border)]/50 hover:bg-[var(--color-surface-muted)]/80"
-                      )}
-                    >
-                      {val > 0 ? `+${val}` : val}%
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-border)]/40">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[var(--color-brand)] text-[var(--color-on-brand)] hover:bg-[var(--color-brand-hover)] transition-colors cursor-pointer w-full text-center"
-              >
-                Uygula ve Kapat
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
