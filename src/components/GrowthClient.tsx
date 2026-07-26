@@ -17,7 +17,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { History, TrendingUp } from "lucide-react";
+import { History, TrendingUp, BarChart2, Activity, Calendar, PieChart, DollarSign } from "lucide-react";
 import { updateBesBalance } from "@/app/growth/actions";
 import {
   BACKLOG_FULL_UNTIL_YEAR,
@@ -773,123 +773,132 @@ export function GrowthClient({
       ) : (
         <>
           <Card className="p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] flex items-center justify-center font-bold">
-                  <TrendingUp size={18} />
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-[var(--color-border)]/40">
+              {/* Header Title & Subtitle */}
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-black shadow-xs">
+                  {chartMetric === "return" ? (
+                    <BarChart2 size={20} />
+                  ) : chartMetric === "value" ? (
+                    <TrendingUp size={20} />
+                  ) : (
+                    <PieChart size={20} />
+                  )}
                 </div>
                 <div>
-                  <h2 className="font-extrabold text-base text-[var(--color-foreground)]">{chartTitle}</h2>
-                  <p className="text-[11px] text-[var(--color-muted)] font-medium">Aylık portföy değer ve % getiri gelişimi</p>
+                  <h2 className="font-black text-base text-[var(--color-foreground)] leading-tight">
+                    {chartTitle}
+                  </h2>
+                  <p className="text-[11px] text-[var(--color-muted)] font-medium">
+                    {chartMetric === "return" && "Her ayın yüzde kâr/zarar getiri oranları"}
+                    {chartMetric === "value" && "Zaman içindeki toplam portföy tutarı ve maliyet gelişimi"}
+                    {chartMetric === "allocation" && "Varlık türlerine (TEFAS, BES, BIST vb.) göre dağılım yığılımı"}
+                  </p>
                 </div>
               </div>
 
+              {/* Toolbar Controls */}
               <div className="flex flex-wrap items-center gap-3">
-                {/* Metric Selector */}
-                <div
-                  className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40 shadow-2xs"
-                  role="group"
-                  aria-label="Grafik metriği"
-                >
+                {/* Descriptive View Mode Selector */}
+                <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50 shadow-2xs">
                   <button
                     type="button"
-                    onClick={() => setChartMetric("value")}
+                    onClick={() => {
+                      setChartMetric("return");
+                      setChartType("bar");
+                    }}
                     className={cn(
-                      "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
-                      chartMetric === "value"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
-                    )}
-                  >
-                    Değer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartMetric("allocation")}
-                    className={cn(
-                      "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
-                      chartMetric === "allocation"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
-                    )}
-                  >
-                    Dağılım
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartMetric("return")}
-                    className={cn(
-                      "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
+                      "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all duration-200",
                       chartMetric === "return"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    % Getiri
+                    <BarChart2 size={14} />
+                    <span>Aylık Getiri %</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChartMetric("value");
+                      setChartType("area");
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all duration-200",
+                      chartMetric === "value"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                    )}
+                  >
+                    <DollarSign size={14} />
+                    <span>Portföy Değeri</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChartMetric("allocation");
+                      setChartType("area");
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all duration-200",
+                      chartMetric === "allocation"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                    )}
+                  >
+                    <PieChart size={14} />
+                    <span>Varlık Dağılımı</span>
                   </button>
                 </div>
 
-                {/* Chart Type Selector */}
-                <div
-                  className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40 shadow-2xs"
-                  role="group"
-                  aria-label="Grafik türü"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setChartType("area")}
-                    className={cn(
-                      "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
-                      chartType === "area"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
-                    )}
+                {/* Compact Year Selector Dropdown with Calendar Icon */}
+                <div className="flex items-center gap-2 bg-[var(--color-surface-muted)] px-3.5 py-1.5 rounded-xl border border-[var(--color-border)]/50 shadow-2xs">
+                  <Calendar size={14} className="text-[var(--color-brand-strong)]" />
+                  <select
+                    id="chart-year"
+                    value={chartYearValue}
+                    onChange={(e) => setChartYearFilter(e.target.value)}
+                    className="bg-transparent text-xs font-extrabold text-[var(--color-foreground)] outline-none cursor-pointer"
                   >
-                    Alan
-                  </button>
+                    <option value={YEAR_FILTER_ALL}>Tüm Zamanlar</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y} Yılı
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Subtle Chart Format Toggle (Alan / Çubuk) */}
+                <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50">
                   <button
                     type="button"
                     onClick={() => setChartType("bar")}
+                    title="Çubuk Grafik Görünümü"
                     className={cn(
-                      "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
+                      "p-1.5 rounded-lg text-xs font-bold transition-all",
                       chartType === "bar"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-2xs"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    Çubuk
+                    <BarChart2 size={15} />
                   </button>
-                </div>
-
-                {/* Quick Year Presets */}
-                <div className="flex items-center gap-1.5 bg-[var(--color-surface-muted)]/60 p-1 rounded-xl border border-[var(--color-border)]/40">
                   <button
                     type="button"
-                    onClick={() => setChartYearFilter(YEAR_FILTER_ALL)}
+                    onClick={() => setChartType("area")}
+                    title="Alan (Çizgi) Grafik Görünümü"
                     className={cn(
-                      "px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all",
-                      chartYearValue === YEAR_FILTER_ALL
-                        ? "bg-[var(--color-brand)] text-white shadow-xs"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      "p-1.5 rounded-lg text-xs font-bold transition-all",
+                      chartType === "area"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-2xs"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    Tümü
+                    <Activity size={15} />
                   </button>
-                  {years.map((y) => (
-                    <button
-                      key={y}
-                      type="button"
-                      onClick={() => setChartYearFilter(y)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all",
-                        chartYearValue === y
-                          ? "bg-[var(--color-brand)] text-white shadow-xs"
-                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-                      )}
-                    >
-                      {y}
-                    </button>
-                  ))}
                 </div>
               </div>
             </div>
