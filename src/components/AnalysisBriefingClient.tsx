@@ -33,6 +33,7 @@ import {
 } from "@/lib/utils";
 import { AnalysisAiSection } from "./AnalysisAiSection";
 import { TechnicalDetailModal } from "./TechnicalDetailModal";
+import { TefasInvestorSection } from "./TefasInvestorSection";
 
 interface AnalysisBriefingClientProps {
   pulse: AnalysisPulse;
@@ -81,6 +82,14 @@ export function AnalysisBriefingClient({
   const [techFilter, setTechFilter] = useState<TechFilterType>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("GRID");
+
+  const symbolNotes = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of briefing?.payload.perSymbol ?? []) {
+      map.set(row.symbol, row.note);
+    }
+    return map;
+  }, [briefing]);
 
   // Portfolio Health Metrics Calculation
   const healthStats = useMemo(() => {
@@ -708,91 +717,10 @@ export function AnalysisBriefingClient({
 
       {/* 5. TEFAS Investor Intelligence Section */}
       {tefasInvestors && (
-        <section className="space-y-4 pt-4 border-t border-[var(--color-border)]/50">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-brand-strong)] block">
-                Fon Hareketleri
-              </span>
-              <h2 className="text-xl font-black tracking-tight text-[var(--color-foreground)]">
-                TEFAS Haftalık Yatırımcı Sayısı Analizi
-              </h2>
-            </div>
-            <span className="text-[11px] text-[var(--color-muted)]">
-              Kişi sayısı değişimi & talep eğilimi göstergesi
-            </span>
-          </div>
-
-          {/* Stats Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-            <div className="card p-3 border border-[var(--color-border)]/50">
-              <span className="text-[10px] font-extrabold text-[var(--color-profit)] uppercase">Artan Fonlar</span>
-              <div className="text-lg font-black text-[var(--color-profit)] mt-0.5 tabular-nums">{tefasInvestors.risingCount}</div>
-            </div>
-            <div className="card p-3 border border-[var(--color-border)]/50">
-              <span className="text-[10px] font-extrabold text-[var(--color-loss)] uppercase">Azalan Fonlar</span>
-              <div className="text-lg font-black text-[var(--color-loss)] mt-0.5 tabular-nums">{tefasInvestors.fallingCount}</div>
-            </div>
-            <div className="card p-3 border border-[var(--color-border)]/50">
-              <span className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase">Nötr Seyir</span>
-              <div className="text-lg font-black text-[var(--color-foreground)] mt-0.5 tabular-nums">{tefasInvestors.flatCount}</div>
-            </div>
-            {tefasInvestors.topInflow && (
-              <div className="card p-3 border border-[var(--color-border)]/50 col-span-2 sm:col-span-1">
-                <span className="text-[10px] font-extrabold text-[var(--color-profit)] uppercase">En Çok Giriş</span>
-                <div className="text-xs font-extrabold text-[var(--color-foreground)] mt-1 truncate tabular-nums">
-                  {tefasInvestors.topInflow.symbol} ({formatPercent(tefasInvestors.topInflow.weekDeltaPct)})
-                </div>
-              </div>
-            )}
-            {tefasInvestors.topOutflow && (
-              <div className="card p-3 border border-[var(--color-border)]/50 col-span-2 sm:col-span-1">
-                <span className="text-[10px] font-extrabold text-[var(--color-loss)] uppercase">En Çok Çıkış</span>
-                <div className="text-xs font-extrabold text-[var(--color-foreground)] mt-1 truncate tabular-nums">
-                  {tefasInvestors.topOutflow.symbol} ({formatPercent(tefasInvestors.topOutflow.weekDeltaPct)})
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* TEFAS Fund List */}
-          <div className="card border border-[var(--color-border)]/60 rounded-2xl overflow-hidden divide-y divide-[var(--color-border)]/40">
-            {tefasInvestors.funds.map((f) => (
-              <div
-                key={f.symbol}
-                className="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[8rem_1fr_auto_auto_6rem] items-center gap-3 p-4 text-xs"
-              >
-                <div>
-                  <p className="font-extrabold text-sm text-[var(--color-foreground)]">{f.symbol}</p>
-                </div>
-                <div className="hidden sm:block text-[11px] text-[var(--color-muted)] tabular-nums">
-                  {f.latest != null ? `${formatNumber(f.latest, 0)} kişi` : "—"}
-                </div>
-                <div
-                  className={cn(
-                    "font-bold tabular-nums text-right text-xs",
-                    (f.weekDeltaPct ?? 0) > 0 && "text-[var(--color-profit)]",
-                    (f.weekDeltaPct ?? 0) < 0 && "text-[var(--color-loss)]"
-                  )}
-                >
-                  {f.weekDeltaPct != null ? formatPercent(f.weekDeltaPct) : "—"}
-                </div>
-                <div className="flex justify-center">
-                  {f.trend4w === "up" ? (
-                    <ArrowUpRight size={16} className="text-[var(--color-profit)]" />
-                  ) : f.trend4w === "down" ? (
-                    <ArrowDownRight size={16} className="text-[var(--color-loss)]" />
-                  ) : (
-                    <Minus size={16} className="text-[var(--color-muted)]" />
-                  )}
-                </div>
-                <div className="justify-self-end">
-                  <MiniSpark series={f.series} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <TefasInvestorSection
+          tefasInvestors={tefasInvestors}
+          symbolNotes={symbolNotes}
+        />
       )}
 
       {/* Technical Detail Modal */}
@@ -803,39 +731,5 @@ export function AnalysisBriefingClient({
         />
       )}
     </div>
-  );
-}
-
-function MiniSpark({
-  series,
-}: {
-  series: { date: string; investors: number }[];
-}) {
-  if (series.length < 2) {
-    return <div className="h-6 w-16 rounded bg-[var(--color-surface-muted)]" />;
-  }
-  const values = series.map((s) => s.investors);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const w = 64;
-  const h = 24;
-  const pts = values
-    .map((v, i) => {
-      const x = (i / (values.length - 1)) * w;
-      const y = h - ((v - min) / range) * (h - 4) - 2;
-      return `${x},${y}`;
-    })
-    .join(" ");
-  const rising = values[values.length - 1] >= values[0];
-  return (
-    <svg width={w} height={h} className="justify-self-end" aria-hidden>
-      <polyline
-        fill="none"
-        stroke={rising ? "var(--color-profit)" : "var(--color-loss)"}
-        strokeWidth="1.5"
-        points={pts}
-      />
-    </svg>
   );
 }
