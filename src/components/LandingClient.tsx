@@ -25,6 +25,10 @@ import {
   ArrowDownRight,
   FileText,
   GitCompareArrows,
+  Activity,
+  Check,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { formatMoney, formatPercent, cn } from "@/lib/utils";
 
@@ -50,8 +54,8 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-foreground)] selection:bg-[var(--color-brand)] selection:text-white font-sans">
-      {/* 1. Sticky Navigation Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--color-bg)]/85 border-b border-[var(--color-border)]/60 transition-all">
+      {/* 1. Header Navigation Bar (Public & Clean) */}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--color-bg)]/90 border-b border-[var(--color-border)]/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
@@ -68,7 +72,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           </Link>
 
-          {/* Center Links (Desktop) */}
+          {/* Center Nav Links */}
           <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-[var(--color-muted)]">
             <a href="#overview-tables" className="hover:text-[var(--color-foreground)] transition-colors">
               Genel Bakış Tabloları
@@ -80,7 +84,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               CSV İçe Aktarım
             </a>
             <a href="#technical" className="hover:text-[var(--color-foreground)] transition-colors">
-              Teknik Analiz
+              Teknik Göstergeler
             </a>
             <a href="#tefas" className="hover:text-[var(--color-foreground)] transition-colors">
               TEFAS Akışları
@@ -141,7 +145,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             </h1>
 
             <p className="text-sm sm:text-base md:text-lg text-[var(--color-muted)] max-w-3xl mx-auto font-medium leading-relaxed">
-              Varlıklarınızı detaylı pozisyon tabloları, ay ay performans matrisleri, esnek CSV ekstre aktarımı ve kural tabanlı 0-100 teknik sağlık skorlarıyla tek platformda takip edin.
+              BIST Hisseleri, TEFAS Fonları, Yabancı Borsalar (Nasdaq), Kripto, Döviz ve BES yatırımlarınızı detaylı pozisyon tabloları, ay ay performans matrisleri, esnek CSV ekstre aktarımı ve kural tabanlı 0-100 teknik sağlık skorlarıyla yönetin.
             </p>
 
             {/* CTA Buttons */}
@@ -165,7 +169,6 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
           {/* Hero Live Dashboard Table Showcase Mockup */}
           <div className="pt-4 max-w-5xl mx-auto">
             <div className="card p-4 sm:p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/70 shadow-2xl rounded-3xl text-left space-y-4 relative group hover:border-[var(--color-brand)]/40 transition-all">
-              {/* Window Header */}
               <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--color-border)]/40">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
@@ -278,7 +281,6 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Feature 1 */}
             <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 font-bold">
                 <Globe size={20} />
@@ -289,7 +291,6 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               </p>
             </div>
 
-            {/* Feature 2 */}
             <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 font-bold">
                 <PieChart size={20} />
@@ -300,7 +301,6 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               </p>
             </div>
 
-            {/* Feature 3 */}
             <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 font-bold">
                 <GitCompareArrows size={20} />
@@ -314,92 +314,185 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       </section>
 
-      {/* 4. Section 2: Portföy Gelişimi — Aylık & Yıllık Performans Matrisi */}
+      {/* 4. Section 2: Portföy Gelişimi — Gerçek Aylık & Yıllık Performans Tabloları */}
       <section id="monthly-matrix" className="py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
           <div className="text-center space-y-3 max-w-3xl mx-auto">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-brand-strong)] flex items-center justify-center gap-1">
-              <Calendar size={14} className="text-[var(--color-brand)]" /> Aylık & Yıllık Performans Matrisi
+              <Calendar size={14} className="text-[var(--color-brand)]" /> Portföy Gelişimi & Getiri Matrisi
             </span>
             <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-[var(--color-foreground)]">
-              Geçmiş Aylık Getiri Geçmişinizi Adım Adım İnceleyin
+              Geçmiş Aylık & Yıllık Getiri Performansı
             </h2>
             <p className="text-xs sm:text-sm text-[var(--color-muted)] font-medium leading-relaxed">
-              Yatırımlarınızın her yıl hangi ay kaç % kazandırdığını veya kaybettiğini renk kodlu matris tablosu ile görün.
+              Sistemimizde kullanılan gerçek **Portföy Gelişimi** tablosu sayesinde yatırımlarınızın her yıl ve her ay varlık bazında kaç % kazandırdığını veya kaybettiğini şeffaf bir biçimde takip edin.
             </p>
           </div>
 
-          {/* Monthly Matrix Mockup Visual */}
-          <div className="card p-6 sm:p-8 bg-[var(--color-surface)] border border-[var(--color-border)]/70 shadow-xl rounded-3xl space-y-6">
-            <div className="flex justify-between items-center text-xs font-bold pb-2 border-b border-[var(--color-border)]/40">
-              <span className="text-[var(--color-foreground)] flex items-center gap-1.5">
-                <BarChart2 size={16} className="text-[var(--color-brand)]" />
-                Yıllara ve Aylara Göre Getiri Tablosu (% Yüzde Değişim)
-              </span>
-              <span className="text-[var(--color-brand-strong)]">Otomatik Hesaplanan Performans Matrisi</span>
+          <div className="space-y-8">
+            {/* Real App Component Replica 1: Dönemlik Kümülatif Getiri Tablosu */}
+            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/70 shadow-xl rounded-3xl space-y-4">
+              <div className="flex justify-between items-center text-xs font-bold border-b border-[var(--color-border)]/40 pb-3">
+                <span className="text-[var(--color-foreground)] flex items-center gap-2">
+                  <TrendingUp size={16} className="text-[var(--color-brand)]" />
+                  Yıllara Göre Dönemlik Kümülatif Getiri Performansı
+                </span>
+                <span className="text-[11px] font-extrabold text-[var(--color-brand-strong)]">Gerçek Sistem Görünümü</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] uppercase text-[10px] font-extrabold">
+                    <tr>
+                      <th className="p-3">Dönem / Yıl</th>
+                      <th className="p-3 text-right">Dönem Başı Değer</th>
+                      <th className="p-3 text-right">Dönem Sonu Değer</th>
+                      <th className="p-3 text-center">Net Getiri (₺ TRY)</th>
+                      <th className="p-3 text-center">Net Getiri ($ USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border)]/30 font-bold tabular-nums">
+                    <tr>
+                      <td className="p-3 font-black text-[var(--color-foreground)]">2026 YTD (Yıl Başından Beri)</td>
+                      <td className="p-3 text-right text-[var(--color-muted)]">1.200.000 ₺</td>
+                      <td className="p-3 text-right font-black text-[var(--color-foreground)]">1.485.200 ₺</td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%23.77
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%14.20
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-black text-[var(--color-foreground)]">2025 Yılı Tam Dönem</td>
+                      <td className="p-3 text-right text-[var(--color-muted)]">712.500 ₺</td>
+                      <td className="p-3 text-right font-black text-[var(--color-foreground)]">1.200.000 ₺</td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%68.42
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%34.15
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-black text-[var(--color-foreground)]">2024 Yılı Tam Dönem</td>
+                      <td className="p-3 text-right text-[var(--color-muted)]">450.000 ₺</td>
+                      <td className="p-3 text-right font-black text-[var(--color-foreground)]">712.500 ₺</td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%58.33
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%28.60
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-center border-collapse">
-                <thead>
-                  <tr className="bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] font-extrabold text-[10px] uppercase">
-                    <th className="p-2.5 text-left">Yıl</th>
-                    <th className="p-2.5">Oca</th>
-                    <th className="p-2.5">Şub</th>
-                    <th className="p-2.5">Mar</th>
-                    <th className="p-2.5">Nis</th>
-                    <th className="p-2.5">May</th>
-                    <th className="p-2.5">Haz</th>
-                    <th className="p-2.5">Tem</th>
-                    <th className="p-2.5">Ağu</th>
-                    <th className="p-2.5">Eyl</th>
-                    <th className="p-2.5">Eki</th>
-                    <th className="p-2.5">Kas</th>
-                    <th className="p-2.5">Ara</th>
-                    <th className="p-2.5 text-right font-black">Yıllık Toplam</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]/30 font-bold tabular-nums">
-                  <tr>
-                    <td className="p-2.5 text-left font-black text-[var(--color-foreground)]">2026</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%4.2</td>
-                    <td className="p-2.5 text-rose-600 bg-rose-500/10 rounded">-%1.5</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%6.8</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%2.4</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%3.1</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%5.0</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%1.8</td>
-                    <td className="p-2.5 text-slate-400">-</td>
-                    <td className="p-2.5 text-slate-400">-</td>
-                    <td className="p-2.5 text-slate-400">-</td>
-                    <td className="p-2.5 text-slate-400">-</td>
-                    <td className="p-2.5 text-slate-400">-</td>
-                    <td className="p-2.5 text-right font-black text-[var(--color-profit)] text-sm">+%23.8 YTD</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 text-left font-black text-[var(--color-foreground)]">2025</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%8.1</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%3.4</td>
-                    <td className="p-2.5 text-rose-600 bg-rose-500/10 rounded">-%2.1</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%5.5</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%4.0</td>
-                    <td className="p-2.5 text-rose-600 bg-rose-500/10 rounded">-%0.8</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%9.2</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%1.5</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%4.8</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%3.2</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%6.1</td>
-                    <td className="p-2.5 text-emerald-600 bg-emerald-500/10 rounded">+%2.9</td>
-                    <td className="p-2.5 text-right font-black text-[var(--color-profit)] text-sm">+%68.4 Toplam</td>
-                  </tr>
-                </tbody>
-              </table>
+            {/* Real App Component Replica 2: Aylık Varlık Dağılım & Değişim Tablosu */}
+            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/70 shadow-xl rounded-3xl space-y-4">
+              <div className="flex justify-between items-center text-xs font-bold border-b border-[var(--color-border)]/40 pb-3">
+                <span className="text-[var(--color-foreground)] flex items-center gap-2">
+                  <Table size={16} className="text-[var(--color-brand)]" />
+                  Aylık Varlık Değerleri ve Bir Önceki Aya Göre Getiri Yüzdeleri
+                </span>
+                <span className="text-[11px] font-extrabold text-[var(--color-brand-strong)]">Aylık Matris Görünümü</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] uppercase text-[10px] font-extrabold">
+                    <tr>
+                      <th className="p-3">Ay</th>
+                      <th className="p-3 text-right">BES</th>
+                      <th className="p-3 text-right">BIST Hisse</th>
+                      <th className="p-3 text-right">TEFAS Fon</th>
+                      <th className="p-3 text-right">Yabancı Borsa</th>
+                      <th className="p-3 text-right">Kripto</th>
+                      <th className="p-3 text-right font-black">Toplam Portföy</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border)]/30 font-medium tabular-nums">
+                    <tr>
+                      <td className="p-3 font-bold text-[var(--color-foreground)]">2026.06</td>
+                      <td className="p-3 text-right">
+                        <div>125.400 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%3.2</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>390.625 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%5.8</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>350.200 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%2.4</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>353.587 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%4.1</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>284.760 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-loss)]">-%1.8</div>
+                      </td>
+                      <td className="p-3 text-right font-bold">
+                        <div className="text-sm font-black text-[var(--color-foreground)]">1.485.200 ₺</div>
+                        <span className="inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-[11px] font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%3.45
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="p-3 font-bold text-[var(--color-foreground)]">2026.05</td>
+                      <td className="p-3 text-right">
+                        <div>121.500 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%2.1</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>369.200 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%4.5</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>342.000 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%1.9</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>339.650 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%3.8</div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <div>289.980 ₺</div>
+                        <div className="text-[10px] font-bold text-[var(--color-profit)]">+%6.2</div>
+                      </td>
+                      <td className="p-3 text-right font-bold">
+                        <div className="text-sm font-black text-[var(--color-foreground)]">1.435.660 ₺</div>
+                        <span className="inline-flex items-center justify-center rounded-lg px-2 py-0.5 text-[11px] font-bold bg-[var(--color-profit-soft)] text-[var(--color-profit)]">
+                          +%3.85
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5. Section 3: Gelişmiş CSV İçe Aktarım & Esnek Ekstre Yönetimi */}
+      {/* 5. Section 3: Gelişmiş CSV İçe Aktarım — Gerçek Ekran Görseli */}
       <section id="csv-import" className="py-16 md:py-24 bg-[var(--color-surface-muted)]/20 border-y border-[var(--color-border)]/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
           <div className="text-center space-y-3 max-w-3xl mx-auto">
@@ -410,42 +503,93 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               Borsa Ekstrelerinizi CSV İle Tek Tıkla Aktarın
             </h2>
             <p className="text-xs sm:text-sm text-[var(--color-muted)] font-medium leading-relaxed">
-              Geçmiş işlemlerinizi elle tek tek girmek zorunda değilsiniz. Aracı kurumunuzdan veya Excel'den aldığınız CSV ekstrelerinizi saniyeler içinde PortTrack'e yükleyin.
+              Geçmiş işlemlerinizi elle tek tek girmek zorunda değilsiniz. Aracı kurumunuzdan veya Excel'den aldığınız CSV ekstrelerinizi PortTrack'e doğrudan yükleyin.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Step 1 */}
-            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 font-extrabold text-sm">
-                1
+          {/* Real App Component Replica: CSV Import Modal Visual Mockup */}
+          <div className="card p-6 sm:p-8 bg-[var(--color-surface)] border border-[var(--color-border)]/70 shadow-2xl rounded-3xl max-w-4xl mx-auto space-y-6">
+            <div className="flex justify-between items-center border-b border-[var(--color-border)]/40 pb-3">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="text-[var(--color-brand-strong)]" size={18} />
+                <h3 className="font-extrabold text-sm text-[var(--color-foreground)]">CSV Önizleme & Otomatik Tür Eşleme Ekranı</h3>
               </div>
-              <h3 className="font-extrabold text-base text-[var(--color-foreground)]">CSV Dosyasını Yükleyin</h3>
-              <p className="text-xs text-[var(--color-muted)] leading-relaxed font-medium">
-                Tarih, Tür, Sembol, İşlem Yönü (Alış/Satış), Birim Fiyat ve Adet sütunlarını içeren herhangi bir `.csv` dosyasını seçin veya sürükleyin.
-              </p>
+              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                142 İşlem Satırı Analiz Edildi
+              </span>
             </div>
 
-            {/* Step 2 */}
-            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 font-extrabold text-sm">
-                2
+            {/* CSV File Dropzone & Mode Picker Visual */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/50 space-y-2">
+                <span className="text-[10px] font-extrabold uppercase text-[var(--color-muted)]">Yüklenen Dosya</span>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 font-bold">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-extrabold text-[var(--color-foreground)]">porttrack_islemler_2026.csv</div>
+                    <div className="text-[10px] text-[var(--color-muted)]">14.2 KB · UTF-8 Kodlamalı</div>
+                  </div>
+                </div>
               </div>
-              <h3 className="font-extrabold text-base text-[var(--color-foreground)]">Satır Satır Önizleme & Eşleme</h3>
-              <p className="text-xs text-[var(--color-muted)] leading-relaxed font-medium">
-                Veriler veritabanına yazılmadan önce satır satır kontrol edilir. Nasdaq, TEFAS veya BIST etiketleri otomatik olarak varlık türlerine eşlenir.
-              </p>
+
+              {/* Mode Switcher */}
+              <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/50 space-y-2">
+                <span className="text-[10px] font-extrabold uppercase text-[var(--color-muted)]">Aktarım Modu Seçimi</span>
+                <div className="space-y-1.5 text-xs font-bold">
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-brand)]/40 text-[var(--color-brand-strong)] shadow-2xs">
+                    <span>🔘 Tüm İşlemleri Sıfırla ve Değiştir (Replace)</span>
+                    <Check size={14} />
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--color-surface)]/50 text-[var(--color-muted)]">
+                    <span>⚪ Yalnızca Yeni Satırları Ekleyerek Güncelle (Append)</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Step 3 */}
-            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 font-extrabold text-sm">
-                3
-              </div>
-              <h3 className="font-extrabold text-base text-[var(--color-foreground)]">Esnek Aktarım Modları</h3>
-              <p className="text-xs text-[var(--color-muted)] leading-relaxed font-medium">
-                <strong>"Tüm Portföyü Değiştir"</strong> veya <strong>"Yalnızca Yeni Satırları Ekle"</strong> modlarından dilediğinizi seçerek aktarımı tamamlayın.
-              </p>
+            {/* Line by line mapped table */}
+            <div className="overflow-x-auto border border-[var(--color-border)]/50 rounded-xl">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] uppercase text-[10px] font-extrabold">
+                  <tr>
+                    <th className="p-2.5">Satır</th>
+                    <th className="p-2.5">Tarih</th>
+                    <th className="p-2.5">CSV Türü</th>
+                    <th className="p-2.5">Sembol</th>
+                    <th className="p-2.5">İşlem Yönü</th>
+                    <th className="p-2.5 text-right">Fiyat & Adet</th>
+                    <th className="p-2.5">Sistem Varlık Türü Eşleşmesi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]/30 font-medium tabular-nums">
+                  <tr>
+                    <td className="p-2.5 text-[var(--color-muted)]">#1</td>
+                    <td className="p-2.5 font-bold">29.05.2026</td>
+                    <td className="p-2.5 font-semibold">Nasdaq</td>
+                    <td className="p-2.5 font-black text-[var(--color-foreground)]">VPG</td>
+                    <td className="p-2.5"><span className="text-[var(--color-profit)] font-bold">Alış</span></td>
+                    <td className="p-2.5 text-right font-bold">124.49 $ × 0.803 ad.</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 font-bold text-[10px]">Yabancı Borsa</span></td>
+                  </tr>
+                  <tr>
+                    <td className="p-2.5 text-[var(--color-muted)]">#2</td>
+                    <td className="p-2.5 font-bold">28.05.2026</td>
+                    <td className="p-2.5 font-semibold">TEFAS</td>
+                    <td className="p-2.5 font-black text-[var(--color-foreground)]">TCD</td>
+                    <td className="p-2.5"><span className="text-[var(--color-profit)] font-bold">Alış</span></td>
+                    <td className="p-2.5 text-right font-bold">4.12 ₺ × 5.000 ad.</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold text-[10px]">TEFAS Fon</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button className="btn btn-primary text-xs py-2.5 px-6 font-extrabold shadow-md">
+                142 İşlemi Veritabanına Aktar ve Onayla
+              </button>
             </div>
           </div>
         </div>
@@ -498,7 +642,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       </section>
 
-      {/* 7. Section 5: TEFAS Fon Akışları */}
+      {/* 7. Section 5: TEFAS Fon Akışları — Gerçek Ekran Görseli */}
       <section id="tefas" className="py-16 md:py-24 bg-[var(--color-surface-muted)]/20 border-y border-[var(--color-border)]/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
           <div className="text-center space-y-3 max-w-3xl mx-auto">
@@ -511,6 +655,46 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             <p className="text-xs sm:text-sm text-[var(--color-muted)] font-medium leading-relaxed">
               TEFAS yatırım fonlarında haftalık bazda kaç yeni yatırımcının katıldığını veya ayrıldığını sparkline grafiklerle izleyin.
             </p>
+          </div>
+
+          {/* Real App Component Replica: TEFAS Investor Count Showcase */}
+          <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/70 shadow-xl rounded-3xl max-w-4xl mx-auto space-y-4">
+            <div className="flex justify-between items-center border-b border-[var(--color-border)]/40 pb-3 text-xs font-bold">
+              <span className="text-[var(--color-foreground)] flex items-center gap-2">
+                <Users size={16} className="text-emerald-500" />
+                TEFAS Haftalık Yatırımcı Katılımı ve Talep Haritası
+              </span>
+              <span className="text-emerald-600 font-extrabold">🔥 En Yüksek Talep Gören Fonlar</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-emerald-500/20 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-extrabold text-sm text-[var(--color-foreground)]">TCD</span>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600">+%3.83 / hf</span>
+                </div>
+                <div className="text-xs font-extrabold text-[var(--color-profit)]">+1.420 Kişi Katıldı</div>
+                <div className="text-[10px] text-[var(--color-muted)] font-medium">Toplam Yatırımcı: 38.450 kişi</div>
+              </div>
+
+              <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-emerald-500/20 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-extrabold text-sm text-[var(--color-foreground)]">IIH</span>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600">+%3.65 / hf</span>
+                </div>
+                <div className="text-xs font-extrabold text-[var(--color-profit)]">+850 Kişi Katıldı</div>
+                <div className="text-[10px] text-[var(--color-muted)] font-medium">Toplam Yatırımcı: 24.120 kişi</div>
+              </div>
+
+              <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-rose-500/20 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-extrabold text-sm text-[var(--color-foreground)]">MAC</span>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-rose-500/10 text-rose-600">-%1.66 / hf</span>
+                </div>
+                <div className="text-xs font-extrabold text-[var(--color-loss)]">-320 Kişi Ayrıldı</div>
+                <div className="text-[10px] text-[var(--color-muted)] font-medium">Toplam Yatırımcı: 18.900 kişi</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

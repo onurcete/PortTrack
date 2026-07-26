@@ -1,13 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isAuth, setIsAuth] = useState<boolean | null>(null);
 
-  // Giris ekraninda chrome gosterme
-  if (pathname === "/login") {
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => setIsAuth(Boolean(data.user)))
+      .catch(() => setIsAuth(false));
+  }, [pathname]);
+
+  // Public/Karşılama sayfalarında veya giriş yapılmamış ana sayfada App Topbar'ı gösterme
+  const isPublicPage =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/welcome" ||
+    (pathname === "/" && isAuth === false);
+
+  if (isPublicPage) {
     return <>{children}</>;
   }
 
