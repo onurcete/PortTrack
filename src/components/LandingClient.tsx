@@ -820,8 +820,136 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               Borsa Ekstrelerinizi CSV İle Tek Tıkla Aktarın
             </h2>
             <p className="text-xs sm:text-sm text-[var(--color-muted)] font-medium leading-relaxed">
-              Aracı kurumunuzdan veya Excel'den aldığınız CSV ekstrelerinizi otomatik tür eşleme ve Replace/Append seçenekleriyle yükleyin.
+              Aracı kurumunuzdan veya Excel'den aldığınız CSV ekstrelerinizi otomatik tür eşleme ve Replace/Append seçenekleriyle kolayca PortTrack'e aktarın.
             </p>
+          </div>
+
+          {/* 3 Step Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 font-extrabold text-sm">
+                1
+              </div>
+              <h3 className="font-extrabold text-base text-[var(--color-foreground)]">CSV Dosyasını Yükleyin</h3>
+              <p className="text-xs text-[var(--color-muted)] leading-relaxed font-medium">
+                Tarih, Tür, Sembol, İşlem Yönü (Alış/Satış), Birim Fiyat ve Adet sütunlarını içeren herhangi bir `.csv` dosyasını seçin veya sürükleyin.
+              </p>
+            </div>
+
+            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 font-extrabold text-sm">
+                2
+              </div>
+              <h3 className="font-extrabold text-base text-[var(--color-foreground)]">Satır Satır Önizleme & Eşleme</h3>
+              <p className="text-xs text-[var(--color-muted)] leading-relaxed font-medium">
+                Veriler veritabanına yazılmadan önce satır satır kontrol edilir. Nasdaq, TEFAS veya BIST etiketleri otomatik olarak varlık türlerine eşlenir.
+              </p>
+            </div>
+
+            <div className="card p-6 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl space-y-3 shadow-xs">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 font-extrabold text-sm">
+                3
+              </div>
+              <h3 className="font-extrabold text-base text-[var(--color-foreground)]">Esnek Aktarım Modları</h3>
+              <p className="text-xs text-[var(--color-muted)] leading-relaxed font-medium">
+                <strong>"Tüm Portföyü Değiştir"</strong> veya <strong>"Yalnızca Yeni Satırları Ekle"</strong> modlarından dilediğinizi seçerek aktarımı tamamlayın.
+              </p>
+            </div>
+          </div>
+
+          {/* Real System Visual Mockup: CSV Import Preview Dialog Card */}
+          <div className="card p-6 sm:p-8 bg-[var(--color-surface)] border border-[var(--color-border)]/70 shadow-2xl rounded-3xl max-w-4xl mx-auto space-y-6">
+            <div className="flex justify-between items-center border-b border-[var(--color-border)]/40 pb-3">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="text-[var(--color-brand-strong)]" size={18} />
+                <h3 className="font-extrabold text-sm text-[var(--color-foreground)]">CSV Önizleme & Otomatik Tür Eşleme Ekranı</h3>
+              </div>
+              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                142 İşlem Satırı Analiz Edildi
+              </span>
+            </div>
+
+            {/* CSV File Dropzone & Mode Picker Visual */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/50 space-y-2">
+                <span className="text-[10px] font-extrabold uppercase text-[var(--color-muted)]">Yüklenen Dosya</span>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 font-bold">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-extrabold text-[var(--color-foreground)]">porttrack_islemler_2026.csv</div>
+                    <div className="text-[10px] text-[var(--color-muted)]">14.2 KB · UTF-8 Kodlamalı</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mode Switcher */}
+              <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/50 space-y-2">
+                <span className="text-[10px] font-extrabold uppercase text-[var(--color-muted)]">Aktarım Modu Seçimi</span>
+                <div className="space-y-1.5 text-xs font-bold">
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--color-surface)] border border-[var(--color-brand)]/40 text-[var(--color-brand-strong)] shadow-2xs">
+                    <span>🔘 Tüm İşlemleri Sıfırla ve Değiştir (Replace)</span>
+                    <Check size={14} />
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-[var(--color-surface)]/50 text-[var(--color-muted)]">
+                    <span>⚪ Yalnızca Yeni Satırları Ekleyerek Güncelle (Append)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Line by line mapped table */}
+            <div className="overflow-x-auto border border-[var(--color-border)]/50 rounded-xl">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] uppercase text-[10px] font-extrabold">
+                  <tr>
+                    <th className="p-2.5">Satır</th>
+                    <th className="p-2.5">Tarih</th>
+                    <th className="p-2.5">CSV Türü</th>
+                    <th className="p-2.5">Sembol</th>
+                    <th className="p-2.5">İşlem Yönü</th>
+                    <th className="p-2.5 text-right">Fiyat & Adet</th>
+                    <th className="p-2.5">Sistem Varlık Türü Eşleşmesi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]/30 font-medium tabular-nums">
+                  <tr>
+                    <td className="p-2.5 text-[var(--color-muted)]">#1</td>
+                    <td className="p-2.5 font-bold">29.05.2026</td>
+                    <td className="p-2.5 font-semibold">Nasdaq</td>
+                    <td className="p-2.5 font-black text-[var(--color-foreground)]">VPG</td>
+                    <td className="p-2.5"><span className="text-[var(--color-profit)] font-bold">Alış</span></td>
+                    <td className="p-2.5 text-right font-bold">124.49 $ × 0.803 ad.</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 font-bold text-[10px]">Yabancı Borsa</span></td>
+                  </tr>
+                  <tr>
+                    <td className="p-2.5 text-[var(--color-muted)]">#2</td>
+                    <td className="p-2.5 font-bold">28.05.2026</td>
+                    <td className="p-2.5 font-semibold">TEFAS</td>
+                    <td className="p-2.5 font-black text-[var(--color-foreground)]">TCD</td>
+                    <td className="p-2.5"><span className="text-[var(--color-profit)] font-bold">Alış</span></td>
+                    <td className="p-2.5 text-right font-bold">4.12 ₺ × 5.000 ad.</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold text-[10px]">TEFAS Fon</span></td>
+                  </tr>
+                  <tr>
+                    <td className="p-2.5 text-[var(--color-muted)]">#3</td>
+                    <td className="p-2.5 font-bold">25.05.2026</td>
+                    <td className="p-2.5 font-semibold">BIST</td>
+                    <td className="p-2.5 font-black text-[var(--color-foreground)]">THYAO</td>
+                    <td className="p-2.5"><span className="text-[var(--color-profit)] font-bold">Alış</span></td>
+                    <td className="p-2.5 text-right font-bold">312.50 ₺ × 1.250 ad.</td>
+                    <td className="p-2.5"><span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 font-bold text-[10px]">BIST Hisse</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button className="btn btn-primary text-xs py-2.5 px-6 font-extrabold shadow-md">
+                142 İşlemi Veritabanına Aktar ve Onayla
+              </button>
+            </div>
           </div>
         </div>
       </section>
