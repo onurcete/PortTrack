@@ -376,6 +376,10 @@
     "name": "BULLS PORTFÖY ATAK DEĞIŞKEN FON"
   },
   {
+    "symbol": "BAI",
+    "name": "BV PORTFÖY ALTIN KATILIM FONU"
+  },
+  {
     "symbol": "BAL",
     "name": "QNB PORTFÖY BALY SERBEST (DÖVİZ) ÖZEL FON"
   },
@@ -1844,10 +1848,6 @@
     "name": "DENİZ PORTFÖY FMV IŞIK ÜNİVERSİTESİ EĞİTİME DESTEK SERBEST FON"
   },
   {
-    "symbol": "FNE",
-    "name": "AZİMUT PORTFÖY FİNE AGRO SERBEST (TL) ÖZEL FON"
-  },
-  {
     "symbol": "FNN",
     "name": "QNB PORTFÖY KAR PAYI ÖDEYEN ONUNCU SERBEST (DÖVİZ) FON"
   },
@@ -2241,7 +2241,7 @@
   },
   {
     "symbol": "GID",
-    "name": "GARANTİ PORTFÖY İNŞAAT SEKTÖRÜ DEĞİŞKEN FON"
+    "name": "GARANTİ PORTFÖY İNŞAAT SEKTÖRÜ HİSSE SENEDİ FONU (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "GIE",
@@ -2812,6 +2812,10 @@
     "name": "HEDEF PORTFÖY DÖRDÜNCÜ İSTATİSTİKSEL ARBİTRAJ HİSSE SENEDİ SERBEST (TL) FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
+    "symbol": "HDD",
+    "name": "AHLATCI PORTFÖY BİRİNCİ DEĞİŞKEN FON"
+  },
+  {
     "symbol": "HDE",
     "name": "HSBC PORTFÖY BEŞİNCİ SERBEST (DÖVİZ-AVRO) FON"
   },
@@ -2846,6 +2850,10 @@
   {
     "symbol": "HFI",
     "name": "HEDEF PORTFÖY İKİNCİ KATILIM HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
+  },
+  {
+    "symbol": "HFO",
+    "name": "AHLATCI PORTFÖY KATILIM HİSSE SENEDİ (TL) FONU (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "HFR",
@@ -3196,12 +3204,8 @@
     "name": "İSTANBUL PORTFÖY AGRESİF DEĞİŞKEN FON"
   },
   {
-    "symbol": "IAF",
-    "name": "İSTANBUL PORTFÖY ARK I SERBEST FON"
-  },
-  {
     "symbol": "IAI",
-    "name": "İŞ PORTFÖY TOROS SERBEST ÖZEL FON"
+    "name": "İŞ PORTFÖY TOROS HİSSE SENEDİ SERBEST ÖZEL FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "IAJ",
@@ -3357,7 +3361,7 @@
   },
   {
     "symbol": "IEV",
-    "name": "İŞ PORTFÖY TAŞIMACILIK DEĞİŞKEN FON"
+    "name": "İŞ PORTFÖY HAVACILIK VE SAVUNMA TEKNOLOJİLERİ DEĞİŞKEN FON"
   },
   {
     "symbol": "IEZ",
@@ -3394,6 +3398,10 @@
   {
     "symbol": "IGZ",
     "name": "İŞ PORTFÖY ÜNİ HİSSE SENEDİ SERBEST ÖZEL FON (HİSSE SENEDİ YOĞUN FON)"
+  },
+  {
+    "symbol": "IH1",
+    "name": "İNCİR PORTFÖY BİRİNCİ HİSSE SENEDİ FONU (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "IHA",
@@ -3450,10 +3458,6 @@
   {
     "symbol": "IIN",
     "name": "INVEO PORTFÖY PARA PİYASASI SERBEST (TL) FON"
-  },
-  {
-    "symbol": "IIP",
-    "name": "İSTANBUL PORTFÖY ARİES SERBEST FON"
   },
   {
     "symbol": "IIS",
@@ -3653,7 +3657,7 @@
   },
   {
     "symbol": "IPA",
-    "name": "İŞ PORTFÖY SÜTAŞ İKİNCİ SERBEST ÖZEL FON"
+    "name": "İŞ PORTFÖY SÜTAŞ HİSSE SENEDİ SERBEST ÖZEL FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "IPB",
@@ -3836,10 +3840,6 @@
     "name": "INVEO PORTFÖY KİRA SERTİFİKALARI KATILIM FONU"
   },
   {
-    "symbol": "IVA",
-    "name": "İSTANBUL PORTFÖY BAYRAKTAR SERBEST ÖZEL FON"
-  },
-  {
     "symbol": "IVF",
     "name": "İSTANBUL PORTFÖY KATILIM HİSSE SENEDİ (TL) FONU (HİSSE SENEDİ YOĞUN FON)"
   },
@@ -3938,6 +3938,10 @@
   {
     "symbol": "KCL",
     "name": "KARE PORTFÖY ÇOKLU VARLIK KATILIM FONU"
+  },
+  {
+    "symbol": "KCR",
+    "name": "AK PORTFÖY KÜLÇE ALTIN KATILIM FONU"
   },
   {
     "symbol": "KCV",
@@ -4238,6 +4242,10 @@
   {
     "symbol": "KPK",
     "name": "İŞ PORTFÖY DURUSU SERBEST (DÖVİZ) ÖZEL FON"
+  },
+  {
+    "symbol": "KPM",
+    "name": "KARE PORTFÖY SEKİZİNCİ HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "KPP",
@@ -5424,10 +5432,6 @@
     "name": "QNB PORTFÖY FAGİ SERBEST (DÖVİZ) ÖZEL FON"
   },
   {
-    "symbol": "OVT",
-    "name": "QNB PORTFÖY DCD SERBEST (DÖVİZ) ÖZEL FON"
-  },
-  {
     "symbol": "OYL",
     "name": "OYAK PORTFÖY BİRİNCİ PARA PİYASASI (TL) FONU"
   },
@@ -5441,7 +5445,7 @@
   },
   {
     "symbol": "OZC",
-    "name": "ASTRA PORTFÖY BİRİNCİ SERBEST ÖZEL FON"
+    "name": "ASTRA PORTFÖY BİRİNCİ HİSSE SENEDİ SERBEST ÖZEL FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "P1A",
@@ -5650,6 +5654,10 @@
   {
     "symbol": "PJP",
     "name": "PERFORM PORTFÖY BİRİNCİ SERBEST (DÖVİZ) FON"
+  },
+  {
+    "symbol": "PK1",
+    "name": "AHLATCI PORTFÖY PARA PİYASASI KATILIM (TL) FONU"
   },
   {
     "symbol": "PKD",
@@ -5870,10 +5878,6 @@
   {
     "symbol": "PRY",
     "name": "PUSULA PORTFÖY PARA PİYASASI (TL) FONU"
-  },
-  {
-    "symbol": "PRZ",
-    "name": "ROTA PORTFÖY POYRAZ SERBEST ÖZEL FON"
   },
   {
     "symbol": "PSD",
@@ -6136,6 +6140,10 @@
     "name": "RE-PIE PORTFÖY SEKİZİNCİ HİSSE SENEDİ SERBEST (TL) FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
+    "symbol": "RFM",
+    "name": "ROTA PORTFÖY ENERJİ VE METAL FON SEPETİ FONU"
+  },
+  {
     "symbol": "RGD",
     "name": "RE-PIE PORTFÖY AGRESİF DEĞİŞKEN FON"
   },
@@ -6205,11 +6213,7 @@
   },
   {
     "symbol": "ROF",
-    "name": "ROTA PORTFÖY ONUNCU SERBEST FON"
-  },
-  {
-    "symbol": "ROS",
-    "name": "ROTA PORTFÖY ONYEDİNCİ SERBEST (DÖVİZ) FON"
+    "name": "ROTA PORTFÖY ONUNCU HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "ROY",
@@ -6408,6 +6412,10 @@
     "name": "AK PORTFÖY SEKİZİNCİ SERBEST FON"
   },
   {
+    "symbol": "SD1",
+    "name": "SPARTA PORTFÖY BİRİNCİ DEĞİŞKEN FON"
+  },
+  {
     "symbol": "SDA",
     "name": "AK PORTFÖY 2026 SERBEST (DÖVİZ) FON"
   },
@@ -6430,6 +6438,10 @@
   {
     "symbol": "SGT",
     "name": "GARANTİ PORTFÖY SİBER GÜVENLİK TEKNOLOJİLERİ DEĞİŞKEN FON"
+  },
+  {
+    "symbol": "SHC",
+    "name": "STRATEJİ PORTFÖY İKİNCİ HİSSE SENEDİ FONU (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "SHE",
@@ -6886,6 +6898,10 @@
   {
     "symbol": "TKM",
     "name": "TEB PORTFÖY PARA PİYASASI (TL) FONU"
+  },
+  {
+    "symbol": "TLC",
+    "name": "TEB PORTFÖY ALTERNATİFBANK DEĞİŞKEN ÖZEL FON"
   },
   {
     "symbol": "TLE",
@@ -8032,6 +8048,10 @@
     "name": "ZİRAAT PORTFÖY BUDİN SERBEST (DÖVİZ) ÖZEL FON"
   },
   {
+    "symbol": "ZPO",
+    "name": "ZİRAAT PORTFÖY PARA PİYASASI KATILIM FONU"
+  },
+  {
     "symbol": "ZPR",
     "name": "ZİRAAT PORTFÖY PARA PİYASASI SERBEST FON"
   },
@@ -8177,7 +8197,7 @@
   },
   {
     "symbol": "AEZ",
-    "name": "ALLIANZ YAŞAM VE EMEKLİLİK A.Ş. ATA PORTFÖY DEĞİŞKEN EMEKLİLİK YATIRIM FONU"
+    "name": "ALLIANZ YAŞAM VE EMEKLİLİK A.Ş. YAPI KREDİ FON SEPETİ EMEKLİLİK YATIRIM FONU"
   },
   {
     "symbol": "AFH",
@@ -8361,7 +8381,7 @@
   },
   {
     "symbol": "ALU",
-    "name": "ALLIANZ YAŞAM VE EMEKLİLİK A.Ş. AGRESİF DEĞİŞKEN EMEKLİLİK YATIRIM FONU"
+    "name": "ALLIANZ YAŞAM VE EMEKLİLİK A.Ş. KATILIM HİSSE SENEDİ EMEKLİLİK YATIRIM FONU"
   },
   {
     "symbol": "ALZ",

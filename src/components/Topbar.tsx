@@ -13,6 +13,7 @@ import {
   LineChart,
   Activity,
   Shield,
+  Sparkles,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/growth", label: "Portföy Gelişimi", icon: TrendingUp },
   { href: "/performance", label: "Ürün Performansı", icon: LineChart },
   { href: "/analysis", label: "Analiz", icon: Activity },
+  { href: "/welcome", label: "Tanıtım", icon: Sparkles },
 ];
 
 export function Topbar() {

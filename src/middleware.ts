@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE, getSessionUser } from "@/lib/auth";
 
-const PUBLIC = ["/login", "/register", "/api/auth/login", "/api/auth/register", "/api/cron"];
+const PUBLIC = ["/welcome", "/login", "/register", "/api/auth/login", "/api/auth/register", "/api/cron"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
