@@ -54,74 +54,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-foreground)] selection:bg-[var(--color-brand)] selection:text-white font-sans">
-      {/* 1. Header Navigation Bar (Public & Clean) */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-[var(--color-bg)]/90 border-b border-[var(--color-border)]/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-brand-strong)] text-white font-black text-sm shadow-md group-hover:scale-105 transition-transform">
-              PT
-            </div>
-            <div className="flex flex-col">
-              <span className="font-black text-lg tracking-tight text-[var(--color-foreground)] leading-none">
-                PortTrack
-              </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--color-brand-strong)] mt-0.5">
-                Portföy Takip & Analiz
-              </span>
-            </div>
-          </Link>
-
-          {/* Center Nav Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-[var(--color-muted)]">
-            <a href="#overview-tables" className="hover:text-[var(--color-foreground)] transition-colors">
-              Genel Bakış Tabloları
-            </a>
-            <a href="#monthly-matrix" className="hover:text-[var(--color-foreground)] transition-colors">
-              Aylık/Yıllık Matris
-            </a>
-            <a href="#csv-import" className="hover:text-[var(--color-foreground)] transition-colors">
-              CSV İçe Aktarım
-            </a>
-            <a href="#technical" className="hover:text-[var(--color-foreground)] transition-colors">
-              Teknik Göstergeler
-            </a>
-            <a href="#tefas" className="hover:text-[var(--color-foreground)] transition-colors">
-              TEFAS Akışları
-            </a>
-            <a href="#simulator" className="hover:text-[var(--color-foreground)] transition-colors">
-              Büyüme Simülatörü
-            </a>
-          </nav>
-
-          {/* Right Action Buttons */}
-          <div className="flex items-center gap-3">
-            {isLoggedIn ? (
-              <Link
-                href="/"
-                className="btn btn-primary text-xs shadow-md hover:shadow-lg transition-all"
-              >
-                Portföy Paneline Git <ArrowRight size={14} />
-              </Link>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="btn btn-outline text-xs font-extrabold px-4 py-2 hover:bg-[var(--color-surface-muted)]"
-                >
-                  Giriş Yap
-                </Link>
-                <Link
-                  href="/register"
-                  className="btn btn-primary text-xs font-extrabold px-4 py-2 shadow-md hover:shadow-lg transition-all"
-                >
-                  Ücretsiz Kayıt Ol <ArrowRight size={14} />
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* 2. Hero Section */}
 
       {/* 2. Hero Section */}
       <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden">
