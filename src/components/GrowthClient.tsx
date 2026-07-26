@@ -774,10 +774,20 @@ export function GrowthClient({
         <>
           <Card className="p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h2 className="font-semibold text-sm">{chartTitle}</h2>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] flex items-center justify-center font-bold">
+                  <TrendingUp size={18} />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-base text-[var(--color-foreground)]">{chartTitle}</h2>
+                  <p className="text-[11px] text-[var(--color-muted)] font-medium">Aylık portföy değer ve % getiri gelişimi</p>
+                </div>
+              </div>
+
               <div className="flex flex-wrap items-center gap-3">
+                {/* Metric Selector */}
                 <div
-                  className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40"
+                  className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40 shadow-2xs"
                   role="group"
                   aria-label="Grafik metriği"
                 >
@@ -787,7 +797,7 @@ export function GrowthClient({
                     className={cn(
                       "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
                       chartMetric === "value"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
                     )}
                   >
@@ -799,7 +809,7 @@ export function GrowthClient({
                     className={cn(
                       "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
                       chartMetric === "allocation"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
                     )}
                   >
@@ -811,15 +821,17 @@ export function GrowthClient({
                     className={cn(
                       "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
                       chartMetric === "return"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
                     )}
                   >
                     % Getiri
                   </button>
                 </div>
+
+                {/* Chart Type Selector */}
                 <div
-                  className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40"
+                  className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/40 shadow-2xs"
                   role="group"
                   aria-label="Grafik türü"
                 >
@@ -829,7 +841,7 @@ export function GrowthClient({
                     className={cn(
                       "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
                       chartType === "area"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
                     )}
                   >
@@ -841,57 +853,75 @@ export function GrowthClient({
                     className={cn(
                       "rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-200",
                       chartType === "bar"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/40"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/40 font-extrabold"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-transparent",
                     )}
                   >
                     Çubuk
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="chart-year"
-                    className="text-xs font-semibold text-[var(--color-muted)]"
+
+                {/* Quick Year Presets */}
+                <div className="flex items-center gap-1.5 bg-[var(--color-surface-muted)]/60 p-1 rounded-xl border border-[var(--color-border)]/40">
+                  <button
+                    type="button"
+                    onClick={() => setChartYearFilter(YEAR_FILTER_ALL)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all",
+                      chartYearValue === YEAR_FILTER_ALL
+                        ? "bg-[var(--color-brand)] text-white shadow-xs"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    )}
                   >
-                    Yıl
-                  </label>
-                  <select
-                    id="chart-year"
-                    value={chartYearValue}
-                    onChange={(e) => setChartYearFilter(e.target.value)}
-                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] transition-colors duration-200"
-                  >
-                    <option value={YEAR_FILTER_ALL}>Tümü</option>
-                    {years.map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
+                    Tümü
+                  </button>
+                  {years.map((y) => (
+                    <button
+                      key={y}
+                      type="button"
+                      onClick={() => setChartYearFilter(y)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all",
+                        chartYearValue === y
+                          ? "bg-[var(--color-brand)] text-white shadow-xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      )}
+                    >
+                      {y}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
+            {/* Elevated Glassmorphic KPI Summary Cards */}
             {periodSummary && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
-                    Toplam Portföy
-                  </p>
-                  <p className="text-xl font-bold tabular-nums">
+                <Card className="p-4 bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] border border-[var(--color-border)]/60 shadow-md rounded-2xl space-y-1 hover:border-[var(--color-brand)]/30 transition-all">
+                  <div className="flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                    <span>TOPLAM PORTFÖY</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)] text-[var(--color-foreground)] font-black text-[9px]">₺ TRY</span>
+                  </div>
+                  <p className="text-2xl font-black tabular-nums text-[var(--color-foreground)] tracking-tight">
                     {formatMoney(periodSummary.last.valueTRY, "TRY")}
                   </p>
-                  <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
+                  <p className="text-[11px] text-[var(--color-muted)] font-medium">
                     {formatPeriodDate(periodSummary.last.month)}
                   </p>
                 </Card>
-                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
-                    Dönem Getirisi
-                  </p>
+
+                <Card className="p-4 bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] border border-[var(--color-border)]/60 shadow-md rounded-2xl space-y-1 hover:border-[var(--color-brand)]/30 transition-all">
+                  <div className="flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                    <span>DÖNEM GETİRİSİ</span>
+                    {periodSummary.returnTRY != null && (
+                      <span className={cn("px-2 py-0.5 rounded-full font-black text-[10px]", periodSummary.returnTRY >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500")}>
+                        {formatPercent(periodSummary.returnTRY)}
+                      </span>
+                    )}
+                  </div>
                   <p
                     className={cn(
-                      "text-xl font-bold tabular-nums",
+                      "text-2xl font-black tabular-nums tracking-tight",
                       periodSummary.pnlTRY >= 0
                         ? "text-[var(--color-profit)]"
                         : "text-[var(--color-loss)]",
@@ -900,56 +930,49 @@ export function GrowthClient({
                     {periodSummary.pnlTRY >= 0 ? "+" : ""}
                     {formatMoney(periodSummary.pnlTRY, "TRY")}
                   </p>
-                  {periodSummary.returnTRY != null && (
-                    <p
-                      className={cn(
-                        "text-xs font-semibold tabular-nums mt-0.5",
-                        periodSummary.returnTRY >= 0
-                          ? "text-[var(--color-profit)]"
-                          : "text-[var(--color-loss)]",
-                      )}
-                    >
-                      {formatPercent(periodSummary.returnTRY)}
-                    </p>
-                  )}
+                  <p className="text-[11px] text-[var(--color-muted)] font-medium">Net ₺ kazanç/kayıp</p>
                 </Card>
-                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
-                    Dönem Başlangıç
-                  </p>
-                  <p className="text-xl font-bold tabular-nums">
+
+                <Card className="p-4 bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] border border-[var(--color-border)]/60 shadow-md rounded-2xl space-y-1 hover:border-[var(--color-brand)]/30 transition-all">
+                  <div className="flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                    <span>DÖNEM BAŞLANGIÇ</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)] text-[var(--color-muted)] font-bold text-[9px]">BAZ DEĞER</span>
+                  </div>
+                  <p className="text-2xl font-black tabular-nums text-[var(--color-foreground)] tracking-tight">
                     {formatMoney(periodSummary.first.valueTRY, "TRY")}
                   </p>
-                  <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
+                  <p className="text-[11px] text-[var(--color-muted)] font-medium">
                     {formatPeriodDate(periodSummary.first.month)}
                   </p>
                 </Card>
-                <Card className="p-4 shadow-none theme-inset border border-[var(--color-border)]/40">
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] mb-1">
-                    Toplam Portföy ($)
-                  </p>
-                  <p className="text-xl font-bold tabular-nums">
+
+                <Card className="p-4 bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] border border-[var(--color-border)]/60 shadow-md rounded-2xl space-y-1 hover:border-[var(--color-brand)]/30 transition-all">
+                  <div className="flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                    <span>TOPLAM PORTFÖY ($)</span>
+                    <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-black text-[9px]">$ USD</span>
+                  </div>
+                  <p className="text-2xl font-black tabular-nums text-[var(--color-foreground)] tracking-tight">
                     {formatMoney(periodSummary.last.valueUSD, "USD")}
                   </p>
                   {periodSummary.returnUSD != null && (
                     <p
                       className={cn(
-                        "text-xs font-semibold tabular-nums mt-0.5",
+                        "text-xs font-extrabold tabular-nums",
                         periodSummary.returnUSD >= 0
                           ? "text-[var(--color-profit)]"
                           : "text-[var(--color-loss)]",
                       )}
                     >
-                      {formatPercent(periodSummary.returnUSD)}
+                      USD Getiri: {formatPercent(periodSummary.returnUSD)}
                     </p>
                   )}
                 </Card>
               </div>
             )}
 
-            <div className="h-[380px]">
+            <div className="h-[400px] pt-2">
               {plotData.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
+                <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)] font-medium">
                   {showReturnMetric
                     ? "Karşılaştırma için en az iki ay gerekir."
                     : "Seçilen dönem için veri yok."}
@@ -959,29 +982,21 @@ export function GrowthClient({
                   {chartType === "area" ? (
                     <AreaChart
                       data={plotData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      margin={{ top: 20, right: 10, left: 0, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-brand)" stopOpacity={0.25} />
+                          <stop offset="0%" stopColor="var(--color-brand)" stopOpacity={0.35} />
                           <stop offset="100%" stopColor="var(--color-brand)" stopOpacity={0.01} />
                         </linearGradient>
                         <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
-                          <stop
-                            offset="0%"
-                            stopColor="var(--color-brand)"
-                            stopOpacity={0.25}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="var(--color-brand)"
-                            stopOpacity={0.01}
-                          />
+                          <stop offset="0%" stopColor="var(--color-brand)" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="var(--color-brand)" stopOpacity={0.01} />
                         </linearGradient>
-                        {/* Aktif varlık türleri için gradyanlar */}
+                        {/* Active asset types gradients */}
                         {activeTypes.map((t) => (
                           <linearGradient key={t} id={`g-${t}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={ASSET_META[t].color} stopOpacity={0.4} />
+                            <stop offset="0%" stopColor={ASSET_META[t].color} stopOpacity={0.5} />
                             <stop offset="100%" stopColor={ASSET_META[t].color} stopOpacity={0.05} />
                           </linearGradient>
                         ))}
@@ -989,18 +1004,18 @@ export function GrowthClient({
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke="var(--color-border)"
-                        strokeOpacity={0.4}
+                        strokeOpacity={0.3}
                         vertical={false}
                       />
                       <XAxis
                         dataKey="month"
-                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 500 }}
+                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.5 }}
                         minTickGap={24}
                       />
                       <YAxis
-                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 500 }}
+                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={false}
                         width={showReturnMetric ? 56 : 70}
@@ -1040,10 +1055,10 @@ export function GrowthClient({
                           type="monotone"
                           dataKey="returnPctPlot"
                           stroke="var(--color-brand)"
-                          strokeWidth={2.5}
+                          strokeWidth={3}
                           fill="url(#gr)"
                           name="returnPctPlot"
-                          activeDot={{ r: 6, strokeWidth: 0, fill: "var(--color-brand)" }}
+                          activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: "var(--color-brand)" }}
                         />
                       ) : chartMetric === "allocation" ? (
                         activeTypes.map((t) => (
@@ -1064,33 +1079,43 @@ export function GrowthClient({
                           type="monotone"
                           dataKey="value"
                           stroke="var(--color-brand)"
-                          strokeWidth={2.5}
+                          strokeWidth={3}
                           fill="url(#gv)"
-                          activeDot={{ r: 6, strokeWidth: 0, fill: "var(--color-brand)" }}
+                          activeDot={{ r: 7, strokeWidth: 2, stroke: "#fff", fill: "var(--color-brand)" }}
                         />
                       )}
                     </AreaChart>
                   ) : (
                     <BarChart
                       data={plotData}
-                      margin={{ top: 20, right: 10, left: 0, bottom: 0 }}
+                      margin={{ top: 25, right: 10, left: 0, bottom: 0 }}
                       barGap={showReturnMetric ? 0 : 2}
                     >
+                      <defs>
+                        <linearGradient id="bar-profit-grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                        </linearGradient>
+                        <linearGradient id="bar-loss-grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.85} />
+                          <stop offset="100%" stopColor="#e11d48" stopOpacity={1} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke="var(--color-border)"
-                        strokeOpacity={0.4}
+                        strokeOpacity={0.3}
                         vertical={false}
                       />
                       <XAxis
                         dataKey="month"
-                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 500 }}
+                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.5 }}
                         minTickGap={24}
                       />
                       <YAxis
-                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 500 }}
+                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={false}
                         width={showReturnMetric ? 56 : 70}
@@ -1136,16 +1161,32 @@ export function GrowthClient({
                               key={i}
                               fill={
                                 (row.returnPct ?? 0) >= 0
-                                  ? "var(--color-profit)"
-                                  : "var(--color-loss)"
+                                  ? "url(#bar-profit-grad)"
+                                  : "url(#bar-loss-grad)"
                               }
                             />
                           ))}
                           <LabelList
                             dataKey="returnPct"
-                            position="top"
-                            formatter={(v: any) => v != null ? `${Number(v).toFixed(1)}%` : ""}
-                            style={{ fill: "var(--color-foreground)", fontSize: 8, fontWeight: 600 }}
+                            content={(props: any) => {
+                              const { x, y, width, height, value } = props;
+                              if (value == null) return null;
+                              const val = Number(value);
+                              const isPositive = val >= 0;
+                              const labelY = isPositive ? y - 6 : y + height + 12;
+                              return (
+                                <text
+                                  x={x + width / 2}
+                                  y={labelY}
+                                  fill={isPositive ? "#10b981" : "#f43f5e"}
+                                  textAnchor="middle"
+                                  fontSize={9}
+                                  fontWeight={700}
+                                >
+                                  {val > 0 ? `+${val.toFixed(1)}%` : `${val.toFixed(1)}%`}
+                                </text>
+                              );
+                            }}
                           />
                         </Bar>
                       ) : chartMetric === "allocation" ? (
@@ -1164,13 +1205,13 @@ export function GrowthClient({
                           dataKey="value"
                           fill="var(--color-brand)"
                           name="value"
-                          radius={[5, 5, 0, 0]}
+                          radius={[6, 6, 0, 0]}
                         >
                           <LabelList
                             dataKey="value"
                             position="top"
                             formatter={(v: any) => formatMoney(Number(v), currency, { compact: true })}
-                            style={{ fill: "var(--color-foreground)", fontSize: 8, fontWeight: 600 }}
+                            style={{ fill: "var(--color-foreground)", fontSize: 8, fontWeight: 700 }}
                           />
                         </Bar>
                       )}
