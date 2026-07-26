@@ -35,7 +35,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await withBriefingLock(`briefing:${userId}`, async () => {
+    const modeParam = req.nextUrl.searchParams.get("mode") as "general" | "technical" | "risk" | "opportunity" | null;
+    const focusMode = modeParam ?? "general";
+
+    const result = await withBriefingLock(`briefing:${userId}:${focusMode}`, async () => {
       const bundle = await loadAnalysisBundle(userId);
       const day = briefingDay();
 
@@ -62,7 +65,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const { payload, model } = await generateAnalysisBriefing(bundle.context);
+      const { payload, model } = await generateAnalysisBriefing(bundle.context, focusMode);
 
       const saved = await prisma.analysisBriefing.upsert({
         where: {
