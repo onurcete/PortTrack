@@ -19,16 +19,18 @@ import type { BriefingPayload } from "@/lib/analysisAi";
 import { FOCUS_MODE_LABELS, type BriefingFocusMode } from "@/lib/analysisAi";
 import { cn, formatDate } from "@/lib/utils";
 
+export type BriefingData = {
+  payload: BriefingPayload;
+  model: string;
+  createdAt: string;
+  contextHash: string;
+};
+
 interface AnalysisAiSectionProps {
-  briefing: {
-    payload: BriefingPayload;
-    model: string;
-    createdAt: string;
-    contextHash: string;
-  } | null;
+  briefing: BriefingData | null;
   aiConfigured: boolean;
   contextHash: string;
-  onRefresh: (mode: BriefingFocusMode, force: boolean) => Promise<void>;
+  onRefresh: (mode: BriefingFocusMode, force: boolean) => Promise<BriefingData | null>;
   aiLoading: boolean;
   aiError: string | null;
 }
@@ -49,16 +51,40 @@ export function AnalysisAiSection({
   aiError,
 }: AnalysisAiSectionProps) {
   const [focusMode, setFocusMode] = useState<BriefingFocusMode>("general");
+  const [modeCache, setModeCache] = useState<Record<BriefingFocusMode, BriefingData | null>>({
+    general: briefing,
+    technical: null,
+    risk: null,
+    opportunity: null,
+  });
+
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
   const [askAnswer, setAskAnswer] = useState<{ question: string; answer: string } | null>(null);
   const [askError, setAskError] = useState<string | null>(null);
 
-  const staleCache = briefing && briefing.contextHash !== contextHash;
+  // Active briefing for currently selected mode
+  const activeBriefing = modeCache[focusMode] ?? (focusMode === "general" ? briefing : null);
+  const staleCache = activeBriefing && activeBriefing.contextHash !== contextHash;
 
   async function handleModeChange(mode: BriefingFocusMode) {
     setFocusMode(mode);
-    await onRefresh(mode, true);
+    // If already cached for this mode, switch instantly without API call!
+    if (modeCache[mode]) return;
+
+    // Otherwise, fetch once for this mode with force=false (checks db cache first)
+    const result = await onRefresh(mode, false);
+    if (result) {
+      setModeCache((prev) => ({ ...prev, [mode]: result }));
+    }
+  }
+
+  async function handleForceRegenerate() {
+    // Explicit refresh button: forces fresh OpenAI generation for current mode
+    const result = await onRefresh(focusMode, true);
+    if (result) {
+      setModeCache((prev) => ({ ...prev, [focusMode]: result }));
+    }
   }
 
   async function handleAskQuestion(qText?: string) {
@@ -119,10 +145,10 @@ export function AnalysisAiSection({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => onRefresh(focusMode, true)}
+              onClick={handleForceRegenerate}
               disabled={aiLoading || !aiConfigured}
               className="btn btn-primary text-xs shadow-sm hover:shadow-md transition-all"
-              title={aiConfigured ? "Seçili mod ile yeni yapay zekâ yorumu üret" : "OPENAI_API_KEY tanımlı değil"}
+              title={aiConfigured ? "Seçili mod için OpenAI API'sını çağırarak yeni yorum üret" : "OPENAI_API_KEY tanımlı değil"}
             >
               <Sparkles size={14} className={cn(aiLoading && "animate-spin")} />
               {aiLoading ? "Üretiliyor..." : "AI Yorumunu Yenile"}
@@ -137,10 +163,10 @@ export function AnalysisAiSection({
               <Compass size={13} className="text-[var(--color-brand)]" />
               Analiz Odağı Seçin
             </span>
-            {briefing && (
-              <span className="text-[11px] text-[var(--color-muted)]">
-                Model: <strong className="text-[var(--color-foreground)]">{briefing.model}</strong> · {formatDate(briefing.createdAt)}
-                {staleCache && <span className="text-amber-500 font-bold ml-1.5">· Yeni veri mevcut!</span>}
+            {activeBriefing && (
+              <span className="text-[11px] text-[var(--color-muted)] flex items-center gap-1">
+                <span>Model: <strong className="text-[var(--color-foreground)]">{activeBriefing.model}</strong> · {formatDate(activeBriefing.createdAt)}</span>
+                {staleCache && <span className="text-amber-500 font-bold ml-1">· Yeni veri var</span>}
               </span>
             )}
           </div>
@@ -149,6 +175,8 @@ export function AnalysisAiSection({
             {(Object.keys(FOCUS_MODE_LABELS) as BriefingFocusMode[]).map((mode) => {
               const active = focusMode === mode;
               const cfg = FOCUS_MODE_LABELS[mode];
+              const isCached = Boolean(modeCache[mode]);
+
               return (
                 <button
                   key={mode}
@@ -156,7 +184,7 @@ export function AnalysisAiSection({
                   onClick={() => handleModeChange(mode)}
                   disabled={aiLoading || !aiConfigured}
                   className={cn(
-                    "text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between space-y-1",
+                    "text-left p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between space-y-1.5 relative group",
                     active
                       ? "bg-[var(--color-surface)] border-[var(--color-brand)]/50 shadow-xs ring-2 ring-[var(--color-brand)]/20"
                       : "bg-[var(--color-surface-muted)]/20 border-[var(--color-border)]/40 hover:bg-[var(--color-surface-muted)]/60"
@@ -166,11 +194,28 @@ export function AnalysisAiSection({
                     <span className={cn("text-xs font-bold", active ? "text-[var(--color-brand-strong)]" : "text-[var(--color-foreground)]")}>
                       {cfg.label}
                     </span>
-                    {active && <CheckCircle2 size={13} className="text-[var(--color-brand-strong)] shrink-0" />}
+                    {active ? (
+                      <CheckCircle2 size={13} className="text-[var(--color-brand-strong)] shrink-0" />
+                    ) : isCached ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title="Önbellekte Hazır" />
+                    ) : null}
                   </div>
+
                   <span className="text-[10px] text-[var(--color-muted)] line-clamp-1">
                     {cfg.desc}
                   </span>
+
+                  <div className="flex items-center justify-between pt-1 text-[9px] font-semibold border-t border-[var(--color-border)]/20">
+                    {isCached ? (
+                      <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                        ✓ Hazır (0 API Maliyeti)
+                      </span>
+                    ) : (
+                      <span className="text-[var(--color-muted)]">
+                        İlkin Oluştur
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -186,20 +231,20 @@ export function AnalysisAiSection({
                 Gerçek yapay zekâ briefing üretimi için ortam değişkenlerine <code className="font-mono text-[var(--color-foreground)]">OPENAI_API_KEY</code> ekleyin. Sayfa aşağıdaki teknik metriklerle çalışmaya devam eder.
               </p>
             </div>
-          ) : !briefing ? (
+          ) : !activeBriefing ? (
             <div className="p-6 text-center space-y-3">
-              <p className="text-sm font-bold text-[var(--color-foreground)]">Henüz AI briefing üretilmedi</p>
+              <p className="text-sm font-bold text-[var(--color-foreground)]">Bu mod için henüz AI briefing üretilmedi</p>
               <p className="text-xs text-[var(--color-muted)] max-w-md mx-auto">
-                Portföyünüzün teknik skorları, varlık ağırlıkları ve TEFAS hareketlerinden oluşan yapay zekâ analizini başlatın.
+                Seçtiğiniz <strong>{FOCUS_MODE_LABELS[focusMode].label}</strong> odağında yapay zekâ analizini başlatabilirsiniz.
               </p>
               <button
                 type="button"
-                onClick={() => onRefresh(focusMode, false)}
+                onClick={handleForceRegenerate}
                 disabled={aiLoading}
                 className="btn btn-primary text-xs"
               >
                 <Sparkles size={14} />
-                İlk Briefing'i Oluştur
+                Analizi Üret
               </button>
             </div>
           ) : (
@@ -207,27 +252,27 @@ export function AnalysisAiSection({
               {/* Big Headline */}
               <div>
                 <h3 className="text-xl sm:text-2xl font-black tracking-tight text-[var(--color-foreground)] leading-snug">
-                  {briefing.payload.headline}
+                  {activeBriefing.payload.headline}
                 </h3>
               </div>
 
               {/* Main Summary */}
               <div className="text-xs sm:text-sm leading-relaxed text-[var(--color-foreground)]/90 space-y-2 whitespace-pre-line bg-[var(--color-surface)]/60 p-4 rounded-xl border border-[var(--color-border)]/40 shadow-2xs">
-                {briefing.payload.summary}
+                {activeBriefing.payload.summary}
               </div>
 
               {/* Highlights & Risks Grid */}
-              {(briefing.payload.highlights.length > 0 || briefing.payload.risks.length > 0) && (
+              {(activeBriefing.payload.highlights.length > 0 || activeBriefing.payload.risks.length > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Highlights */}
-                  {briefing.payload.highlights.length > 0 && (
+                  {activeBriefing.payload.highlights.length > 0 && (
                     <div className="card p-4 bg-emerald-500/5 border border-emerald-500/20 space-y-2.5 rounded-xl">
                       <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-profit)]">
                         <TrendingUp size={14} />
                         Öne Çıkan Fırsat & Olumlu Sinyaller
                       </div>
                       <ul className="space-y-2 text-xs">
-                        {briefing.payload.highlights.map((h, i) => (
+                        {activeBriefing.payload.highlights.map((h, i) => (
                           <li key={i} className="flex items-start gap-2 text-[var(--color-foreground)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-profit)] mt-1.5 shrink-0" />
                             <span>{h}</span>
@@ -238,14 +283,14 @@ export function AnalysisAiSection({
                   )}
 
                   {/* Risks */}
-                  {briefing.payload.risks.length > 0 && (
+                  {activeBriefing.payload.risks.length > 0 && (
                     <div className="card p-4 bg-rose-500/5 border border-rose-500/20 space-y-2.5 rounded-xl">
                       <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-loss)]">
                         <AlertTriangle size={14} />
                         Riskler & Dikkat Edilmesi Gerekenler
                       </div>
                       <ul className="space-y-2 text-xs">
-                        {briefing.payload.risks.map((r, i) => (
+                        {activeBriefing.payload.risks.map((r, i) => (
                           <li key={i} className="flex items-start gap-2 text-[var(--color-foreground)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-loss)] mt-1.5 shrink-0" />
                             <span>{r}</span>
@@ -258,21 +303,21 @@ export function AnalysisAiSection({
               )}
 
               {/* TEFAS AI Note if present */}
-              {briefing.payload.tefasNote && (
+              {activeBriefing.payload.tefasNote && (
                 <div className="p-3.5 bg-[var(--color-brand-soft)]/30 border border-[var(--color-brand)]/20 rounded-xl text-xs space-y-1">
                   <span className="font-extrabold text-[var(--color-brand-strong)] block">TEFAS Fon Yatırımcı Yorumu</span>
-                  <p className="text-[var(--color-foreground)]/90">{briefing.payload.tefasNote}</p>
+                  <p className="text-[var(--color-foreground)]/90">{activeBriefing.payload.tefasNote}</p>
                 </div>
               )}
 
               {/* Per Symbol Short AI Notes */}
-              {briefing.payload.perSymbol && briefing.payload.perSymbol.length > 0 && (
+              {activeBriefing.payload.perSymbol && activeBriefing.payload.perSymbol.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
                     Varlık Bazlı Öne Çıkan Yorumlar
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
-                    {briefing.payload.perSymbol.map((ps) => (
+                    {activeBriefing.payload.perSymbol.map((ps) => (
                       <div key={ps.symbol} className="p-2.5 bg-[var(--color-surface)] border border-[var(--color-border)]/50 rounded-xl text-xs space-y-0.5">
                         <span className="font-extrabold text-[var(--color-foreground)]">{ps.symbol}</span>
                         <p className="text-[11px] text-[var(--color-muted)] line-clamp-2">{ps.note}</p>

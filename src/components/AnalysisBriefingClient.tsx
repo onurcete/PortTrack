@@ -170,17 +170,20 @@ export function AnalysisBriefingClient({
       const data = await res.json();
       if (!data.ok) {
         setAiError(data.error ?? "Briefing üretilemedi");
-        return;
+        return null;
       }
-      setBriefing({
+      const newBriefing = {
         payload: data.payload,
         model: data.model,
         createdAt: data.createdAt,
         contextHash: data.contextHash,
-      });
+      };
+      setBriefing(newBriefing);
       router.refresh();
+      return newBriefing;
     } catch {
       setAiError("Bağlantı hatası");
+      return null;
     } finally {
       setAiLoading(false);
     }
