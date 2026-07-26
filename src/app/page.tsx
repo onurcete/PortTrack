@@ -1,12 +1,18 @@
 import { getPortfolio } from "@/lib/data";
 import { getBenchmarkComparisonData, getPeriodReturns } from "@/lib/history";
 import { DashboardClient, type DashboardDTO } from "@/components/DashboardClient";
-import { requireUser } from "@/lib/auth";
+import { LandingClient } from "@/components/LandingClient";
+import { getSessionUserIdOptional } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const userId = await requireUser();
+  const userId = await getSessionUserIdOptional();
+
+  if (!userId) {
+    return <LandingClient isLoggedIn={false} />;
+  }
+
   const [p, benchmarkData, periodReturns] = await Promise.all([
     getPortfolio(userId),
     getBenchmarkComparisonData(userId),

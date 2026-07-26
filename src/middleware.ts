@@ -6,8 +6,9 @@ const PUBLIC = ["/welcome", "/login", "/register", "/api/auth/login", "/api/auth
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Statik dosyalar ve public yollar serbest
+  // Statik dosyalar, kök sayfa (/) ve public yollar serbest
   if (
+    pathname === "/" ||
     PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")

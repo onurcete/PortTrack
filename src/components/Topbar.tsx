@@ -25,7 +25,6 @@ const NAV = [
   { href: "/growth", label: "Portföy Gelişimi", icon: TrendingUp },
   { href: "/performance", label: "Ürün Performansı", icon: LineChart },
   { href: "/analysis", label: "Analiz", icon: Activity },
-  { href: "/welcome", label: "Tanıtım", icon: Sparkles },
 ];
 
 export function Topbar() {
