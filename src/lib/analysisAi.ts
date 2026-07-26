@@ -35,6 +35,8 @@ export function getOpenAiModel(): string {
 const SYSTEM_PROMPT = `Sen PortTrack portföy takip uygulamasının analiz asistanısın.
 Kurallar:
 - Yalnızca verilen JSON context'teki verilere dayan. Context dışı sembol, rakam veya olay uydurma.
+- Context içerisinde her bir varlığın ilk alış tarihi (firstBuyDate), elde tutulma süresi (daysHeld), kâr/zarar oranı (unrealizedPctTRY) ve maliyet bilgileri (costTRY) bulunmaktadır.
+- Kullanıcı en eski alınan fonu, ilk alış tarihini veya elde tutulma süresini sorduğunda bu tarih ve süre verilerini (firstBuyDate / daysHeld) kullanarak kesin ve doğru yanıt ver.
 - Türkçe yaz. Yatırım tavsiyesi verme; al/sat/tut emri verme.
 - Dil sakin, net ve profesyonel olsun.
 - Teknik skorlar kural tabanlıdır; bunları "yapay zekâ skoru" diye sunma.
@@ -53,7 +55,7 @@ export const FOCUS_MODE_LABELS: Record<BriefingFocusMode, { label: string; desc:
 function buildUserPrompt(context: AnalysisContext, mode: BriefingFocusMode = "general"): string {
   let modeInstruction = "";
   if (mode === "technical") {
-    modeInstruction = "Analizi ağırlıklı olarak teknik skorlar, RSI aşırı alım/satım bölgeleri, MACD sinyalleri ve trend uyumsuzluklarına odakla.";
+    modeInstruction = "Analizi ağırlıklı olarak teknik skorlar, RSI aşırı alım/satım bölgeleri, MACD sinyallerine odakla.";
   } else if (mode === "risk") {
     modeInstruction = "Analizi ağırlıklı olarak portföydeki risk faktörleri, konsantrasyon riskleri, aşırı primlenmiş veya sert düşen varlıklara odakla.";
   } else if (mode === "opportunity") {
@@ -152,11 +154,11 @@ export async function askAnalysisAi(
 Portföy Verisi (Context):
 ${JSON.stringify(context)}
 
-Lütfen soruya portföydeki teknik verileri, ağırlıkları ve TEFAS hareketlerini göz önüne alarak 2-3 paragraf halinde net, profesyonel ve doğrudan cevap ver. Yatırım tavsiyesi olmadığını belirt. Markdown kullanabilirsin.`;
+Lütfen soruya portföydeki verileri (ilk alış tarihleri 'firstBuyDate', tutulma süreleri 'daysHeld', kâr/zarar oranları 'unrealizedPctTRY', ağırlıklar ve TEFAS hareketleri) göz önüne alarak net, doğru, profesyonel ve doğrudan cevap ver. Kullanıcının sorusu tarih/süre ile ilgiliyse (örn: en eski aldığım fon/hisse) firstBuyDate ve daysHeld alanlarına dayanarak kesin tarih ver. Yatırım tavsiyesi olmadığını belirt. Markdown kullanabilirsin.`;
 
   const completion = await client.chat.completions.create({
     model,
-    temperature: 0.5,
+    temperature: 0.3,
     messages: [
       { role: "system", content: SYSTEM_PROMPT.replace("Çıktıyı yalnızca geçerli JSON olarak ver (markdown yok).", "Açıklayıcı ve okunaklı markdown yanıt ver.") },
       { role: "user", content: prompt },

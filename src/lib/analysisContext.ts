@@ -15,6 +15,10 @@ export interface HoldingContextInput {
   weightPct: number;
   dailyChangePct: number | null;
   valueTRY: number;
+  firstBuyDate: string | null;
+  daysHeld: number | null;
+  unrealizedPctTRY: number | null;
+  costTRY: number;
   analysis: {
     score: number;
     trendSignal: string;
@@ -52,11 +56,25 @@ export interface AnalysisContext {
       trend4w: string;
     }>;
   } | null;
+  holdingsSummary: Array<{
+    symbol: string;
+    assetType: AssetType;
+    name: string | null;
+    firstBuyDate: string | null;
+    daysHeld: number | null;
+    weightPct: number;
+    valueTRY: number;
+    costTRY: number;
+    unrealizedPctTRY: number | null;
+  }>;
   stocks: Array<{
     symbol: string;
     assetType: AssetType;
     weightPct: number;
     dailyChangePct: number | null;
+    firstBuyDate: string | null;
+    daysHeld: number | null;
+    unrealizedPctTRY: number | null;
     score: number | null;
     trendSignal: string | null;
     macdSignal: string | null;
@@ -67,12 +85,18 @@ export interface AnalysisContext {
     assetType: AssetType;
     weightPct: number;
     dailyChangePct: number | null;
+    firstBuyDate: string | null;
+    daysHeld: number | null;
+    unrealizedPctTRY: number | null;
     score: number | null;
   }>;
   bes: Array<{
     symbol: string;
     weightPct: number;
     valueTRY: number;
+    firstBuyDate: string | null;
+    daysHeld: number | null;
+    unrealizedPctTRY: number | null;
   }>;
 }
 
@@ -81,6 +105,20 @@ export function buildAnalysisContext(
   holdings: HoldingContextInput[],
   tefasInvestors: TefasInvestorSummary | null,
 ): AnalysisContext {
+  const holdingsSummary = holdings
+    .map((h) => ({
+      symbol: h.symbol,
+      assetType: h.assetType,
+      name: h.name,
+      firstBuyDate: h.firstBuyDate,
+      daysHeld: h.daysHeld,
+      weightPct: round1(h.weightPct),
+      valueTRY: Math.round(h.valueTRY),
+      costTRY: Math.round(h.costTRY),
+      unrealizedPctTRY: h.unrealizedPctTRY != null ? round1(h.unrealizedPctTRY) : null,
+    }))
+    .sort((a, b) => (b.daysHeld ?? 0) - (a.daysHeld ?? 0));
+
   const stocks = holdings
     .filter((h) => tabKeyForAssetType(h.assetType) === "STOCKS")
     .map((h) => ({
@@ -88,6 +126,9 @@ export function buildAnalysisContext(
       assetType: h.assetType,
       weightPct: round1(h.weightPct),
       dailyChangePct: h.dailyChangePct,
+      firstBuyDate: h.firstBuyDate,
+      daysHeld: h.daysHeld,
+      unrealizedPctTRY: h.unrealizedPctTRY != null ? round1(h.unrealizedPctTRY) : null,
       score: h.analysis?.score ?? null,
       trendSignal: h.analysis?.trendSignal ?? null,
       macdSignal: h.analysis?.macdSignal ?? null,
@@ -102,6 +143,9 @@ export function buildAnalysisContext(
       assetType: h.assetType,
       weightPct: round1(h.weightPct),
       dailyChangePct: h.dailyChangePct,
+      firstBuyDate: h.firstBuyDate,
+      daysHeld: h.daysHeld,
+      unrealizedPctTRY: h.unrealizedPctTRY != null ? round1(h.unrealizedPctTRY) : null,
       score: h.analysis?.score ?? null,
     }))
     .sort((a, b) => b.weightPct - a.weightPct);
@@ -112,6 +156,9 @@ export function buildAnalysisContext(
       symbol: h.symbol,
       weightPct: round1(h.weightPct),
       valueTRY: Math.round(h.valueTRY),
+      firstBuyDate: h.firstBuyDate,
+      daysHeld: h.daysHeld,
+      unrealizedPctTRY: h.unrealizedPctTRY != null ? round1(h.unrealizedPctTRY) : null,
     }));
 
   return {
@@ -156,6 +203,7 @@ export function buildAnalysisContext(
           })),
         }
       : null,
+    holdingsSummary,
     stocks,
     alternatives,
     bes,

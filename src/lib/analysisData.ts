@@ -30,6 +30,10 @@ export interface HoldingDTO {
   quantity: number;
   currentPriceNative: number | null;
   nativeCurrency: "TRY" | "USD";
+  firstBuyDate: string | null;
+  daysHeld: number | null;
+  unrealizedPctTRY: number | null;
+  costTRY: number;
   analysis: {
     symbol: string;
     assetType: AssetType;
@@ -122,22 +126,34 @@ export async function loadAnalysisBundle(
     ]),
   );
 
-  const holdings: HoldingDTO[] = openPositions.map((p) => ({
-    symbol: p.symbol,
-    assetType: p.assetType,
-    name: p.name ?? null,
-    valueTRY: p.valueTRY,
-    valueUSD: p.valueUSD,
-    weightPct:
-      pulse.totalValueTRY > 0
-        ? (p.valueTRY / pulse.totalValueTRY) * 100
-        : 0,
-    dailyChangePct: p.dailyChangePct,
-    quantity: p.quantity,
-    currentPriceNative: p.currentPriceNative,
-    nativeCurrency: p.nativeCurrency,
-    analysis: analysisBySymbol.get(p.symbol) ?? null,
-  }));
+  const nowMs = Date.now();
+  const holdings: HoldingDTO[] = openPositions.map((p) => {
+    const firstBuyStr = p.firstBuyDate ? p.firstBuyDate.toISOString().slice(0, 10) : null;
+    const daysHeld = p.firstBuyDate
+      ? Math.max(0, Math.floor((nowMs - p.firstBuyDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : null;
+
+    return {
+      symbol: p.symbol,
+      assetType: p.assetType,
+      name: p.name ?? null,
+      valueTRY: p.valueTRY,
+      valueUSD: p.valueUSD,
+      weightPct:
+        pulse.totalValueTRY > 0
+          ? (p.valueTRY / pulse.totalValueTRY) * 100
+          : 0,
+      dailyChangePct: p.dailyChangePct,
+      quantity: p.quantity,
+      currentPriceNative: p.currentPriceNative,
+      nativeCurrency: p.nativeCurrency,
+      firstBuyDate: firstBuyStr,
+      daysHeld,
+      unrealizedPctTRY: p.unrealizedPctTRY,
+      costTRY: p.costTRY,
+      analysis: analysisBySymbol.get(p.symbol) ?? null,
+    };
+  });
 
   const context = buildAnalysisContext(
     pulse,
@@ -148,6 +164,10 @@ export async function loadAnalysisBundle(
       weightPct: h.weightPct,
       dailyChangePct: h.dailyChangePct,
       valueTRY: h.valueTRY,
+      firstBuyDate: h.firstBuyDate,
+      daysHeld: h.daysHeld,
+      unrealizedPctTRY: h.unrealizedPctTRY,
+      costTRY: h.costTRY,
       analysis: h.analysis
         ? {
             score: h.analysis.score,
