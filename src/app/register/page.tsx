@@ -53,39 +53,6 @@ function RegisterForm() {
     }
   }
 
-  const [activeImg, setActiveImg] = useState<{ src: string; title: string; desc: string }>({
-    src: "/api/showcase/growth-matrix.jpg",
-    title: "Ay Ay Performans Matrisi",
-    desc: "2021-2026 Toplam +%6.850,61 ₺ Kazanç Büyüme Performansı",
-  });
-
-  const screenshots = [
-    {
-      src: "/api/showcase/growth-matrix.jpg",
-      title: "Ay Ay Performans Matrisi",
-      desc: "2021-2026 Toplam +%6.850,61 ₺ Kazanç Büyüme Performansı",
-      label: "Büyüme Matrisi",
-    },
-    {
-      src: "/api/showcase/dashboard-overview.jpg",
-      title: "PortTrack Canlı Dashboard",
-      desc: "3.192.206 ₺ Toplam Varlık, MTD +%3,25, YTD +%53,75",
-      label: "Genel Bakış",
-    },
-    {
-      src: "/api/showcase/performance-heatmap.jpg",
-      title: "Performans Sıcaklık Haritası",
-      desc: "Varlık bazında kâr/zarar ve ay ay getiri dağılımları",
-      label: "Sıcaklık Haritası",
-    },
-    {
-      src: "/api/showcase/tefas-flows.jpg",
-      title: "TEFAS Katılım Akışları",
-      desc: "Fon katılım & ayrılış hareketleri haritası",
-      label: "TEFAS Akışları",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-foreground)] flex items-center justify-center p-4 sm:p-6 md:p-10 relative overflow-hidden font-sans">
       {/* Background Glow Effects */}
@@ -133,50 +100,50 @@ function RegisterForm() {
             </div>
           </div>
 
-          {/* Real Application Screenshot Gallery with Interactive Tabs */}
-          <div className="my-6 space-y-3 relative z-10">
-            {/* Main Screenshot Image Preview */}
-            <div className="relative group rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/40">
-              <img
-                src={activeImg.src}
-                alt={activeImg.title}
-                className="w-full h-48 sm:h-56 object-cover object-top rounded-2xl transition-all duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-4">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-black text-white flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-emerald-400" /> {activeImg.title}
-                  </div>
-                  <div className="text-[10px] text-indigo-200 font-medium">
-                    {activeImg.desc}
-                  </div>
+          {/* Animated Glassmorphic Feature Dashboard Widget Showcase */}
+          <div className="my-6 space-y-3.5 relative z-10">
+            {/* Free Account Capabilities Card */}
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl space-y-3 relative overflow-hidden">
+              <div className="flex justify-between items-center text-xs font-extrabold text-indigo-200">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck size={15} className="text-cyan-400" /> Ücretsiz Hesabınız Neleri Kapsar?
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-white">
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+                  <span className="text-emerald-400 font-black">✓</span> Sınırsız İşlem Takibi
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+                  <span className="text-emerald-400 font-black">✓</span> CSV Ekstre İçe Aktarımı
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+                  <span className="text-emerald-400 font-black">✓</span> TEFAS Akış Haritası
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+                  <span className="text-emerald-400 font-black">✓</span> Performans Matrisleri
                 </div>
               </div>
             </div>
 
-            {/* Thumbnail Screenshot Gallery Grid */}
-            <div className="grid grid-cols-4 gap-1.5">
-              {screenshots.map((s) => (
-                <button
-                  key={s.src}
-                  type="button"
-                  onClick={() => setActiveImg(s)}
-                  className={`rounded-xl overflow-hidden border transition-all text-left group relative ${
-                    activeImg.src === s.src
-                      ? "border-emerald-400 ring-2 ring-emerald-400/40 opacity-100 scale-105"
-                      : "border-white/15 opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  <img
-                    src={s.src}
-                    alt={s.label}
-                    className="w-full h-12 object-cover object-top"
+            {/* Portfolio Growth Sparkline Preview Card */}
+            <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2 backdrop-blur-md">
+              <div className="flex justify-between text-indigo-200 text-[10px] font-bold">
+                <span>Örnek Toplam Portföy Büyüklüğü</span>
+                <span className="text-emerald-400 font-black">+%840,98 Kazanç</span>
+              </div>
+              <div className="flex justify-between items-baseline text-white font-black">
+                <span className="text-xl">3.192.206 ₺</span>
+                <span className="text-indigo-200 text-xs font-semibold">$67.449 USD</span>
+              </div>
+              <div className="flex items-end gap-1.5 h-6 pt-1">
+                {[30, 45, 60, 50, 75, 90, 80, 100].map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 bg-gradient-to-t from-emerald-500/20 to-emerald-400 rounded-t-sm"
+                    style={{ height: `${h}%` }}
                   />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-0.5 text-[9px] font-black text-white text-center">
-                    {s.label}
-                  </div>
-                </button>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 

@@ -51,39 +51,6 @@ function LoginForm() {
     }
   }
 
-  const [activeImg, setActiveImg] = useState<{ src: string; title: string; desc: string }>({
-    src: "/api/showcase/dashboard-overview.jpg",
-    title: "PortTrack Canlı Dashboard",
-    desc: "3.192.206 ₺ Toplam Varlık, MTD +%3,25, YTD +%53,75",
-  });
-
-  const screenshots = [
-    {
-      src: "/api/showcase/dashboard-overview.jpg",
-      title: "PortTrack Canlı Dashboard",
-      desc: "3.192.206 ₺ Toplam Varlık, MTD +%3,25, YTD +%53,75",
-      label: "Genel Bakış",
-    },
-    {
-      src: "/api/showcase/growth-matrix.jpg",
-      title: "Ay Ay Büyüme Matrisi",
-      desc: "2021-2026 Toplam +%6.850,61 ₺ Kazanç Büyüme Performansı",
-      label: "Büyüme Matrisi",
-    },
-    {
-      src: "/api/showcase/performance-heatmap.jpg",
-      title: "Performans Sıcaklık Haritası",
-      desc: "Varlık bazında kâr/zarar ve ay ay getiri dağılımları",
-      label: "Sıcaklık Haritası",
-    },
-    {
-      src: "/api/showcase/asset-scores.jpg",
-      title: "Varlık Sağlık Skorları",
-      desc: "0-100 kural tabanlı teknik analiz ve momentum puanlaması",
-      label: "Sağlık Skorları",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-foreground)] flex items-center justify-center p-4 sm:p-6 md:p-10 relative overflow-hidden font-sans">
       {/* Background Glow Effects */}
@@ -127,51 +94,81 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Real Application Screenshot Image Gallery with Interactive Tabs */}
-          <div className="my-6 space-y-3 relative z-10">
-            {/* Main Active Screenshot Image Preview */}
-            <div className="relative group rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/40">
-              {/* eslint-disable-next-html-extension / next-image */}
-              <img
-                src={activeImg.src}
-                alt={activeImg.title}
-                className="w-full h-48 sm:h-56 object-cover object-top rounded-2xl transition-all duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-4">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-black text-white flex items-center gap-1.5">
-                    <TrendingUp size={14} className="text-emerald-400" /> {activeImg.title}
+          {/* Animated Glassmorphic Feature Dashboard Widget Showcase */}
+          <div className="my-6 space-y-3.5 relative z-10">
+            {/* Live Portfolio Value Summary Widget */}
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl space-y-3 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
+              
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-indigo-200 font-extrabold flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  Canlı Portföy Varlığı
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-[10px] border border-emerald-500/30">
+                  +%840,98 Toplam
+                </span>
+              </div>
+
+              <div className="flex justify-between items-baseline">
+                <div>
+                  <div className="text-2xl lg:text-3xl font-black tabular-nums tracking-tight text-white">
+                    3.192.206 ₺
                   </div>
-                  <div className="text-[10px] text-indigo-200 font-medium">
-                    {activeImg.desc}
-                  </div>
+                  <div className="text-[11px] text-indigo-200 font-semibold">$67.449 USD</div>
                 </div>
+                <div className="text-right">
+                  <div className="text-xs font-black text-emerald-400">+100.530 ₺</div>
+                  <div className="text-[10px] text-indigo-200">Bu Ay (MTD +%3,25)</div>
+                </div>
+              </div>
+
+              {/* Sparkline Graphic Bars */}
+              <div className="flex items-end gap-1.5 h-7 pt-1">
+                {[40, 55, 35, 65, 80, 70, 90, 85, 100].map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 bg-gradient-to-t from-emerald-500/30 to-emerald-400 rounded-t-sm transition-all duration-300 group-hover:brightness-125"
+                    style={{ height: `${h}%` }}
+                  />
+                ))}
               </div>
             </div>
 
-            {/* Thumbnail Gallery Switches */}
-            <div className="grid grid-cols-4 gap-1.5">
-              {screenshots.map((s) => (
-                <button
-                  key={s.src}
-                  type="button"
-                  onClick={() => setActiveImg(s)}
-                  className={`rounded-xl overflow-hidden border transition-all text-left group relative ${
-                    activeImg.src === s.src
-                      ? "border-emerald-400 ring-2 ring-emerald-400/40 opacity-100 scale-105"
-                      : "border-white/15 opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  <img
-                    src={s.src}
-                    alt={s.label}
-                    className="w-full h-12 object-cover object-top"
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-0.5 text-[9px] font-black text-white text-center">
-                    {s.label}
-                  </div>
-                </button>
-              ))}
+            {/* Asset Performance Grid Badges */}
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
+              {/* Asset 1: TEFAS Fonu */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5 backdrop-blur-md">
+                <div className="flex justify-between items-center text-indigo-200 text-[10px]">
+                  <span>PHE (TEFAS)</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-black text-[9px]">88 Skor</span>
+                </div>
+                <div className="flex justify-between text-white font-black">
+                  <span>498.250 ₺</span>
+                  <span className="text-emerald-400">+%15,6</span>
+                </div>
+                <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+                  <div className="bg-emerald-400 h-full w-[88%]" />
+                </div>
+              </div>
+
+              {/* Asset 2: Yabancı Borsa Hissesi */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5 backdrop-blur-md">
+                <div className="flex justify-between items-center text-indigo-200 text-[10px]">
+                  <span>INTC (Borsa)</span>
+                  <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-black text-[9px]">+103,5%</span>
+                </div>
+                <div className="flex justify-between text-white font-black">
+                  <span>143.200 ₺</span>
+                  <span className="text-cyan-400">RSI &lt; 30</span>
+                </div>
+                <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+                  <div className="bg-cyan-400 h-full w-[76%]" />
+                </div>
+              </div>
             </div>
           </div>
 
