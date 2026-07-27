@@ -122,7 +122,7 @@ export function Topbar() {
             title="Güncel fiyatları çek"
           >
             <RefreshCw size={14} className={cn(refreshing && "animate-spin")} />
-            <span className="hidden sm:inline">
+            <span className="inline text-[11px] sm:text-xs">
               {refreshing ? "Güncelleniyor..." : "Fiyatları Güncelle"}
             </span>
           </button>
