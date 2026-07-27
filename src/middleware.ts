@@ -9,6 +9,8 @@ const PUBLIC = [
   "/gizlilik-politikasi",
   "/showcase",
   "/api/showcase",
+  "/api/email/preview",
+  "/email-preview",
   "/api/auth/login",
   "/api/auth/register",
   "/api/cron",
