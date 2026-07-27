@@ -57,21 +57,21 @@ export async function GET(req: NextRequest) {
     const dailyAmtTRY = periodReturns.dailyAmtTRY ?? 0;
     const dailyPctTRY = periodReturns.dailyTRY ?? 0;
 
-    // En iyi 3 Varlık (Genel Kârlılığa Göre)
-    const topPerformers = holdings
-      .map((h) => ({
-        symbol: h.symbol,
-        assetType: h.assetType,
-        changePercent: h.unrealizedPctTRY || h.dailyChangePct || 0,
-        valueTRY: h.valueTRY,
-      }))
-      .sort((a, b) => b.changePercent - a.changePercent)
-      .slice(0, 3);
+    // Tüm varlıkların performans verisi
+    const mappedHoldings = holdings.map((h) => ({
+      symbol: h.symbol,
+      assetType: h.assetType,
+      changePercent: h.unrealizedPctTRY || h.dailyChangePct || 0,
+      valueTRY: h.valueTRY,
+    }));
 
-    // AI Analiz Skoru ve Özet
-    const scores = holdings.map((h) => h.analysis?.score).filter((s): s is number => typeof s === "number");
-    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 84;
-    const aiBriefingSummary = `Geçen gün itibarıyla portföyünüzün teknik sağlık skoru ${avgScore}/100 seviyesindedir. TEFAS fonlarında ve BIST hisselerinde momentum pozitif alanda seyretmektedir.`;
+    // Günün En Çok Kazandıran İlk 3 Varlığı
+    const sortedDesc = [...mappedHoldings].sort((a, b) => b.changePercent - a.changePercent);
+    const topGainers = sortedDesc.slice(0, 3);
+
+    // Günün En Çok Kaybettiren İlk 3 Varlığı
+    const sortedAsc = [...mappedHoldings].sort((a, b) => a.changePercent - b.changePercent);
+    const topLosers = sortedAsc.slice(0, 3);
 
     const dateStr = new Date().toLocaleDateString("tr-TR", {
       day: "numeric",
@@ -91,9 +91,8 @@ export async function GET(req: NextRequest) {
       weeklyPctTRY: periodReturns.weeklyTRY,
       mtdPctTRY: periodReturns.mtdTRY,
       ytdPctTRY: periodReturns.ytdTRY,
-      topPerformers,
-      aiScore: avgScore,
-      aiBriefingSummary,
+      topGainers,
+      topLosers,
     });
 
     // 4. Canlı E-Postayı Gönder (Resend API)
@@ -119,7 +118,8 @@ export async function GET(req: NextRequest) {
       stats: {
         totalTRY,
         totalUSD,
-        topPerformersCount: topPerformers.length,
+        topGainersCount: topGainers.length,
+        topLosersCount: topLosers.length,
       },
     });
   } catch (err: any) {

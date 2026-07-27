@@ -2,6 +2,13 @@
  * PortTrack %100 Mobil Dark/Light Uyumlu Günlük Portföy Özet E-Postası HTML Şablon Oluşturucu
  */
 
+export interface PerformerItem {
+  symbol: string;
+  assetType: string;
+  changePercent: number;
+  valueTRY: number;
+}
+
 export interface DailyDigestData {
   userName: string;
   userEmail: string;
@@ -18,14 +25,9 @@ export interface DailyDigestData {
   mtdPctTRY: number | null;
   ytdPctTRY: number | null;
 
-  topPerformers: Array<{
-    symbol: string;
-    assetType: string;
-    changePercent: number;
-    valueTRY: number;
-  }>;
-  aiScore: number;
-  aiBriefingSummary: string;
+  // En Çok Kazanan 3 ve En Çok Kaybeden 3 Varlık
+  topGainers: PerformerItem[];
+  topLosers: PerformerItem[];
 }
 
 export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
@@ -42,14 +44,29 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
   const fmtPct = (val: number | null) =>
     val == null ? "%0,00" : `${val >= 0 ? "+" : ""}${val.toFixed(2).replace(".", ",")}%`;
 
-  const performersRows = data.topPerformers
+  // Gainers Rows
+  const gainersRows = data.topGainers
     .map(
       (item) => `
       <tr style="border-bottom: 1px solid #f1f5f9;">
-        <td style="padding: 12px 14px; font-weight: 800; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; font-size: 13px;">${item.symbol}</td>
-        <td style="padding: 12px 14px; color: #64748b !important; -webkit-text-fill-color: #64748b !important; font-size: 11px; font-weight: 600;">${item.assetType}</td>
-        <td style="padding: 12px 14px; text-align: right; color: #16a34a !important; -webkit-text-fill-color: #16a34a !important; font-weight: 800; font-size: 13px;">+${item.changePercent.toFixed(2).replace(".", ",")}%</td>
-        <td style="padding: 12px 14px; text-align: right; color: #334155 !important; -webkit-text-fill-color: #334155 !important; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
+        <td style="padding: 10px 14px; font-weight: 800; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; font-size: 13px;">${item.symbol}</td>
+        <td style="padding: 10px 14px; color: #64748b !important; -webkit-text-fill-color: #64748b !important; font-size: 11px; font-weight: 600;">${item.assetType}</td>
+        <td style="padding: 10px 14px; text-align: right; color: #16a34a !important; -webkit-text-fill-color: #16a34a !important; font-weight: 800; font-size: 13px;">+${item.changePercent.toFixed(2).replace(".", ",")}%</td>
+        <td style="padding: 10px 14px; text-align: right; color: #334155 !important; -webkit-text-fill-color: #334155 !important; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
+      </tr>
+    `
+    )
+    .join("");
+
+  // Losers Rows
+  const losersRows = data.topLosers
+    .map(
+      (item) => `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 14px; font-weight: 800; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; font-size: 13px;">${item.symbol}</td>
+        <td style="padding: 10px 14px; color: #64748b !important; -webkit-text-fill-color: #64748b !important; font-size: 11px; font-weight: 600;">${item.assetType}</td>
+        <td style="padding: 10px 14px; text-align: right; color: #dc2626 !important; -webkit-text-fill-color: #dc2626 !important; font-weight: 800; font-size: 13px;">${item.changePercent.toFixed(2).replace(".", ",")}%</td>
+        <td style="padding: 10px 14px; text-align: right; color: #334155 !important; -webkit-text-fill-color: #334155 !important; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
       </tr>
     `
     )
@@ -73,7 +90,7 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
         <!-- Main Content Card -->
         <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 560px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
           
-          <!-- Header Banner (Solid Color Fallback + WebKit Forced White Text) -->
+          <!-- Header Banner -->
           <tr>
             <td bgcolor="#1e1b4b" style="background-color: #1e1b4b !important; padding: 30px 28px 24px;">
               <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -150,14 +167,14 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
             </td>
           </tr>
 
-          <!-- Top Performers Table -->
+          <!-- Top Gainers Table (En Çok Kazandıran İlk 3) -->
           ${
-            data.topPerformers.length > 0
+            data.topGainers.length > 0
               ? `
           <tr>
-            <td style="padding: 0 28px 24px;">
-              <div style="font-size: 13px; font-weight: 900; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; margin-bottom: 12px;">
-                🔥 Portföyde Öne Çıkan Varlıklar
+            <td style="padding: 0 28px 20px;">
+              <div style="font-size: 13px; font-weight: 900; color: #16a34a !important; -webkit-text-fill-color: #16a34a !important; margin-bottom: 10px;">
+                🟢 Günün En Çok Kazandıran 3 Varlığı
               </div>
               <div style="background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
                 <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left;">
@@ -170,7 +187,7 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
                     </tr>
                   </thead>
                   <tbody>
-                    ${performersRows}
+                    ${gainersRows}
                   </tbody>
                 </table>
               </div>
@@ -180,19 +197,35 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
               : ""
           }
 
-          <!-- AI Insights Box -->
+          <!-- Top Losers Table (En Çok Kaybettiren İlk 3) -->
+          ${
+            data.topLosers.length > 0
+              ? `
           <tr>
-            <td style="padding: 0 28px 28px;">
-              <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 18px;">
-                <div style="font-size: 12px; font-weight: 900; color: #1d4ed8 !important; -webkit-text-fill-color: #1d4ed8 !important; margin-bottom: 6px;">
-                  🤖 Yapay Zekâ Analiz Asistanı Notu · Skor: ${data.aiScore}/100
-                </div>
-                <p style="font-size: 12px; color: #1e3a8a !important; -webkit-text-fill-color: #1e3a8a !important; line-height: 1.6; margin: 0; font-weight: 500;">
-                  ${data.aiBriefingSummary}
-                </p>
+            <td style="padding: 0 28px 24px;">
+              <div style="font-size: 13px; font-weight: 900; color: #dc2626 !important; -webkit-text-fill-color: #dc2626 !important; margin-bottom: 10px;">
+                🔴 Günün En Çok Kaybettiren 3 Varlığı
+              </div>
+              <div style="background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden;">
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left;">
+                  <thead>
+                    <tr style="background-color: #f8fafc; color: #64748b !important; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+                      <th style="padding: 10px 14px;">Varlık</th>
+                      <th style="padding: 10px 14px;">Tür</th>
+                      <th style="padding: 10px 14px; text-align: right;">Getiri</th>
+                      <th style="padding: 10px 14px; text-align: right;">Değer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${losersRows}
+                  </tbody>
+                </table>
               </div>
             </td>
           </tr>
+          `
+              : ""
+          }
 
           <!-- Footer Action Button & Disclaimer -->
           <tr>
