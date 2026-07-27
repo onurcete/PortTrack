@@ -100,40 +100,49 @@ function RegisterForm() {
             </div>
           </div>
 
-          {/* Visual Showcase Stack */}
+          {/* Real Application Screenshot Gallery */}
           <div className="my-6 space-y-3 relative z-10">
-            {/* Live Feature Card */}
-            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl space-y-2.5">
-              <div className="flex justify-between items-center text-xs font-extrabold text-indigo-200">
-                <span className="flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-cyan-400" /> Ücretsiz Hesabınız Neleri Kapsar?
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-white">
-                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
-                  <span className="text-emerald-400 font-black">✓</span> Sınırsız İşlem Ekleme
-                </div>
-                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
-                  <span className="text-emerald-400 font-black">✓</span> CSV Ekstre İçe Aktarımı
-                </div>
-                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
-                  <span className="text-emerald-400 font-black">✓</span> TEFAS Akış Takibi
-                </div>
-                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
-                  <span className="text-emerald-400 font-black">✓</span> Performans Matrisleri
+            {/* Main Screenshot Image Preview */}
+            <div className="relative group rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/40">
+              <img
+                src="/showcase/growth-matrix.jpg"
+                alt="Aylık ve Yıllık Büyüme Matrisi"
+                className="w-full h-48 sm:h-56 object-cover object-top rounded-2xl transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-4">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-black text-white flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-emerald-400" /> Ay Ay Performans Matrisi
+                  </div>
+                  <div className="text-[10px] text-indigo-200 font-medium">
+                    2021-2026 Toplam +%6.850,61 ₺ Kazanç Büyüme Performansı
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Portfolio Overview Card Preview */}
-            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5 text-[10px] font-bold">
-              <div className="flex justify-between text-indigo-200">
-                <span>Örnek Toplam Portföy</span>
-                <span className="text-emerald-400 font-black">+%840,98 Kazanç</span>
+            {/* Thumbnail Screenshot Gallery Grid */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
+                <img
+                  src="/showcase/dashboard-overview.jpg"
+                  alt="PortTakip Dashboard"
+                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
+                />
               </div>
-              <div className="flex justify-between text-white font-black text-sm">
-                <span>3.192.206 ₺</span>
-                <span className="text-indigo-200 text-xs">$67.449 USD</span>
+              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
+                <img
+                  src="/showcase/performance-heatmap.jpg"
+                  alt="Performans Sıcaklık Haritası"
+                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
+                />
+              </div>
+              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
+                <img
+                  src="/showcase/tefas-flows.jpg"
+                  alt="TEFAS Katılım Akışları"
+                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
+                />
               </div>
             </div>
           </div>

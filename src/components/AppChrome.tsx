@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { CookieBanner } from "@/components/CookieBanner";
 
@@ -21,6 +22,8 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/welcome" ||
+    pathname === "/kullanim-kosullari" ||
+    pathname === "/gizlilik-politikasi" ||
     (pathname === "/" && isAuth === false);
 
   if (isPublicPage) {
@@ -33,11 +36,42 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-bg)]">
+    <div className="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-foreground)]">
       <Topbar />
       <main className="flex-1 mx-auto w-full max-w-[1400px] px-5 py-7 md:px-10 md:py-9">
         {children}
       </main>
+
+      {/* Logged in App Footer */}
+      <footer className="border-t border-[var(--color-border)]/60 py-6 bg-[var(--color-surface)] text-xs text-[var(--color-muted)] mt-auto">
+        <div className="mx-auto w-full max-w-[1400px] px-5 md:px-10 flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-sm text-[var(--color-foreground)]">PortTrack</span>
+              <span>© 2026 PortTrack. Tüm hakları saklıdır.</span>
+            </div>
+            <p className="text-[10px] text-[var(--color-muted)] max-w-2xl font-medium">
+              <strong className="text-amber-600 dark:text-amber-400">⚠️ Yasal Uyarı (YTD):</strong> Sitedeki tüm grafikler, veri hesaplamaları ve AI asistan yanıtları yalnızca kişisel bilgi amaçlıdır. SPK kapsamında yatırım tavsiyesi teşkil etmez.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 font-bold text-xs">
+            <Link
+              href="/kullanim-kosullari"
+              className="hover:text-[var(--color-brand-strong)] transition-colors underline"
+            >
+              Kullanım Koşulları
+            </Link>
+            <Link
+              href="/gizlilik-politikasi"
+              className="hover:text-[var(--color-brand-strong)] transition-colors underline"
+            >
+              Gizlilik Politikası & KVKK
+            </Link>
+          </div>
+        </div>
+      </footer>
+
       <CookieBanner />
     </div>
   );

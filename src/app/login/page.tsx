@@ -94,56 +94,50 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Visual App Mockup Cards Stack */}
+          {/* Real Application Screenshot Image Gallery */}
           <div className="my-6 space-y-3 relative z-10">
-            {/* Live Portfolio Summary Mockup */}
-            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl space-y-2.5">
-              <div className="flex justify-between items-center text-xs font-extrabold">
-                <span className="text-indigo-200 flex items-center gap-1.5">
-                  <TrendingUp size={14} className="text-emerald-400" /> Canlı Portföy Özeti
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-[10px]">
-                  +%840,98 Toplam
-                </span>
-              </div>
-              <div className="flex justify-between items-baseline">
-                <div>
-                  <div className="text-2xl font-black tabular-nums tracking-tight">3.192.206 ₺</div>
-                  <div className="text-[10px] text-indigo-200">$67.449 USD</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-black text-emerald-400">+100.530 ₺</div>
-                  <div className="text-[10px] text-indigo-200">Bu Ay (MTD +%3,25)</div>
+            {/* Main Screenshot Image Preview */}
+            <div className="relative group rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/40">
+              {/* eslint-disable-next-html-extension / next-image */}
+              <img
+                src="/showcase/dashboard-overview.jpg"
+                alt="PortTrack Canlı Portföy Ekran Görünümü"
+                className="w-full h-48 sm:h-56 object-cover object-top rounded-2xl transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-4">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-black text-white flex items-center gap-1.5">
+                    <TrendingUp size={14} className="text-emerald-400" /> PortTrack Canlı Dashboard
+                  </div>
+                  <div className="text-[10px] text-indigo-200 font-medium">
+                    3.192.206 ₺ Toplam Varlık, MTD +%3,25, YTD +%53,75
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Mini Performance Heatmap & Asset Score Visual Mockups */}
-            <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-              {/* Asset Health Card */}
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
-                <div className="flex justify-between items-center text-indigo-200">
-                  <span>PHE TEFAS Fonu</span>
-                  <span className="h-4 w-4 rounded-full bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center">88</span>
-                </div>
-                <div className="flex justify-between text-white font-black">
-                  <span>498.250 ₺</span>
-                  <span className="text-emerald-400">+%15.6</span>
-                </div>
-                <div className="text-[9px] text-indigo-300">0-100 Yüksek Sağlık Skoru</div>
+            {/* Thumbnail Screenshot Gallery Grid */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
+                <img
+                  src="/showcase/growth-matrix.jpg"
+                  alt="Aylık Büyüme Matrisi"
+                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
+                />
               </div>
-
-              {/* Heatmap Card */}
-              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
-                <div className="flex justify-between items-center text-indigo-200">
-                  <span>INTC Hissesi</span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-extrabold text-[9px]">+103,58%</span>
-                </div>
-                <div className="flex justify-between text-white font-black">
-                  <span>143.200 ₺</span>
-                  <span className="text-emerald-400">RSI &lt; 30 Dip</span>
-                </div>
-                <div className="text-[9px] text-indigo-300">Aylık Matris Performansı</div>
+              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
+                <img
+                  src="/showcase/performance-heatmap.jpg"
+                  alt="Performans Sıcaklık Haritası"
+                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
+                />
+              </div>
+              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
+                <img
+                  src="/showcase/asset-scores.jpg"
+                  alt="Varlık Sağlık Skorları"
+                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
+                />
               </div>
             </div>
           </div>
