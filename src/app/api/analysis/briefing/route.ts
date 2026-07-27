@@ -19,11 +19,6 @@ export const maxDuration = 60;
 /** AI briefing üretir veya cache'den döner. ?force=1 ile yeniden üretir. */
 export async function POST(req: NextRequest) {
   try {
-    const userId = await requireUser();
-    const force =
-      req.nextUrl.searchParams.get("force") === "1" ||
-      req.nextUrl.searchParams.get("force") === "true";
-
     if (!isOpenAiConfigured()) {
       return NextResponse.json(
         {
@@ -34,6 +29,11 @@ export async function POST(req: NextRequest) {
         { status: 503 },
       );
     }
+
+    const userId = await requireUser();
+    const force =
+      req.nextUrl.searchParams.get("force") === "1" ||
+      req.nextUrl.searchParams.get("force") === "true";
 
     const modeParam = req.nextUrl.searchParams.get("mode") as "general" | "technical" | "risk" | "opportunity" | null;
     const focusMode = modeParam ?? "general";
