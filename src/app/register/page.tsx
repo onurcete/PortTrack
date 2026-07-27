@@ -53,6 +53,39 @@ function RegisterForm() {
     }
   }
 
+  const [activeImg, setActiveImg] = useState<{ src: string; title: string; desc: string }>({
+    src: "/api/showcase/growth-matrix.jpg",
+    title: "Ay Ay Performans Matrisi",
+    desc: "2021-2026 Toplam +%6.850,61 ₺ Kazanç Büyüme Performansı",
+  });
+
+  const screenshots = [
+    {
+      src: "/api/showcase/growth-matrix.jpg",
+      title: "Ay Ay Performans Matrisi",
+      desc: "2021-2026 Toplam +%6.850,61 ₺ Kazanç Büyüme Performansı",
+      label: "Büyüme Matrisi",
+    },
+    {
+      src: "/api/showcase/dashboard-overview.jpg",
+      title: "PortTrack Canlı Dashboard",
+      desc: "3.192.206 ₺ Toplam Varlık, MTD +%3,25, YTD +%53,75",
+      label: "Genel Bakış",
+    },
+    {
+      src: "/api/showcase/performance-heatmap.jpg",
+      title: "Performans Sıcaklık Haritası",
+      desc: "Varlık bazında kâr/zarar ve ay ay getiri dağılımları",
+      label: "Sıcaklık Haritası",
+    },
+    {
+      src: "/api/showcase/tefas-flows.jpg",
+      title: "TEFAS Katılım Akışları",
+      desc: "Fon katılım & ayrılış hareketleri haritası",
+      label: "TEFAS Akışları",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-foreground)] flex items-center justify-center p-4 sm:p-6 md:p-10 relative overflow-hidden font-sans">
       {/* Background Glow Effects */}
@@ -100,50 +133,50 @@ function RegisterForm() {
             </div>
           </div>
 
-          {/* Real Application Screenshot Gallery */}
+          {/* Real Application Screenshot Gallery with Interactive Tabs */}
           <div className="my-6 space-y-3 relative z-10">
             {/* Main Screenshot Image Preview */}
             <div className="relative group rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/40">
               <img
-                src="/showcase/growth-matrix.jpg"
-                alt="Aylık ve Yıllık Büyüme Matrisi"
-                className="w-full h-48 sm:h-56 object-cover object-top rounded-2xl transition-transform duration-500 group-hover:scale-105"
+                src={activeImg.src}
+                alt={activeImg.title}
+                className="w-full h-48 sm:h-56 object-cover object-top rounded-2xl transition-all duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-4">
                 <div className="space-y-0.5">
                   <div className="text-xs font-black text-white flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-emerald-400" /> Ay Ay Performans Matrisi
+                    <Sparkles size={14} className="text-emerald-400" /> {activeImg.title}
                   </div>
                   <div className="text-[10px] text-indigo-200 font-medium">
-                    2021-2026 Toplam +%6.850,61 ₺ Kazanç Büyüme Performansı
+                    {activeImg.desc}
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Thumbnail Screenshot Gallery Grid */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
-                <img
-                  src="/showcase/dashboard-overview.jpg"
-                  alt="PortTakip Dashboard"
-                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
-                />
-              </div>
-              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
-                <img
-                  src="/showcase/performance-heatmap.jpg"
-                  alt="Performans Sıcaklık Haritası"
-                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
-                />
-              </div>
-              <div className="rounded-xl overflow-hidden border border-white/15 shadow-md bg-black/30 group">
-                <img
-                  src="/showcase/tefas-flows.jpg"
-                  alt="TEFAS Katılım Akışları"
-                  className="w-full h-14 object-cover object-top transition-transform group-hover:scale-110"
-                />
-              </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {screenshots.map((s) => (
+                <button
+                  key={s.src}
+                  type="button"
+                  onClick={() => setActiveImg(s)}
+                  className={`rounded-xl overflow-hidden border transition-all text-left group relative ${
+                    activeImg.src === s.src
+                      ? "border-emerald-400 ring-2 ring-emerald-400/40 opacity-100 scale-105"
+                      : "border-white/15 opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={s.src}
+                    alt={s.label}
+                    className="w-full h-12 object-cover object-top"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-0.5 text-[9px] font-black text-white text-center">
+                    {s.label}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 

@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE, getSessionUser } from "@/lib/auth";
 
-const PUBLIC = ["/welcome", "/login", "/register", "/api/auth/login", "/api/auth/register", "/api/cron"];
+const PUBLIC = [
+  "/welcome",
+  "/login",
+  "/register",
+  "/kullanim-kosullari",
+  "/gizlilik-politikasi",
+  "/showcase",
+  "/api/showcase",
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/cron",
+];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -32,5 +43,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|showcase|.*\\.(?:png|jpg|jpeg|gif|svg|ico)).*)"],
 };
