@@ -18,25 +18,48 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isValidEmail = EMAIL_REGEX.test(email.trim());
+  const emailsMatch = email.trim().toLowerCase() === confirmEmail.trim().toLowerCase() && confirmEmail.length > 0;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError("");
+
+    // Live Validations
+    if (!isValidEmail) {
+      setError("Lütfen geçerli bir e-posta adresi girin (Örn: ad@domain.com).");
+      return;
+    }
+
+    if (!emailsMatch) {
+      setError("E-posta adresi ile E-posta tekrarı birbiriyle eşleşmiyor.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Şifreniz en az 6 karakter olmalıdır.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, confirmEmail, password }),
       });
       if (res.ok) {
         const next = params.get("next") || "/";
@@ -215,10 +238,22 @@ function RegisterForm() {
                 </div>
               </div>
 
+              {/* Email Address Input & Live Validation */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
-                  E-posta Adresi
-                </label>
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                    E-posta Adresi
+                  </label>
+                  {email.length > 0 && (
+                    <span
+                      className={`text-[10px] font-bold flex items-center gap-1 ${
+                        isValidEmail ? "text-emerald-400" : "text-rose-400"
+                      }`}
+                    >
+                      {isValidEmail ? "✓ Geçerli E-posta Formatı" : "⚠️ Geçersiz e-posta adresi"}
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <Mail
                     size={16}
@@ -229,8 +264,52 @@ function RegisterForm() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 pl-10 pr-4 py-3 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all placeholder:font-medium"
+                    className={`w-full rounded-xl border pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all placeholder:font-medium bg-[var(--color-surface-muted)]/40 ${
+                      email.length > 0
+                        ? isValidEmail
+                          ? "border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                          : "border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                        : "border-[var(--color-border)] focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20"
+                    }`}
                     placeholder="ornek@e-posta.com"
+                  />
+                </div>
+              </div>
+
+              {/* Confirm Email Address Input */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                    E-posta Adresi Tekrarı (Onay)
+                  </label>
+                  {confirmEmail.length > 0 && (
+                    <span
+                      className={`text-[10px] font-bold flex items-center gap-1 ${
+                        emailsMatch ? "text-emerald-400" : "text-rose-400"
+                      }`}
+                    >
+                      {emailsMatch ? "✓ Adresler Eşleşiyor" : "⚠️ Adresler Eşleşmiyor"}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Mail
+                    size={16}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+                  />
+                  <input
+                    type="email"
+                    required
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    className={`w-full rounded-xl border pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all placeholder:font-medium bg-[var(--color-surface-muted)]/40 ${
+                      confirmEmail.length > 0
+                        ? emailsMatch
+                          ? "border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                          : "border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                        : "border-[var(--color-border)] focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20"
+                    }`}
+                    placeholder="ornek@e-posta.com (Tekrar)"
                   />
                 </div>
               </div>

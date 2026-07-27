@@ -4,10 +4,13 @@ import { AUTH_COOKIE, createSession, hashPassword } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 export async function POST(req: NextRequest) {
-  const { name, email, password } = (await req.json().catch(() => ({}))) as {
+  const { name, email, confirmEmail, password } = (await req.json().catch(() => ({}))) as {
     name?: string;
     email?: string;
+    confirmEmail?: string;
     password?: string;
   };
 
@@ -18,14 +21,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // 1. Strict Email Format Validation
+  if (!EMAIL_REGEX.test(normalizedEmail)) {
+    return NextResponse.json(
+      { ok: false, error: "Lütfen geçerli bir e-posta adresi girin (Örn: ad@domain.com)." },
+      { status: 400 },
+    );
+  }
+
+  // 2. Email Confirmation Check
+  if (confirmEmail !== undefined && confirmEmail.trim().toLowerCase() !== normalizedEmail) {
+    return NextResponse.json(
+      { ok: false, error: "E-posta adresleri birbiriyle eşleşmiyor." },
+      { status: 400 },
+    );
+  }
+
   if (password.length < 6) {
     return NextResponse.json(
       { ok: false, error: "Şifre en az 6 karakter olmalıdır." },
       { status: 400 },
     );
   }
-
-  const normalizedEmail = email.trim().toLowerCase();
 
   // Check if email already exists
   const existingUser = await prisma.user.findFirst({
