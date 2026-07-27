@@ -62,13 +62,13 @@ function RegisterForm() {
       {/* Main Glass Card Container */}
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 bg-[var(--color-surface)] border border-[var(--color-border)]/70 rounded-3xl shadow-2xl overflow-hidden relative z-10">
         
-        {/* Left Side: Brand Showcase & Features (Hidden on mobile) */}
+        {/* Left Side: Brand Showcase & Rich Features */}
         <div className="hidden md:flex md:col-span-6 p-8 lg:p-12 bg-gradient-to-br from-[var(--color-brand-strong)] via-indigo-950 to-slate-950 text-white flex-col justify-between relative overflow-hidden">
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
 
           {/* Top Logo & Back link */}
-          <div className="space-y-6 relative z-10">
+          <div className="space-y-5 relative z-10">
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3 group">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[var(--color-brand-strong)] font-black text-base shadow-md group-hover:scale-105 transition-transform">
@@ -86,7 +86,7 @@ function RegisterForm() {
             </div>
 
             {/* Headline */}
-            <div className="space-y-3 pt-4">
+            <div className="space-y-2 pt-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-emerald-300 border border-white/15 text-[11px] font-extrabold">
                 <Sparkles size={13} />
                 <span>%100 Ücretsiz Portföy Hesabı</span>
@@ -94,43 +94,66 @@ function RegisterForm() {
               <h2 className="text-2xl lg:text-3xl font-black leading-tight tracking-tight">
                 Saniyeler İçinde Hesabınızı Oluşturun.
               </h2>
-              <p className="text-xs lg:text-sm text-indigo-200/80 leading-relaxed font-medium">
-                Tüm yatırımlarınızı tek bir güvenli panelde bir araya getirin. Kredi kartı gerekmez, anında kullanmaya başlayın.
+              <p className="text-xs text-indigo-200/80 leading-relaxed font-medium">
+                Tüm yatırımlarınızı tek bir güvenli panelde bir araya getirin. Kredi kartı gerekmez.
               </p>
             </div>
           </div>
 
-          {/* Floating Live Feature Card */}
-          <div className="my-8 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl space-y-3 relative z-10">
-            <div className="flex justify-between items-center text-xs font-extrabold text-indigo-200">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-cyan-400" /> Ücretsiz Hesabınız Neleri Kapsar?
-              </span>
+          {/* Visual Showcase Stack */}
+          <div className="my-6 space-y-3 relative z-10">
+            {/* Live Feature Card */}
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl space-y-2.5">
+              <div className="flex justify-between items-center text-xs font-extrabold text-indigo-200">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-cyan-400" /> Ücretsiz Hesabınız Neleri Kapsar?
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-white">
+                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-black">✓</span> Sınırsız İşlem Ekleme
+                </div>
+                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-black">✓</span> CSV Ekstre İçe Aktarımı
+                </div>
+                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-black">✓</span> TEFAS Akış Takibi
+                </div>
+                <div className="p-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5">
+                  <span className="text-emerald-400 font-black">✓</span> Performans Matrisleri
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-bold text-white">
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">✓ Sınırsız İşlem Ekleme</div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">✓ CSV Ekstre İçe Aktarımı</div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">✓ TEFAS Akış Takibi</div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">✓ Performans Matrisleri</div>
+
+            {/* Portfolio Overview Card Preview */}
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5 text-[10px] font-bold">
+              <div className="flex justify-between text-indigo-200">
+                <span>Örnek Toplam Portföy</span>
+                <span className="text-emerald-400 font-black">+%840,98 Kazanç</span>
+              </div>
+              <div className="flex justify-between text-white font-black text-sm">
+                <span>3.192.206 ₺</span>
+                <span className="text-indigo-200 text-xs">$67.449 USD</span>
+              </div>
             </div>
           </div>
 
           {/* Feature Bullets */}
-          <div className="space-y-2.5 text-xs text-indigo-100 font-medium relative z-10">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+          <div className="space-y-2 text-xs text-indigo-100 font-medium relative z-10">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
               <span>Gelişmiş ₺ / $ Çoklu Para Birimi Desteği</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <Zap size={16} className="text-amber-400 shrink-0" />
+            <div className="flex items-center gap-2">
+              <Zap size={15} className="text-amber-400 shrink-0" />
               <span>Yapay Zekâ Analiz Asistanı Erişimi</span>
             </div>
           </div>
 
           {/* Bottom Copyright */}
-          <div className="pt-6 border-t border-white/10 text-[10px] text-indigo-300/70 font-semibold flex justify-between items-center relative z-10">
+          <div className="pt-5 border-t border-white/10 text-[10px] text-indigo-300/70 font-semibold flex justify-between items-center relative z-10 mt-4">
             <span>© 2026 PortTrack. Ücretsiz Kayıt.</span>
-            <Link href="/" className="hover:text-white transition-colors flex items-center gap-1">
+            <Link href="/" className="hover:text-white transition-colors flex items-center gap-1 font-extrabold">
               <ArrowLeft size={12} /> Ana Sayfa
             </Link>
           </div>

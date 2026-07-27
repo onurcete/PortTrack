@@ -87,7 +87,7 @@ export function Topbar() {
         </Link>
 
         {/* Orta Bölüm: Yatay Menü Sekmeleri */}
-        <nav className="flex items-center gap-1 md:gap-2">
+        <nav className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
           {navItems.map((item) => {
             const active =
               item.href === "/"
@@ -99,14 +99,14 @@ export function Topbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs md:text-sm font-medium transition-all duration-150",
+                  "flex items-center gap-1.5 rounded-xl px-2 py-1.5 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs md:text-sm font-bold transition-all duration-150 whitespace-nowrap",
                   active
-                    ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shadow-sm"
+                    ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shadow-xs"
                     : "text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
                 )}
               >
-                <Icon size={16} />
-                <span className="hidden md:inline">{item.label}</span>
+                <Icon size={16} className="shrink-0" />
+                <span>{item.label}</span>
               </Link>
             );
           })}
@@ -118,11 +118,11 @@ export function Topbar() {
             type="button"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="btn btn-outline py-1.5 px-3 text-xs h-9"
+            className="btn btn-outline py-1.5 px-2.5 sm:px-3 text-xs h-9"
             title="Güncel fiyatları çek"
           >
             <RefreshCw size={14} className={cn(refreshing && "animate-spin")} />
-            <span className="hidden lg:inline">
+            <span className="hidden sm:inline">
               {refreshing ? "Güncelleniyor..." : "Fiyatları Güncelle"}
             </span>
           </button>
@@ -132,7 +132,7 @@ export function Topbar() {
 
           <button
             onClick={logout}
-            className="btn btn-ghost py-1.5 px-2.5 h-9 text-xs flex items-center gap-1.5"
+            className="btn btn-ghost py-1.5 px-2 sm:px-2.5 h-9 text-xs flex items-center gap-1.5"
             title="Çıkış Yap"
           >
             <LogOut size={16} />

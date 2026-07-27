@@ -60,13 +60,13 @@ function LoginForm() {
       {/* Main Glass Card Container */}
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 bg-[var(--color-surface)] border border-[var(--color-border)]/70 rounded-3xl shadow-2xl overflow-hidden relative z-10">
         
-        {/* Left Side: Brand Showcase & Features (Hidden on mobile) */}
+        {/* Left Side: Brand Showcase & Rich Application Mockups */}
         <div className="hidden md:flex md:col-span-6 p-8 lg:p-12 bg-gradient-to-br from-[var(--color-brand-strong)] via-indigo-950 to-slate-950 text-white flex-col justify-between relative overflow-hidden">
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-[var(--color-brand)]/25 rounded-full blur-2xl pointer-events-none" />
 
           {/* Top Logo & Back link */}
-          <div className="space-y-6 relative z-10">
+          <div className="space-y-5 relative z-10">
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center gap-3 group">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[var(--color-brand-strong)] font-black text-base shadow-md group-hover:scale-105 transition-transform">
@@ -84,58 +84,90 @@ function LoginForm() {
             </div>
 
             {/* Headline */}
-            <div className="space-y-3 pt-4">
+            <div className="space-y-2 pt-2">
               <h2 className="text-2xl lg:text-3xl font-black leading-tight tracking-tight">
                 Finansal Yatırımlarınızı Profesyonelce Yönetin.
               </h2>
-              <p className="text-xs lg:text-sm text-indigo-200/80 leading-relaxed font-medium">
-                BIST, TEFAS fonları, Yabancı borsalar, Kripto, Döviz ve BES birikimlerinizin tamamını tek ekranda anlık izleyin.
+              <p className="text-xs text-indigo-200/80 leading-relaxed font-medium">
+                BIST, TEFAS fonları, Yabancı borsalar, Kripto, Döviz ve BES birikimlerinizin tamamını anlık takip edin.
               </p>
             </div>
           </div>
 
-          {/* Floating Live Portfolio Mini Card */}
-          <div className="my-8 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl space-y-3 relative z-10">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-indigo-200 font-extrabold flex items-center gap-1.5">
-                <TrendingUp size={14} className="text-emerald-400" /> Canlı Portföy Özeti
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-[10px]">
-                +%840,98 Toplam
-              </span>
-            </div>
-            <div className="flex justify-between items-baseline">
-              <div>
-                <div className="text-xl font-black tabular-nums tracking-tight">3.192.206 ₺</div>
-                <div className="text-[10px] text-indigo-200">$67.449 USD</div>
+          {/* Visual App Mockup Cards Stack */}
+          <div className="my-6 space-y-3 relative z-10">
+            {/* Live Portfolio Summary Mockup */}
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 shadow-xl space-y-2.5">
+              <div className="flex justify-between items-center text-xs font-extrabold">
+                <span className="text-indigo-200 flex items-center gap-1.5">
+                  <TrendingUp size={14} className="text-emerald-400" /> Canlı Portföy Özeti
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-[10px]">
+                  +%840,98 Toplam
+                </span>
               </div>
-              <div className="text-right">
-                <div className="text-xs font-black text-emerald-400">+100.530 ₺</div>
-                <div className="text-[10px] text-indigo-200">Bu Ay (MTD +%3,25)</div>
+              <div className="flex justify-between items-baseline">
+                <div>
+                  <div className="text-2xl font-black tabular-nums tracking-tight">3.192.206 ₺</div>
+                  <div className="text-[10px] text-indigo-200">$67.449 USD</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-black text-emerald-400">+100.530 ₺</div>
+                  <div className="text-[10px] text-indigo-200">Bu Ay (MTD +%3,25)</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mini Performance Heatmap & Asset Score Visual Mockups */}
+            <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+              {/* Asset Health Card */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                <div className="flex justify-between items-center text-indigo-200">
+                  <span>PHE TEFAS Fonu</span>
+                  <span className="h-4 w-4 rounded-full bg-emerald-500 text-white font-black text-[9px] flex items-center justify-center">88</span>
+                </div>
+                <div className="flex justify-between text-white font-black">
+                  <span>498.250 ₺</span>
+                  <span className="text-emerald-400">+%15.6</span>
+                </div>
+                <div className="text-[9px] text-indigo-300">0-100 Yüksek Sağlık Skoru</div>
+              </div>
+
+              {/* Heatmap Card */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                <div className="flex justify-between items-center text-indigo-200">
+                  <span>INTC Hissesi</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-extrabold text-[9px]">+103,58%</span>
+                </div>
+                <div className="flex justify-between text-white font-black">
+                  <span>143.200 ₺</span>
+                  <span className="text-emerald-400">RSI &lt; 30 Dip</span>
+                </div>
+                <div className="text-[9px] text-indigo-300">Aylık Matris Performansı</div>
               </div>
             </div>
           </div>
 
           {/* Feature Bullets */}
-          <div className="space-y-2.5 text-xs text-indigo-100 font-medium relative z-10">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-              <span>Detaylı Pozisyon & Ay Ay Performans Matrisleri</span>
+          <div className="space-y-2 text-xs text-indigo-100 font-medium relative z-10">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+              <span>Ay Ay & Yıl Yıl Büyüme Matrisleri</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <Zap size={16} className="text-amber-400 shrink-0" />
-              <span>0-100 Kural Tabanlı Teknik Sağlık Skorları</span>
+            <div className="flex items-center gap-2">
+              <Zap size={15} className="text-amber-400 shrink-0" />
+              <span>TEFAS Yatırımcı Katılım & Ayrılış Akışları</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck size={16} className="text-cyan-400 shrink-0" />
-              <span>TEFAS Fon Katılım & Ayrılış Akış Haritası</span>
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={15} className="text-cyan-400 shrink-0" />
+              <span>Tek Tıkla CSV Borsa Ekstre Yükleme</span>
             </div>
           </div>
 
           {/* Bottom Copyright */}
-          <div className="pt-6 border-t border-white/10 text-[10px] text-indigo-300/70 font-semibold flex justify-between items-center relative z-10">
+          <div className="pt-5 border-t border-white/10 text-[10px] text-indigo-300/70 font-semibold flex justify-between items-center relative z-10 mt-4">
             <span>© 2026 PortTrack. Güvenli Giriş.</span>
-            <Link href="/" className="hover:text-white transition-colors flex items-center gap-1">
+            <Link href="/" className="hover:text-white transition-colors flex items-center gap-1 font-extrabold">
               <ArrowLeft size={12} /> Ana Sayfa
             </Link>
           </div>
