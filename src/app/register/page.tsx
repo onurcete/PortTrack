@@ -23,29 +23,27 @@ const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const [step, setStep] = useState<"FORM" | "OTP">("FORM");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   const isValidEmail = EMAIL_REGEX.test(email.trim());
-  const emailsMatch = email.trim().toLowerCase() === confirmEmail.trim().toLowerCase() && confirmEmail.length > 0;
 
-  async function submit(e: React.FormEvent) {
+  // Step 1: Send OTP Code to User's Email via Resend
+  async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setInfo("");
 
-    // Live Validations
     if (!isValidEmail) {
       setError("Lütfen geçerli bir e-posta adresi girin (Örn: ad@domain.com).");
-      return;
-    }
-
-    if (!emailsMatch) {
-      setError("E-posta adresi ile E-posta tekrarı birbiriyle eşleşmiyor.");
       return;
     }
 
@@ -56,24 +54,71 @@ function RegisterForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, confirmEmail, password }),
+        body: JSON.stringify({ name, email, password }),
       });
-      if (res.ok) {
-        const next = params.get("next") || "/";
-        router.replace(next);
-        router.refresh();
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.ok) {
+        setStep("OTP");
+        setInfo(`${email} adresinize 6 haneli doğrulama kodu gönderildi.`);
+        startCountdown();
       } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "Kayıt başarısız. Lütfen bilgilerinizi kontrol edin.");
+        setError(data.error || "Doğrulama kodu gönderilemedi. Lütfen bilgilerinizi kontrol edin.");
       }
     } catch {
       setError("Bağlantı hatası oluştu. Lütfen tekrar deneyin.");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Step 2: Verify 6-digit OTP Code and Complete Registration
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (otpCode.trim().length !== 6) {
+      setError("Lütfen 6 haneli doğrulama kodunu eksiksiz girin.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: otpCode.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.ok) {
+        const next = params.get("next") || "/";
+        router.replace(next);
+        router.refresh();
+      } else {
+        setError(data.error || "Doğrulama kodu hatalı veya süresi dolmuş.");
+      }
+    } catch {
+      setError("Bağlantı hatası oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function startCountdown() {
+    setCountdown(60);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   }
 
   return (
@@ -207,163 +252,218 @@ function RegisterForm() {
               </Link>
             </div>
 
-            {/* Form Title */}
-            <div className="space-y-1.5 mb-8">
-              <h1 className="text-2xl font-black tracking-tight text-[var(--color-foreground)]">
-                Yeni Hesabınızı Oluşturun
-              </h1>
-              <p className="text-xs text-[var(--color-muted)] font-medium">
-                Yatırımlarınızı profesyonelce izlemeye başlamak için kaydolun.
-              </p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={submit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
-                  Ad Soyad
-                </label>
-                <div className="relative">
-                  <User
-                    size={16}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
-                  />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 pl-10 pr-4 py-3 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all placeholder:font-medium"
-                    placeholder="Adınız Soyadınız"
-                  />
+            {step === "FORM" ? (
+              /* STEP 1: USER INFO FORM */
+              <div>
+                <div className="space-y-1.5 mb-6">
+                  <h1 className="text-2xl font-black tracking-tight text-[var(--color-foreground)]">
+                    Yeni Hesabınızı Oluşturun
+                  </h1>
+                  <p className="text-xs text-[var(--color-muted)] font-medium">
+                    Yatırımlarınızı profesyonelce izlemeye başlamak için bilgilerinizi girin.
+                  </p>
                 </div>
-              </div>
 
-              {/* Email Address Input & Live Validation */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
-                    E-posta Adresi
-                  </label>
-                  {email.length > 0 && (
-                    <span
-                      className={`text-[10px] font-bold flex items-center gap-1 ${
-                        isValidEmail ? "text-emerald-400" : "text-rose-400"
-                      }`}
-                    >
-                      {isValidEmail ? "✓ Geçerli E-posta Formatı" : "⚠️ Geçersiz e-posta adresi"}
-                    </span>
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                      Ad Soyad
+                    </label>
+                    <div className="relative">
+                      <User
+                        size={16}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+                      />
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 pl-10 pr-4 py-3 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all placeholder:font-medium"
+                        placeholder="Adınız Soyadınız"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email Address Input & Live Format Check */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                        E-posta Adresi
+                      </label>
+                      {email.length > 0 && (
+                        <span
+                          className={`text-[10px] font-bold flex items-center gap-1 ${
+                            isValidEmail ? "text-emerald-400" : "text-rose-400"
+                          }`}
+                        >
+                          {isValidEmail ? "✓ Geçerli E-posta Formatı" : "⚠️ Geçersiz e-posta adresi"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Mail
+                        size={16}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+                      />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className={`w-full rounded-xl border pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all placeholder:font-medium bg-[var(--color-surface-muted)]/40 ${
+                          email.length > 0
+                            ? isValidEmail
+                              ? "border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                              : "border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                            : "border-[var(--color-border)] focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20"
+                        }`}
+                        placeholder="ornek@e-posta.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                      Şifre
+                    </label>
+                    <div className="relative">
+                      <Lock
+                        size={16}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+                      />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 pl-10 pr-10 py-3 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all placeholder:font-medium"
+                        placeholder="En az 6 karakter"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors p-1"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-extrabold flex items-center gap-2">
+                      <span>⚠️ {error}</span>
+                    </div>
                   )}
-                </div>
-                <div className="relative">
-                  <Mail
-                    size={16}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
-                  />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full rounded-xl border pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all placeholder:font-medium bg-[var(--color-surface-muted)]/40 ${
-                      email.length > 0
-                        ? isValidEmail
-                          ? "border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                          : "border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
-                        : "border-[var(--color-border)] focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20"
-                    }`}
-                    placeholder="ornek@e-posta.com"
-                  />
-                </div>
-              </div>
 
-              {/* Confirm Email Address Input */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
-                    E-posta Adresi Tekrarı (Onay)
-                  </label>
-                  {confirmEmail.length > 0 && (
-                    <span
-                      className={`text-[10px] font-bold flex items-center gap-1 ${
-                        emailsMatch ? "text-emerald-400" : "text-rose-400"
-                      }`}
-                    >
-                      {emailsMatch ? "✓ Adresler Eşleşiyor" : "⚠️ Adresler Eşleşmiyor"}
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <Mail
-                    size={16}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
-                  />
-                  <input
-                    type="email"
-                    required
-                    value={confirmEmail}
-                    onChange={(e) => setConfirmEmail(e.target.value)}
-                    className={`w-full rounded-xl border pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all placeholder:font-medium bg-[var(--color-surface-muted)]/40 ${
-                      confirmEmail.length > 0
-                        ? emailsMatch
-                          ? "border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                          : "border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20"
-                        : "border-[var(--color-border)] focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20"
-                    }`}
-                    placeholder="ornek@e-posta.com (Tekrar)"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
-                  Şifre
-                </label>
-                <div className="relative">
-                  <Lock
-                    size={16}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
-                  />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 pl-10 pr-10 py-3 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all placeholder:font-medium"
-                    placeholder="En az 6 karakter"
-                  />
+                  {/* Submit Button */}
                   <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors p-1"
+                    type="submit"
+                    disabled={loading || !email || !password || !isValidEmail}
+                    className="btn btn-primary w-full py-3.5 text-xs font-black rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 mt-4"
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {loading ? (
+                      <span>Doğrulama Kodu Gönderiliyor...</span>
+                    ) : (
+                      <>
+                        <span>E-Posta Doğrulama Kodu Gönder</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
                   </button>
-                </div>
+                </form>
               </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-extrabold flex items-center gap-2">
-                  <span>⚠️ {error}</span>
+            ) : (
+              /* STEP 2: 6-DIGIT OTP VERIFICATION SCREEN */
+              <div>
+                <div className="space-y-2 mb-6">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-extrabold">
+                    <CheckCircle2 size={14} />
+                    <span>E-Posta Onay Kodu Gönderildi</span>
+                  </div>
+                  <h1 className="text-2xl font-black tracking-tight text-[var(--color-foreground)]">
+                    Doğrulama Kodunu Girin
+                  </h1>
+                  <p className="text-xs text-[var(--color-muted)] font-medium leading-relaxed">
+                    <strong className="text-[var(--color-foreground)]">{email}</strong> adresinize 6 haneli bir doğrulama kodu gönderildi.
+                  </p>
                 </div>
-              )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading || !email || !password}
-                className="btn btn-primary w-full py-3.5 text-xs font-black rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 mt-2"
-              >
-                {loading ? (
-                  <span>Hesap Oluşturuluyor...</span>
-                ) : (
-                  <>
-                    <span>Ücretsiz Hesabımı Oluştur</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </form>
+                <form onSubmit={handleVerifyOtp} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                      6 Haneli Güvenlik Kodu
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      autoFocus
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ""))}
+                      className="w-full text-center tracking-[12px] font-mono font-black text-2xl py-3.5 rounded-2xl border border-[var(--color-brand)] bg-[var(--color-brand-soft)]/20 outline-none focus:ring-4 focus:ring-[var(--color-brand)]/20 transition-all text-[var(--color-brand-strong)]"
+                      placeholder="123456"
+                    />
+                  </div>
+
+                  {/* Info / Error Notification */}
+                  {info && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+                      📩 {info}
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-extrabold flex items-center gap-2">
+                      <span>⚠️ {error}</span>
+                    </div>
+                  )}
+
+                  {/* Confirm OTP Button */}
+                  <button
+                    type="submit"
+                    disabled={loading || otpCode.trim().length !== 6}
+                    className="btn btn-primary w-full py-3.5 text-xs font-black rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <span>Doğrulanıyor...</span>
+                    ) : (
+                      <>
+                        <span>Kodu Onayla ve Hesabımı Oluştur</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+
+                  {/* Resend & Back buttons */}
+                  <div className="flex justify-between items-center text-xs font-bold pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpCode("");
+                        setStep("FORM");
+                      }}
+                      className="text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors flex items-center gap-1"
+                    >
+                      ← E-posta Adresini Değiştir
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={countdown > 0 || loading}
+                      onClick={handleSendOtp}
+                      className={`transition-colors ${
+                        countdown > 0
+                          ? "text-[var(--color-muted)] cursor-not-allowed"
+                          : "text-[var(--color-brand-strong)] hover:underline"
+                      }`}
+                    >
+                      {countdown > 0 ? `Tekrar Gönder (${countdown}s)` : "Kodu Tekrar Gönder"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
 
           {/* Footer Login Link */}

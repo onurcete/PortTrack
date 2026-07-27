@@ -11,6 +11,8 @@ const PUBLIC = [
   "/api/showcase",
   "/api/auth/login",
   "/api/auth/register",
+  "/api/auth/send-otp",
+  "/api/auth/verify-otp",
   "/api/cron",
 ];
 
