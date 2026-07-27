@@ -1075,17 +1075,33 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       </section>
 
-      {/* 10. Footer */}
-      <footer className="border-t border-[var(--color-border)]/60 py-8 bg-[var(--color-surface)] text-xs text-[var(--color-muted)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-black text-sm text-[var(--color-foreground)]">PortTrack</span>
-            <span>© 2026 PortTrack. Tüm hakları saklıdır.</span>
+      {/* 10. Footer with Legal Disclaimer */}
+      <footer className="border-t border-[var(--color-border)]/60 py-10 bg-[var(--color-surface)] text-xs text-[var(--color-muted)] space-y-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
+          {/* YTD Yasal Uyarısı Kutusu */}
+          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] leading-relaxed text-[var(--color-muted)] font-medium">
+            <span className="font-extrabold text-amber-600 dark:text-amber-400 mr-1.5 uppercase">⚠️ Yasal Uyarı (YTD):</span>
+            PortTrack platformunda sunulan grafikler, veri hesaplamaları, ortalama maliyetler, TEFAS akışları ve Yapay Zeka (AI) asistan yanıtları yalnızca bilgilendirme ve kişisel takip amaçlıdır. Hiçbir şekilde SPK kapsamında yatırım danışmanlığı veya al-sat tavsiyesi teşkil etmez.
           </div>
 
-          <div className="flex items-center gap-4 font-semibold">
-            <Link href="/login" className="hover:text-[var(--color-foreground)] transition-colors">Giriş Yap</Link>
-            <Link href="/register" className="hover:text-[var(--color-foreground)] transition-colors">Kayıt Ol</Link>
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[var(--color-border)]/30">
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm text-[var(--color-foreground)]">PortTrack</span>
+              <span>© 2026 PortTrack. Tüm hakları saklıdır.</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 font-bold">
+              <Link href="/kullanim-kosullari" className="hover:text-[var(--color-brand-strong)] transition-colors">
+                Kullanım Koşulları
+              </Link>
+              <span className="text-[var(--color-border)]">•</span>
+              <Link href="/gizlilik-politikasi" className="hover:text-[var(--color-brand-strong)] transition-colors">
+                Gizlilik Politikası & KVKK
+              </Link>
+              <span className="text-[var(--color-border)]">•</span>
+              <Link href="/login" className="hover:text-[var(--color-foreground)] transition-colors">Giriş Yap</Link>
+              <Link href="/register" className="hover:text-[var(--color-foreground)] transition-colors">Kayıt Ol</Link>
+            </div>
           </div>
         </div>
       </footer>

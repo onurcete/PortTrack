@@ -733,6 +733,19 @@ export function AnalysisBriefingClient({
           onClose={() => setSelectedHolding(null)}
         />
       )}
+
+      {/* YTD Yasal Uyarı Kutusu */}
+      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-[var(--color-muted)] flex items-start gap-3 mt-6">
+        <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-extrabold text-amber-600 dark:text-amber-400 uppercase text-[11px] tracking-wider">
+            Yasal Uyarı (YTD)
+          </p>
+          <p className="leading-relaxed">
+            Bu sayfada sunulan AI briefing yanıtları, teknik gösterge skorları (RSI, MACD) ve TEFAS yatırımcı hareketleri yalnızca bilgilendirme ve kişisel analiz amaçlıdır. SPK mevzuatı kapsamında yatırım tavsiyesi veya portföy yönetim emri teşkil etmez.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

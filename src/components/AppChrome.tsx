@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Topbar } from "@/components/Topbar";
+import { CookieBanner } from "@/components/CookieBanner";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,7 +24,12 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     (pathname === "/" && isAuth === false);
 
   if (isPublicPage) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <CookieBanner />
+      </>
+    );
   }
 
   return (
@@ -32,6 +38,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       <main className="flex-1 mx-auto w-full max-w-[1400px] px-5 py-7 md:px-10 md:py-9">
         {children}
       </main>
+      <CookieBanner />
     </div>
   );
 }
