@@ -5,6 +5,7 @@ import { generateDailyDigestEmailHtml } from "@/lib/dailyDigestEmail";
 import { sendEmail } from "@/lib/sendEmail";
 
 import { getPortfolio } from "@/lib/data";
+import { getPeriodReturns } from "@/lib/history";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -39,19 +40,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Hedef kullanıcı bulunamadı." }, { status: 404 });
     }
 
-    // 2. Kullanıcı Portföy Verilerini Yükle
-    const [portfolio, bundle] = await Promise.all([
+    // 2. Kullanıcı Portföy ve Dönemsel Getiri Verilerini Yükle
+    const [portfolio, bundle, periodReturns] = await Promise.all([
       getPortfolio(user.id),
       loadAnalysisBundle(user.id),
+      getPeriodReturns(user.id),
     ]);
 
-    const { pulse, holdings } = bundle;
+    const { holdings } = bundle;
 
     // Kâr/Zarar ve Değer Hesaplamaları
     const totalTRY = portfolio.totals.valueTRY || 0;
     const totalUSD = portfolio.totals.valueUSD || 0;
-    const dailyChangeTRY = portfolio.totals.unrealizedTRY || 0;
-    const dailyChangePercent = portfolio.totals.unrealizedPctTRY || 0;
+
+    // Bugün Değişimi (Tam Doğru Hesaplama)
+    const dailyAmtTRY = periodReturns.dailyAmtTRY ?? 0;
+    const dailyPctTRY = periodReturns.dailyTRY ?? 0;
 
     // En iyi 3 Varlık (Genel Kârlılığa Göre)
     const topPerformers = holdings
@@ -67,7 +71,7 @@ export async function GET(req: NextRequest) {
     // AI Analiz Skoru ve Özet
     const scores = holdings.map((h) => h.analysis?.score).filter((s): s is number => typeof s === "number");
     const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 84;
-    const aiBriefingSummary = `Geçen gün itibarıyla portföyünüzün teknik sağlık skoru ${avgScore}/100 seviyesindedir. TEFAS fonlarında ve BIST hisselerinde momentum pozitif alan korunmaktadır. RSI aşırı satım sinyali veren varlıklarınızda tepki alımları izlenebilir.`;
+    const aiBriefingSummary = `Geçen gün itibarıyla portföyünüzün teknik sağlık skoru ${avgScore}/100 seviyesindedir. TEFAS fonlarında ve BIST hisselerinde momentum pozitif alanda seyretmektedir.`;
 
     const dateStr = new Date().toLocaleDateString("tr-TR", {
       day: "numeric",
@@ -75,16 +79,18 @@ export async function GET(req: NextRequest) {
       year: "numeric",
     });
 
-    // 3. E-Posta HTML İçeriğini Üret
+    // 3. Mobil Uyumlu E-Posta HTML İçeriğini Üret
     const html = generateDailyDigestEmailHtml({
       userName: user.name || "Yatırımcı",
       userEmail: user.email,
       dateStr,
       totalTRY,
       totalUSD,
-      dailyChangeTRY,
-      dailyChangePercent,
-      weeklyChangePercent: 3.4,
+      dailyAmtTRY,
+      dailyPctTRY,
+      weeklyPctTRY: periodReturns.weeklyTRY,
+      mtdPctTRY: periodReturns.mtdTRY,
+      ytdPctTRY: periodReturns.ytdTRY,
       topPerformers,
       aiScore: avgScore,
       aiBriefingSummary,

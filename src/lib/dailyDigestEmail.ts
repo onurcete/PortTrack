@@ -1,5 +1,5 @@
 /**
- * Günlük Portföy Özet E-Postası HTML Şablon Oluşturucu
+ * PortTrack Mobil Uyumlu Günlük Portföy Özet E-Postası HTML Şablon Oluşturucu
  */
 
 export interface DailyDigestData {
@@ -8,9 +8,16 @@ export interface DailyDigestData {
   dateStr: string;
   totalTRY: number;
   totalUSD: number;
-  dailyChangeTRY: number;
-  dailyChangePercent: number;
-  weeklyChangePercent: number;
+
+  // Bugün Değişimi (Tam ve Doğru)
+  dailyAmtTRY: number;
+  dailyPctTRY: number;
+
+  // Dönemsel Getiriler
+  weeklyPctTRY: number | null;
+  mtdPctTRY: number | null;
+  ytdPctTRY: number | null;
+
   topPerformers: Array<{
     symbol: string;
     assetType: string;
@@ -22,23 +29,27 @@ export interface DailyDigestData {
 }
 
 export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
-  const isPositive = data.dailyChangeTRY >= 0;
-  const changeBadgeBg = isPositive ? "#064e3b" : "#7f1d1d";
-  const changeBadgeText = isPositive ? "#34d399" : "#f87171";
-  const changeSign = isPositive ? "+" : "";
+  const isDailyPositive = data.dailyAmtTRY >= 0;
+  const dailyBadgeBg = isDailyPositive ? "#10b9811f" : "#ef44441f";
+  const dailyBadgeBorder = isDailyPositive ? "#10b98140" : "#ef444440";
+  const dailyBadgeText = isDailyPositive ? "#10b981" : "#f87171";
+  const dailySign = isDailyPositive ? "+" : "";
 
-  const formattedTotalTRY = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(data.totalTRY);
-  const formattedTotalUSD = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(data.totalUSD);
-  const formattedChangeTRY = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(Math.abs(data.dailyChangeTRY));
+  const fmtTRY = (val: number) =>
+    new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(Math.abs(val));
+  const fmtUSD = (val: number) =>
+    new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.abs(val));
+  const fmtPct = (val: number | null) =>
+    val == null ? "%0,00" : `${val >= 0 ? "+" : ""}${val.toFixed(2).replace(".", ",")}%`;
 
-  const performersHtml = data.topPerformers
+  const performersRows = data.topPerformers
     .map(
       (item) => `
       <tr style="border-bottom: 1px solid #1e293b;">
-        <td style="padding: 12px 16px; font-weight: 800; color: #ffffff; font-size: 13px;">${item.symbol}</td>
-        <td style="padding: 12px 16px; color: #94a3b8; font-size: 11px; font-weight: 600;">${item.assetType}</td>
-        <td style="padding: 12px 16px; text-align: right; color: #34d399; font-weight: 800; font-size: 13px;">+${item.changePercent.toFixed(2)}%</td>
-        <td style="padding: 12px 16px; text-align: right; color: #cbd5e1; font-weight: 700; font-size: 12px;">${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(item.valueTRY)} ₺</td>
+        <td style="padding: 10px 12px; font-weight: 800; color: #ffffff; font-size: 13px;">${item.symbol}</td>
+        <td style="padding: 10px 12px; color: #94a3b8; font-size: 11px; font-weight: 600;">${item.assetType}</td>
+        <td style="padding: 10px 12px; text-align: right; color: #10b981; font-weight: 800; font-size: 13px;">+${item.changePercent.toFixed(2).replace(".", ",")}%</td>
+        <td style="padding: 10px 12px; text-align: right; color: #cbd5e1; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
       </tr>
     `
     )
@@ -48,97 +59,160 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Günlük Portföy Özetiniz | PortTrack</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PortTrack Günlük Özet</title>
 </head>
-<body style="margin:0; padding:0; background-color:#090d16; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#f1f5f9;">
-  <div style="max-width:580px; margin:30px auto; background-color:#0f172a; border:1px solid #1e293b; border-radius:24px; overflow:hidden; box-shadow:0 25px 50px rgba(0,0,0,0.6);">
-    
-    <!-- Top Header -->
-    <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #0f172a 100%); padding: 32px 32px 24px; border-bottom: 1px solid #1e293b;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-        <div style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 900; font-size: 16px; padding: 6px 14px; border-radius: 10px;">PT</div>
-        <span style="font-size: 11px; font-weight: 700; color: #a5b4fc; background: rgba(255,255,255,0.08); padding: 4px 12px; border-radius: 20px;">📅 ${data.dateStr}</span>
-      </div>
-      <h1 style="font-size: 22px; font-weight: 900; color: #ffffff; margin: 0 0 6px 0; letter-spacing: -0.5px;">
-        Günaydın, ${data.userName} ☀️
-      </h1>
-      <p style="font-size: 12px; color: #cbd5e1; margin: 0; font-weight: 500;">
-        İşte bugünkü günlük portföy özetiniz ve öne çıkan varlık analizi:
-      </p>
-    </div>
+<body style="margin: 0; padding: 0; background-color: #030712; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+  
+  <!-- Outer Wrapper -->
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #030712; width: 100%; padding: 20px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container -->
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 560px; background-color: #0f172a; border: 1px solid #1e293b; border-radius: 20px; overflow: hidden; text-align: left; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #0f172a 100%); padding: 28px 24px 20px; border-bottom: 1px solid #1e293b;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <div style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 900; font-size: 15px; padding: 6px 14px; border-radius: 10px;">PT</div>
+                    <span style="font-size: 18px; font-weight: 900; color: #ffffff; margin-left: 8px; vertical-align: middle;">PortTrack</span>
+                  </td>
+                  <td align="right">
+                    <span style="font-size: 11px; font-weight: 700; color: #c7d2fe; background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px;">📅 ${data.dateStr}</span>
+                  </td>
+                </tr>
+              </table>
+              <h1 style="font-size: 20px; font-weight: 900; color: #ffffff; margin: 18px 0 4px 0;">
+                Günaydın, ${data.userName} ☀️
+              </h1>
+              <p style="font-size: 12px; color: #94a3b8; margin: 0; font-weight: 500;">
+                Günün ilk saatlerinde portföyünüzün güncel durumu ve performans özetiniz:
+              </p>
+            </td>
+          </tr>
 
-    <!-- Portfolio Summary Card -->
-    <div style="padding: 28px 32px; border-bottom: 1px solid #1e293b;">
-      <div style="background-color: #1e293b; border-radius: 20px; padding: 24px; border: 1px solid #334155;">
-        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
-          Toplam Portföy Değeri
-        </div>
-        
-        <div style="font-size: 32px; font-weight: 900; color: #ffffff; letter-spacing: -1px; margin-bottom: 8px;">
-          ${formattedTotalTRY} ₺
-          <span style="font-size: 14px; font-weight: 600; color: #94a3b8; margin-left: 6px;">($${formattedTotalUSD} USD)</span>
-        </div>
+          <!-- Total Portfolio Value Card -->
+          <tr>
+            <td style="padding: 24px 24px 16px;">
+              <div style="background-color: #1e293b; border-radius: 16px; padding: 20px; border: 1px solid #334155;">
+                <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px;">
+                  Toplam Portföy Değeri
+                </div>
+                
+                <div style="font-size: 28px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; margin-bottom: 10px;">
+                  ${fmtTRY(data.totalTRY)} ₺
+                  <span style="font-size: 13px; font-weight: 600; color: #94a3b8; margin-left: 4px;">($${fmtUSD(data.totalUSD)} USD)</span>
+                </div>
 
-        <div style="display: inline-block; background-color: ${changeBadgeBg}; color: ${changeBadgeText}; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 12px;">
-          Günün Değişimi: ${changeSign}${formattedChangeTRY} ₺ (${changeSign}${data.dailyChangePercent.toFixed(2)}%)
-        </div>
-      </div>
-    </div>
+                <!-- Bugün Değişimi Rozeti -->
+                <div style="display: inline-block; background-color: ${dailyBadgeBg}; border: 1px solid ${dailyBadgeBorder}; color: ${dailyBadgeText}; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 10px;">
+                  BUGÜN: ${dailySign}${fmtTRY(data.dailyAmtTRY)} ₺ (${dailySign}${data.dailyPctTRY.toFixed(2).replace(".", ",")}%)
+                </div>
+              </div>
+            </td>
+          </tr>
 
-    <!-- Top Performers Section -->
-    ${
-      data.topPerformers.length > 0
-        ? `
-    <div style="padding: 24px 32px; border-bottom: 1px solid #1e293b;">
-      <div style="font-size: 13px; font-weight: 900; color: #ffffff; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
-        <span>🔥 Günün En Çok Kazandıran Varlıkları</span>
-      </div>
-      <div style="background-color: #090d16; border-radius: 16px; border: 1px solid #1e293b; overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left;">
-          <thead>
-            <tr style="background-color: #1e293b; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase;">
-              <th style="padding: 10px 16px;">Varlık</th>
-              <th style="padding: 10px 16px;">Tür</th>
-              <th style="padding: 10px 16px; text-align: right;">Değişim</th>
-              <th style="padding: 10px 16px; text-align: right;">Değer</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${performersHtml}
-          </tbody>
+          <!-- Dönemsel Getiri Dönem Kartları (Son 5 Gün, MTD, YTD) -->
+          <tr>
+            <td style="padding: 0 24px 20px;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <!-- Son 5 Gün -->
+                  <td width="32%" style="background-color: #1e293b; border-radius: 12px; padding: 12px 10px; border: 1px solid #334155; text-align: center;">
+                    <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Son 5 Gün</div>
+                    <div style="font-size: 13px; font-weight: 900; color: ${(data.weeklyPctTRY ?? 0) >= 0 ? "#10b981" : "#f87171"};">
+                      ${fmtPct(data.weeklyPctTRY)}
+                    </div>
+                  </td>
+                  <td width="2%"></td>
+                  <!-- Bu Ay (MTD) -->
+                  <td width="32%" style="background-color: #1e293b; border-radius: 12px; padding: 12px 10px; border: 1px solid #334155; text-align: center;">
+                    <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Bu Ay (MTD)</div>
+                    <div style="font-size: 13px; font-weight: 900; color: ${(data.mtdPctTRY ?? 0) >= 0 ? "#10b981" : "#f87171"};">
+                      ${fmtPct(data.mtdPctTRY)}
+                    </div>
+                  </td>
+                  <td width="2%"></td>
+                  <!-- Bu Yıl (YTD) -->
+                  <td width="32%" style="background-color: #1e293b; border-radius: 12px; padding: 12px 10px; border: 1px solid #334155; text-align: center;">
+                    <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Bu Yıl (YTD)</div>
+                    <div style="font-size: 13px; font-weight: 900; color: ${(data.ytdPctTRY ?? 0) >= 0 ? "#10b981" : "#f87171"};">
+                      ${fmtPct(data.ytdPctTRY)}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Top Performers Table -->
+          ${
+            data.topPerformers.length > 0
+              ? `
+          <tr>
+            <td style="padding: 0 24px 20px;">
+              <div style="font-size: 12px; font-weight: 900; color: #ffffff; margin-bottom: 10px;">
+                🔥 Portföyde Öne Çıkan Varlıklar
+              </div>
+              <div style="background-color: #090d16; border-radius: 14px; border: 1px solid #1e293b; overflow: hidden;">
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left;">
+                  <thead>
+                    <tr style="background-color: #1e293b; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+                      <th style="padding: 8px 12px;">Varlık</th>
+                      <th style="padding: 8px 12px;">Tür</th>
+                      <th style="padding: 8px 12px; text-align: right;">Getiri</th>
+                      <th style="padding: 8px 12px; text-align: right;">Değer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${performersRows}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          `
+              : ""
+          }
+
+          <!-- AI Insights Box -->
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <div style="background: linear-gradient(135deg, rgba(37,99,235,0.12) 0%, rgba(99,102,241,0.06) 100%); border: 1px solid rgba(99,102,241,0.3); border-radius: 14px; padding: 16px;">
+                <div style="font-size: 11px; font-weight: 900; color: #60a5fa; margin-bottom: 6px;">
+                  🤖 Yapay Zekâ Analiz Asistanı Notu · Skor: ${data.aiScore}/100
+                </div>
+                <p style="font-size: 11px; color: #cbd5e1; line-height: 1.6; margin: 0;">
+                  ${data.aiBriefingSummary}
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer Action -->
+          <tr>
+            <td style="padding: 0 24px 28px; text-align: center; border-top: 1px solid #1e293b; pt: 20px;">
+              <div style="margin-top: 20px;">
+                <a href="https://port-track-ten.vercel.app/" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 900; font-size: 12px; padding: 12px 28px; border-radius: 12px; text-decoration: none; box-shadow: 0 6px 16px rgba(37,99,235,0.3);">
+                  Portföy Paneline Git →
+                </a>
+              </div>
+
+              <div style="margin-top: 20px; font-size: 10px; color: #64748b; line-height: 1.5;">
+                Yasal Uyarı: Burada yer alan bilgiler yatırım tavsiyesi değildir.<br>
+                © 2026 PortTrack Otomatik Günlük Özet Servisi.
+              </div>
+            </td>
+          </tr>
+
         </table>
-      </div>
-    </div>
-    `
-        : ""
-    }
+      </td>
+    </tr>
+  </table>
 
-    <!-- AI Insights Box -->
-    <div style="padding: 24px 32px; border-bottom: 1px solid #1e293b;">
-      <div style="background: linear-gradient(135deg, rgba(37,99,235,0.1) 0%, rgba(99,102,241,0.05) 100%); border: 1px solid rgba(99,102,241,0.3); border-radius: 18px; padding: 20px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-          <span style="font-size: 12px; font-weight: 900; color: #60a5fa;">🤖 Yapay Zekâ Analiz Asistanı Notu</span>
-          <span style="background-color: #1e1b4b; color: #818cf8; font-weight: 800; font-size: 10px; padding: 3px 10px; border-radius: 10px;">Sağlık Skoru: ${data.aiScore}/100</span>
-        </div>
-        <p style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin: 0;">
-          ${data.aiBriefingSummary}
-        </p>
-      </div>
-    </div>
-
-    <!-- CTA Button & Footer -->
-    <div style="padding: 32px; text-align: center;">
-      <a href="https://port-track-ten.vercel.app/" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: 900; font-size: 13px; padding: 14px 32px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 20px rgba(37,99,235,0.3);">
-        Portföyünüzü Detaylı İnceleyin →
-      </a>
-
-      <div style="margin-top: 24px; font-size: 10px; color: #64748b; line-height: 1.5;">
-        Yasal Uyarı: Burada yer alan bilgiler yatırım tavsiyesi değildir.<br>
-        PortTrack · Otomatik Günlük Özet Gönderimidir.
-      </div>
-    </div>
-
-  </div>
 </body>
 </html>`;
 }
