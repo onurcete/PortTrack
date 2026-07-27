@@ -1,5 +1,5 @@
 /**
- * PortTrack Resend E-posta Gönderim Servisi
+ * PortTrack Resend E-posta Gönderim Servisi (Vercel Prod Active)
  */
 
 export interface SendEmailOptions {
