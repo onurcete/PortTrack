@@ -57,11 +57,11 @@ export async function GET(req: NextRequest) {
     const dailyAmtTRY = periodReturns.dailyAmtTRY ?? 0;
     const dailyPctTRY = periodReturns.dailyTRY ?? 0;
 
-    // Tüm varlıkların performans verisi
+    // Tüm varlıkların son 1 gündeki günlük performans verisi
     const mappedHoldings = holdings.map((h) => ({
       symbol: h.symbol,
       assetType: h.assetType,
-      changePercent: h.unrealizedPctTRY || h.dailyChangePct || 0,
+      changePercent: h.dailyChangePct ?? 0,
       valueTRY: h.valueTRY,
     }));
 
