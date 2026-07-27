@@ -60,8 +60,8 @@ function LoginForm() {
       {/* Main Glass Card Container */}
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 bg-[var(--color-surface)] border border-[var(--color-border)]/70 rounded-3xl shadow-2xl overflow-hidden relative z-10">
         
-        {/* Left Side: Brand Showcase & Rich Application Mockups */}
-        <div className="hidden md:flex md:col-span-6 p-8 lg:p-12 bg-gradient-to-br from-[var(--color-brand-strong)] via-indigo-950 to-slate-950 text-white flex-col justify-between relative overflow-hidden">
+        {/* Left Side: Brand Showcase & Rich Application Mockups (Always Visible) */}
+        <div className="col-span-12 md:col-span-6 p-6 sm:p-8 lg:p-12 bg-gradient-to-br from-[var(--color-brand-strong)] via-indigo-950 to-slate-950 text-white flex flex-col justify-between relative overflow-hidden order-1">
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-[var(--color-brand)]/25 rounded-full blur-2xl pointer-events-none" />
 
@@ -168,7 +168,7 @@ function LoginForm() {
         </div>
 
         {/* Right Side: Login Form */}
-        <div className="md:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-between">
+        <div className="col-span-12 md:col-span-6 p-6 sm:p-10 lg:p-12 flex flex-col justify-between order-2">
           <div>
             {/* Mobile Header */}
             <div className="flex md:hidden items-center justify-between mb-6 pb-4 border-b border-[var(--color-border)]/40">
