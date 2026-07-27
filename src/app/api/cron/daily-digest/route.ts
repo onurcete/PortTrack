@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { loadAnalysisBundle } from "@/lib/analysisData";
 import { generateDailyDigestEmailHtml } from "@/lib/dailyDigestEmail";
 import { sendEmail } from "@/lib/sendEmail";
-
 import { getPortfolio } from "@/lib/data";
 import { getPeriodReturns } from "@/lib/history";
 
@@ -26,52 +25,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // 1. Hedef Kullanıcıyı Bul (Test için ceteonur@gmail.com)
-    const user = await prisma.user.findFirst({
+    // 1. Hedef Kullanıcıları Bul (ceteonur@gmail.com ve denizbag@gmail.com)
+    let users = await prisma.user.findMany({
       where: {
-        OR: [
-          { email: "ceteonur@gmail.com" },
-          { id: "default-user-id" },
-        ],
+        email: {
+          in: ["ceteonur@gmail.com", "denizbag@gmail.com"],
+        },
       },
     });
 
-    if (!user) {
-      return NextResponse.json({ ok: false, error: "Hedef kullanıcı bulunamadı." }, { status: 404 });
+    if (users.length === 0) {
+      users = await prisma.user.findMany({ take: 5 });
     }
 
-    // 2. Kullanıcı Portföy ve Dönemsel Getiri Verilerini Yükle
-    const [portfolio, bundle, periodReturns] = await Promise.all([
-      getPortfolio(user.id),
-      loadAnalysisBundle(user.id),
-      getPeriodReturns(user.id),
-    ]);
-
-    const { holdings } = bundle;
-
-    // Kâr/Zarar ve Değer Hesaplamaları
-    const totalTRY = portfolio.totals.valueTRY || 0;
-    const totalUSD = portfolio.totals.valueUSD || 0;
-
-    // Bugün Değişimi (Tam Doğru Hesaplama)
-    const dailyAmtTRY = periodReturns.dailyAmtTRY ?? 0;
-    const dailyPctTRY = periodReturns.dailyTRY ?? 0;
-
-    // Tüm varlıkların son 1 gündeki günlük performans verisi
-    const mappedHoldings = holdings.map((h) => ({
-      symbol: h.symbol,
-      assetType: h.assetType,
-      changePercent: h.dailyChangePct ?? 0,
-      valueTRY: h.valueTRY,
-    }));
-
-    // Günün En Çok Kazandıran İlk 3 Varlığı
-    const sortedDesc = [...mappedHoldings].sort((a, b) => b.changePercent - a.changePercent);
-    const topGainers = sortedDesc.slice(0, 3);
-
-    // Günün En Çok Kaybettiren İlk 3 Varlığı
-    const sortedAsc = [...mappedHoldings].sort((a, b) => a.changePercent - b.changePercent);
-    const topLosers = sortedAsc.slice(0, 3);
+    if (users.length === 0) {
+      return NextResponse.json({ ok: false, error: "Gönderilecek kullanıcı bulunamadı." }, { status: 404 });
+    }
 
     const dateStr = new Date().toLocaleDateString("tr-TR", {
       day: "numeric",
@@ -79,48 +48,95 @@ export async function GET(req: NextRequest) {
       year: "numeric",
     });
 
-    // 3. Mobil Uyumlu E-Posta HTML İçeriğini Üret
-    const html = generateDailyDigestEmailHtml({
-      userName: user.name || "Yatırımcı",
-      userEmail: user.email,
-      dateStr,
-      totalTRY,
-      totalUSD,
-      dailyAmtTRY,
-      dailyPctTRY,
-      weeklyPctTRY: periodReturns.weeklyTRY,
-      mtdPctTRY: periodReturns.mtdTRY,
-      ytdPctTRY: periodReturns.ytdTRY,
-      topGainers,
-      topLosers,
-    });
+    const results = [];
 
-    // 4. Canlı E-Postayı Gönder (Resend API)
-    const recipientEmail = "ceteonur@gmail.com";
-    const emailRes = await sendEmail({
-      to: recipientEmail,
-      subject: `📊 Günlük Portföy Özetiniz (${dateStr}) | PortTrack`,
-      html,
-    });
+    // 2. Her kullanıcı için kişiselleştirilmiş bülten üret ve gönder
+    for (const user of users) {
+      if (!user.email) continue;
 
-    if (!emailRes.ok) {
-      return NextResponse.json(
-        { ok: false, error: `E-posta gönderilemedi: ${emailRes.error}` },
-        { status: 500 }
-      );
+      try {
+        const [portfolio, bundle, periodReturns] = await Promise.all([
+          getPortfolio(user.id),
+          loadAnalysisBundle(user.id),
+          getPeriodReturns(user.id),
+        ]);
+
+        const { holdings } = bundle;
+
+        // Kâr/Zarar ve Değer Hesaplamaları
+        const totalTRY = portfolio.totals.valueTRY || 0;
+        const totalUSD = portfolio.totals.valueUSD || 0;
+
+        // Bugün Değişimi
+        const dailyAmtTRY = periodReturns.dailyAmtTRY ?? 0;
+        const dailyPctTRY = periodReturns.dailyTRY ?? 0;
+
+        // Tüm varlıkların son 1 gündeki günlük performans verisi
+        const mappedHoldings = holdings.map((h) => ({
+          symbol: h.symbol,
+          assetType: h.assetType,
+          changePercent: h.dailyChangePct ?? 0,
+          valueTRY: h.valueTRY,
+        }));
+
+        // Günün En Çok Kazandıran İlk 3 Varlığı
+        const sortedDesc = [...mappedHoldings].sort((a, b) => b.changePercent - a.changePercent);
+        const topGainers = sortedDesc.slice(0, 3);
+
+        // Günün En Çok Kaybettiren İlk 3 Varlığı
+        const sortedAsc = [...mappedHoldings].sort((a, b) => a.changePercent - b.changePercent);
+        const topLosers = sortedAsc.slice(0, 3);
+
+        // Kişiselleştirilmiş E-Posta HTML
+        const html = generateDailyDigestEmailHtml({
+          userName: user.name || "Yatırımcı",
+          userEmail: user.email,
+          dateStr,
+          totalTRY,
+          totalUSD,
+          dailyAmtTRY,
+          dailyPctTRY,
+          weeklyPctTRY: periodReturns.weeklyTRY,
+          mtdPctTRY: periodReturns.mtdTRY,
+          ytdPctTRY: periodReturns.ytdTRY,
+          topGainers,
+          topLosers,
+        });
+
+        // Resend API ile Gönderim
+        const emailRes = await sendEmail({
+          to: user.email,
+          subject: `📊 Günlük Portföy Özetiniz (${dateStr}) | PortTrack`,
+          html,
+        });
+
+        results.push({
+          email: user.email,
+          userName: user.name,
+          ok: emailRes.ok,
+          emailId: emailRes.id,
+          error: emailRes.error,
+          stats: {
+            totalTRY,
+            totalUSD,
+            dailyAmtTRY,
+          },
+        });
+      } catch (userErr: any) {
+        console.error(`❌ ${user.email} için bülten oluşturma hatası:`, userErr);
+        results.push({
+          email: user.email,
+          ok: false,
+          error: userErr.message,
+        });
+      }
     }
 
     return NextResponse.json({
       ok: true,
-      recipient: recipientEmail,
-      message: `Günlük portföy özeti ${recipientEmail} adresine başarıyla gönderildi.`,
-      emailId: emailRes.id,
-      stats: {
-        totalTRY,
-        totalUSD,
-        topGainersCount: topGainers.length,
-        topLosersCount: topLosers.length,
-      },
+      sentCount: results.filter((r) => r.ok).length,
+      totalTargets: users.length,
+      details: results,
     });
   } catch (err: any) {
     console.error("❌ Daily Digest Cron Error:", err);
