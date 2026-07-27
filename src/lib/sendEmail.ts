@@ -13,8 +13,11 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   const fromEmail = process.env.EMAIL_FROM?.trim() || "PortTrack <onboarding@resend.dev>";
 
   if (!apiKey) {
-    console.warn("⚠️ RESEND_API_KEY tanımlı değil. E-posta simüle ediliyor.");
-    return { ok: true, id: "simulated-id" };
+    console.warn("⚠️ RESEND_API_KEY tanımlı değil.");
+    return {
+      ok: false,
+      error: "Sunucuda RESEND_API_KEY ortam değişkeni tanımlı değil. Lütfen Vercel Settings > Environment Variables altından RESEND_API_KEY ekleyin.",
+    };
   }
 
   try {
