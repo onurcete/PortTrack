@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AUTH_COOKIE, createSession, verifyPassword } from "@/lib/auth";
+import { logSystemEvent } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -17,17 +18,37 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const cleanEmail = email.trim().toLowerCase();
+
   try {
     const user = await prisma.user.findFirst({
-      where: { email: { equals: email.trim().toLowerCase() } },
+      where: { email: { equals: cleanEmail } },
     });
 
     if (!user || !(await verifyPassword(password, user.password))) {
+      await logSystemEvent({
+        userEmail: cleanEmail,
+        action: "LOGIN_FAILED",
+        status: "FAILED",
+        details: "Hatalı e-posta veya şifre girildi.",
+        req,
+      });
+
       return NextResponse.json(
         { ok: false, error: "E-posta veya şifre hatalı." },
         { status: 401 },
       );
     }
+
+    // Giriş Başarılı Logu
+    await logSystemEvent({
+      userId: user.id,
+      userEmail: user.email,
+      action: "LOGIN",
+      status: "SUCCESS",
+      details: `${user.name || user.email} sisteme giriş yaptı.`,
+      req,
+    });
 
     const token = await createSession(user.id);
     const res = NextResponse.json({ ok: true });

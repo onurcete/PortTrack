@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { refreshPrices, backfillFxHistory } from "@/lib/refresh";
 import { backfillYahoo, backfillTefas } from "@/lib/history";
 import { runTechnicalAnalysis } from "@/app/api/analysis/run/route";
+import { logSystemEvent } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -35,8 +36,23 @@ export async function GET(req: NextRequest) {
     const tefas = await backfillTefas(30000);
     // Teknik analiz hesapla (fiyatlar güncellendikten sonra)
     const analysis = await runTechnicalAnalysis();
+
+    await logSystemEvent({
+      action: "CRON_PRICE_REFRESH",
+      status: "SUCCESS",
+      details: `Vercel Cron otomatik fiyat güncellemesi tamamlandı (${refresh.updated} enstrüman güncellendi).`,
+      req,
+    });
+
     return NextResponse.json({ ok: true, refresh, yahoo, tefas, analysis });
-  } catch (err) {
+  } catch (err: any) {
+    await logSystemEvent({
+      action: "CRON_PRICE_REFRESH",
+      status: "FAILED",
+      details: err?.message || "Cron fiyat güncelleme hatası",
+      req,
+    });
+
     return NextResponse.json(
       { ok: false, error: (err as Error).message },
       { status: 500 },
@@ -45,4 +61,3 @@ export async function GET(req: NextRequest) {
 }
 
 export const POST = GET;
-

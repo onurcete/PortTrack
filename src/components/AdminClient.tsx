@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteUser } from "@/app/admin/actions";
 import {
@@ -19,6 +19,15 @@ import {
   List,
   Eye,
   X,
+  Activity,
+  LogIn,
+  Clock,
+  Search,
+  Filter,
+  Calendar,
+  TrendingUp,
+  Mail,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -69,20 +78,88 @@ interface AdminClientProps {
   dbEngine: DbEngineDTO;
 }
 
-type TabType = "overview" | "users" | "actions" | "tables";
+export interface SystemLogDTO {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  action: string;
+  status: string;
+  details: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface UserStatDTO {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+  loginCount: number;
+  lastLogin: string | null;
+}
+
+export interface LogsDataResponse {
+  logs: SystemLogDTO[];
+  userStats: UserStatDTO[];
+  actionCounts: {
+    totalLogins: number;
+    totalManualRefreshes: number;
+    totalCronRefreshes: number;
+    totalDailyDigests: number;
+  };
+  dailyLoginsSeries: Array<{ date: string; count: number }>;
+}
+
+type TabType = "logs" | "overview" | "users" | "actions" | "tables";
 
 export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: AdminClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [activeTab, setActiveTab] = useState<TabType>("logs");
   const [users, setUsers] = useState<AdminUserDTO[]>(initialUsers);
   const [isPending, startTransition] = useTransition();
   const [selectedSchemaTable, setSelectedSchemaTable] = useState<DbTableDTO | null>(null);
 
+  // System Logs & Analytics State
+  const [logsData, setLogsData] = useState<LogsDataResponse | null>(null);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [actionFilter, setActionFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedLogDetails, setSelectedLogDetails] = useState<SystemLogDTO | null>(null);
+
   // States for running long server operations
   const [runningAction, setRunningAction] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<Record<string, { type: "success" | "error"; message: string } | null>>({});
-
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Load system logs data
+  async function fetchLogs() {
+    setLoadingLogs(true);
+    try {
+      const params = new URLSearchParams();
+      if (actionFilter !== "ALL") params.set("action", actionFilter);
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (searchQuery.trim()) params.set("search", searchQuery.trim());
+
+      const res = await fetch(`/api/admin/logs?${params.toString()}`);
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setLogsData(data);
+      }
+    } catch (err) {
+      console.error("Loglar yuklenirken hata:", err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "logs") {
+      fetchLogs();
+    }
+  }, [activeTab, actionFilter, statusFilter]);
 
   // Secure user deletion function via Server Action
   async function handleDeleteUser(userId: string) {
@@ -119,6 +196,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           [key]: { type: "success", message: msg },
         }));
         router.refresh();
+        if (activeTab === "logs") fetchLogs();
       } else {
         setActionStatus((prev) => ({
           ...prev,
@@ -135,6 +213,27 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
     }
   }
 
+  const getActionBadge = (action: string) => {
+    switch (action) {
+      case "LOGIN":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><LogIn size={11} /> Giriş</span>;
+      case "LOGIN_FAILED":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20"><XCircle size={11} /> Başarısız Giriş</span>;
+      case "PRICE_REFRESH_MANUAL":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20"><RefreshCw size={11} /> Manuel Fiyat</span>;
+      case "CRON_PRICE_REFRESH":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20"><Zap size={11} /> Cron Fiyat</span>;
+      case "CRON_DAILY_DIGEST":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><Mail size={11} /> Bülten Maili</span>;
+      default:
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">{action}</span>;
+    }
+  };
+
+  const maxLoginsCount = logsData?.dailyLoginsSeries
+    ? Math.max(...logsData.dailyLoginsSeries.map((s) => s.count), 1)
+    : 1;
+
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 md:px-8 py-8">
       {/* Başlık alanı */}
@@ -145,7 +244,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text)]">Admin Kontrol Paneli</h1>
-            <p className="text-sm text-[var(--color-muted)] mt-0.5">Sistem verilerini izleyin, kullanıcıları yönetin ve servisleri tetikleyin</p>
+            <p className="text-sm text-[var(--color-muted)] mt-0.5">Sistem hareketlerini, kullanıcı girişlerini ve servis günlüklerini izleyin</p>
           </div>
         </div>
       </div>
@@ -154,11 +253,23 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
         {/* Sol Menü: Sekmeler */}
         <aside className="w-full lg:w-64 flex lg:flex-col gap-2 shrink-0">
           <button
+            onClick={() => setActiveTab("logs")}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full",
+              activeTab === "logs"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 font-bold"
+                : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+            )}
+          >
+            <Activity size={16} />
+            <span>Sistem Logları & Analiz</span>
+          </button>
+          <button
             onClick={() => setActiveTab("overview")}
             className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full",
               activeTab === "overview"
-                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 font-bold"
                 : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
             )}
           >
@@ -170,7 +281,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
             className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full",
               activeTab === "tables"
-                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 font-bold"
                 : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
             )}
           >
@@ -182,7 +293,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
             className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full",
               activeTab === "users"
-                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 font-bold"
                 : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
             )}
           >
@@ -194,7 +305,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
             className={cn(
               "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full",
               activeTab === "actions"
-                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 font-bold"
                 : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
             )}
           >
@@ -205,6 +316,291 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
 
         {/* Sağ İçerik Alanı */}
         <main className="flex-1 min-w-0">
+          {/* TAB 0: Sistem Logları & Analiz */}
+          {activeTab === "logs" && (
+            <div className="space-y-8">
+              {/* Özet Metrik Kartları */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Toplam Giriş</span>
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                      <LogIn size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                    {logsData?.actionCounts.totalLogins ?? "-"}
+                  </div>
+                  <span className="text-xs text-[var(--color-muted)] mt-1 block">Başarılı kullanıcı oturumları</span>
+                </div>
+
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Manuel Fiyat Tıklama</span>
+                    <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+                      <RefreshCw size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                    {logsData?.actionCounts.totalManualRefreshes ?? "-"}
+                  </div>
+                  <span className="text-xs text-[var(--color-muted)] mt-1 block">Butonla tetiklenen güncellemeler</span>
+                </div>
+
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Otomatik Cron Fiyat</span>
+                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+                      <Zap size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                    {logsData?.actionCounts.totalCronRefreshes ?? "-"}
+                  </div>
+                  <span className="text-xs text-[var(--color-muted)] mt-1 block">Zamanlanmış otomatik güncellemeler</span>
+                </div>
+
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Bülten E-Postaları</span>
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                      <Mail size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                    {logsData?.actionCounts.totalDailyDigests ?? "-"}
+                  </div>
+                  <span className="text-xs text-[var(--color-muted)] mt-1 block">İletilen günlük portföy özetleri</span>
+                </div>
+              </div>
+
+              {/* Kullanıcı Giriş & İstatistik Tablosu */}
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
+                      <Users size={18} className="text-[var(--color-brand)]" />
+                      Kullanıcı Giriş & Aktivite Durumu
+                    </h3>
+                    <p className="text-xs text-[var(--color-muted)] mt-0.5">Kullanıcıların toplam oturum açma sayıları ve son giriş zamanları</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)] font-semibold uppercase">
+                        <th className="py-3 px-3">Kullanıcı</th>
+                        <th className="py-3 px-3">E-Posta</th>
+                        <th className="py-3 px-3">Rol</th>
+                        <th className="py-3 px-3 text-center">Giriş Sayısı</th>
+                        <th className="py-3 px-3 text-right">Son Giriş Tarihi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-border)]">
+                      {logsData?.userStats.map((u) => (
+                        <tr key={u.id} className="hover:bg-[var(--color-surface-hover)]">
+                          <td className="py-3 px-3 font-semibold text-[var(--color-text)]">{u.name}</td>
+                          <td className="py-3 px-3 text-[var(--color-muted)]">{u.email}</td>
+                          <td className="py-3 px-3">
+                            <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded-md uppercase", u.role === "ADMIN" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "bg-slate-500/10 text-slate-400 border border-slate-500/20")}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              {u.loginCount} Kez
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right text-[var(--color-muted)]">
+                            {u.lastLogin
+                              ? new Date(u.lastLogin).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                              : "Henüz giriş yapmadı"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Son 14 Günün Giriş Grafiği */}
+              {logsData?.dailyLoginsSeries && logsData.dailyLoginsSeries.length > 0 && (
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
+                        <TrendingUp size={18} className="text-emerald-500" />
+                        Son 14 Günün Giriş Yoğunluğu
+                      </h3>
+                      <p className="text-xs text-[var(--color-muted)] mt-0.5">Günlere göre sisteme yapılan başarılı oturum açma grafiği</p>
+                    </div>
+                  </div>
+
+                  {/* Visual Bar Chart */}
+                  <div className="h-44 flex items-end justify-between gap-2 pt-6 pb-2 px-2">
+                    {logsData.dailyLoginsSeries.map((item, idx) => {
+                      const heightPct = Math.max(12, Math.round((item.count / maxLoginsCount) * 100));
+                      return (
+                        <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                          <span className="text-[10px] font-bold text-[var(--color-muted)] opacity-0 group-hover:opacity-100 transition-opacity">
+                            {item.count}
+                          </span>
+                          <div
+                            style={{ height: `${heightPct}%` }}
+                            className={cn(
+                              "w-full rounded-t-lg transition-all duration-200",
+                              item.count > 0 ? "bg-emerald-500/80 group-hover:bg-emerald-400" : "bg-[var(--color-border)]/40"
+                            )}
+                          />
+                          <span className="text-[9px] font-medium text-[var(--color-muted)] truncate w-full text-center">
+                            {item.date}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Filtrelenebilir Sistem Logları Tablosu */}
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h3 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
+                      <Clock size={18} className="text-purple-400" />
+                      Canlı Sistem Eylem & Denetim Logları
+                    </h3>
+                    <p className="text-xs text-[var(--color-muted)] mt-0.5">Tüm kullanıcı ve sistem eylemlerinin anlık zaman damgalı kayıtları</p>
+                  </div>
+
+                  {/* Filtreler */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+                      <input
+                        type="text"
+                        placeholder="E-posta, IP veya detay ara..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && fetchLogs()}
+                        className="pl-8 pr-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-brand)] w-48 sm:w-60"
+                      />
+                    </div>
+
+                    {/* Action Filter Dropdown */}
+                    <select
+                      value={actionFilter}
+                      onChange={(e) => setActionFilter(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-brand)]"
+                    >
+                      <option value="ALL">Tüm Eylemler</option>
+                      <option value="LOGIN">Kullanıcı Girişi (LOGIN)</option>
+                      <option value="LOGIN_FAILED">Başarısız Giriş</option>
+                      <option value="PRICE_REFRESH_MANUAL">Manuel Fiyat Tıklama</option>
+                      <option value="CRON_PRICE_REFRESH">Otomatik Cron Fiyat</option>
+                      <option value="CRON_DAILY_DIGEST">Günlük Bülten Maili</option>
+                    </select>
+
+                    {/* Status Filter */}
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-brand)]"
+                    >
+                      <option value="ALL">Tüm Durumlar</option>
+                      <option value="SUCCESS">Başarılı</option>
+                      <option value="FAILED">Hatalı</option>
+                    </select>
+
+                    <button
+                      onClick={fetchLogs}
+                      disabled={loadingLogs}
+                      className="p-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
+                      title="Yenile"
+                    >
+                      <RefreshCw size={14} className={cn(loadingLogs && "animate-spin")} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)] font-semibold uppercase">
+                        <th className="py-3 px-3">Tarih / Saat</th>
+                        <th className="py-3 px-3">Eylem</th>
+                        <th className="py-3 px-3">Kullanıcı</th>
+                        <th className="py-3 px-3">Durum</th>
+                        <th className="py-3 px-3">IP Adresi</th>
+                        <th className="py-3 px-3 text-right">Detaylar</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-border)]">
+                      {loadingLogs ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-[var(--color-muted)]">
+                            <Loader2 size={20} className="animate-spin inline mr-2 text-[var(--color-brand)]" />
+                            Loglar yükleniyor...
+                          </td>
+                        </tr>
+                      ) : !logsData?.logs || logsData.logs.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-[var(--color-muted)]">
+                            Henüz kayıtlı sistem logu bulunamadı.
+                          </td>
+                        </tr>
+                      ) : (
+                        logsData.logs.map((log) => (
+                          <tr key={log.id} className="hover:bg-[var(--color-surface-hover)]">
+                            <td className="py-3 px-3 text-[var(--color-text)] whitespace-nowrap">
+                              {new Date(log.createdAt).toLocaleString("tr-TR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">{getActionBadge(log.action)}</td>
+                            <td className="py-3 px-3 font-medium text-[var(--color-text)]">
+                              {log.userEmail || <span className="text-[var(--color-muted)] italic">Sistem (Cron)</span>}
+                            </td>
+                            <td className="py-3 px-3">
+                              {log.status === "SUCCESS" ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
+                                  <CheckCircle size={12} /> Başarılı
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
+                                  <XCircle size={12} /> Hatalı
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-[var(--color-muted)] font-mono text-[11px]">
+                              {log.ipAddress || "-"}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                onClick={() => setSelectedLogDetails(log)}
+                                className="px-2.5 py-1 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg)] text-xs text-[var(--color-brand)] font-medium transition-colors"
+                              >
+                                İncele
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: Genel Bakış */}
           {activeTab === "overview" && (
             <div className="space-y-6">
@@ -218,71 +614,114 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                 <StatCard title="Teknik Analiz Raporu" count={dbStats.technicalAnalyses} icon={<Shield className="text-pink-500" />} />
               </div>
 
-              {/* Ek bilgi kartı */}
-              <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-                <h3 className="font-semibold text-sm text-[var(--color-text)] mb-2">Veritabanı Depolama Hakkında</h3>
-                <p className="text-sm text-[var(--color-muted)] leading-relaxed">
-                  Fiyat kayıtları (PriceSnapshots) ve Döviz Kurları (FxRates) tüm kullanıcılar tarafından ortak şekilde önbellek olarak kullanılır. 
-                  Bu sayede sistemde ortak enstrümanlar için yinelenen API istekleri engellenir ve genel sistem performansı artırılır. 
-                  Kullanıcılara ait İşlemler, Portföy Notları ve Enstrüman Tanımları ise şema düzeyinde tamamen birbirlerinden izole durumdadır.
-                </p>
+              {/* Veritabanı Sunucu Bilgisi */}
+              <div className="mt-8 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-[var(--color-text)] mb-4">Veritabanı Motoru & Bağlantı</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-[var(--color-muted)] block font-medium mb-1">Veritabanı Adı</span>
+                    <span className="font-semibold text-[var(--color-text)]">{dbEngine.databaseName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--color-muted)] block font-medium mb-1">Kullanıcı</span>
+                    <span className="font-semibold text-[var(--color-text)]">{dbEngine.user}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--color-muted)] block font-medium mb-1">Toplam Boyut</span>
+                    <span className="font-semibold text-[var(--color-brand)]">{dbEngine.totalSize}</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--color-muted)] block font-medium mb-1">PostgreSQL Sürümü</span>
+                    <span className="font-semibold text-[var(--color-text)] truncate block" title={dbEngine.version}>
+                      {dbEngine.version}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB 2: Kullanıcı Yönetimi */}
+          {/* TAB 2: Veritabanı Detayları (Tablo İstatistikleri & Şemaları) */}
+          {activeTab === "tables" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tablo Metrikleri & Şema Yapısı</h2>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {dbTables.map((table) => (
+                  <div key={table.name} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4 border-b border-[var(--color-border)] pb-3">
+                      <div>
+                        <h3 className="font-bold text-sm text-[var(--color-text)] font-mono">{table.name}</h3>
+                        <span className="text-xs text-[var(--color-muted)]">{table.rowCount.toLocaleString("tr-TR")} Satır Kayıt</span>
+                      </div>
+                      <button
+                        onClick={() => setSelectedSchemaTable(table)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-brand)] hover:underline"
+                      >
+                        <Eye size={14} /> Şemayı Gör
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="p-2 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)]/50">
+                        <span className="text-[var(--color-muted)] text-[10px] block">Toplam Boyut</span>
+                        <span className="font-bold text-[var(--color-text)]">{(table.totalSize / 1024).toFixed(1)} KB</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)]/50">
+                        <span className="text-[var(--color-muted)] text-[10px] block">Veri Boyutu</span>
+                        <span className="font-bold text-[var(--color-text)]">{(table.tableSize / 1024).toFixed(1)} KB</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)]/50">
+                        <span className="text-[var(--color-muted)] text-[10px] block">İndeks Boyutu</span>
+                        <span className="font-bold text-[var(--color-text)]">{(table.indexSize / 1024).toFixed(1)} KB</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Kullanıcı Yönetimi */}
           {activeTab === "users" && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Kayıtlı Kullanıcılar</h2>
-              <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-[var(--color-text)]">Sistem Kullanıcıları ({users.length})</h2>
+              </div>
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="theme-table-head">
-                      <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
-                        <th className="px-6 py-4">Kullanıcı Bilgileri</th>
-                        <th className="px-6 py-4">Kayıt Tarihi</th>
-                        <th className="px-6 py-4 text-center">İşlem</th>
-                        <th className="px-6 py-4 text-center">Takip</th>
-                        <th className="px-6 py-4 text-right">Eylemler</th>
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-muted)] font-semibold uppercase">
+                        <th className="py-3.5 px-4">Kullanıcı</th>
+                        <th className="py-3.5 px-4">E-Posta</th>
+                        <th className="py-3.5 px-4 text-center">İşlem (Tx)</th>
+                        <th className="py-3.5 px-4 text-center">Takip Varlıkları</th>
+                        <th className="py-3.5 px-4 text-right">Kayıt Tarihi</th>
+                        <th className="py-3.5 px-4 text-right">İşlem</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[var(--color-border)] text-sm">
+                    <tbody className="divide-y divide-[var(--color-border)]">
                       {users.map((u) => (
-                        <tr key={u.id} className="hover:bg-[var(--color-surface-hover)] transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-[var(--color-text)]">{u.name}</div>
-                            <div className="text-xs text-[var(--color-muted)]">{u.email}</div>
+                        <tr key={u.id} className="hover:bg-[var(--color-surface-hover)]">
+                          <td className="py-3.5 px-4 font-semibold text-[var(--color-text)]">{u.name || "Kullanıcı"}</td>
+                          <td className="py-3.5 px-4 text-[var(--color-muted)]">{u.email}</td>
+                          <td className="py-3.5 px-4 text-center font-bold">{u.transactionCount}</td>
+                          <td className="py-3.5 px-4 text-center font-bold">{u.instrumentCount}</td>
+                          <td className="py-3.5 px-4 text-right text-[var(--color-muted)]">
+                            {new Date(u.createdAt).toLocaleDateString("tr-TR")}
                           </td>
-                          <td className="px-6 py-4 text-[var(--color-muted)] text-xs">
-                            {new Date(u.createdAt).toLocaleDateString("tr-TR", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </td>
-                          <td className="px-6 py-4 text-center font-semibold text-[var(--color-text)]">{u.transactionCount}</td>
-                          <td className="px-6 py-4 text-center font-semibold text-[var(--color-text)]">{u.instrumentCount}</td>
-                          <td className="px-6 py-4 text-right">
-                            {u.id !== "default-user-id" ? (
-                              <button
-                                onClick={() => {
-                                  if (confirm(`"${u.name}" isimli kullanıcıyı ve ona ait tüm işlemleri veritabanından tamamen silmek istediğinize emin misiniz?`)) {
-                                    handleDeleteUser(u.id);
-                                  }
-                                }}
-                                disabled={deletingUserId !== null}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors disabled:opacity-50"
-                              >
-                                {deletingUserId === u.id ? (
-                                  <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                  <Trash2 size={16} />
-                                )}
-                              </button>
+                          <td className="py-3.5 px-4 text-right">
+                            {u.id === "default-user-id" ? (
+                              <span className="text-[10px] text-[var(--color-muted)] italic">Varsayılan Yönetici</span>
                             ) : (
-                              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20">
-                                Sistem Yöneticisi
-                              </span>
+                              <button
+                                onClick={() => handleDeleteUser(u.id)}
+                                disabled={deletingUserId === u.id}
+                                className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
+                                title="Kullanıcıyı Sil"
+                              >
+                                {deletingUserId === u.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                              </button>
                             )}
                           </td>
                         </tr>
@@ -294,149 +733,69 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
             </div>
           )}
 
-          {/* TAB 3: Sistem Tetikleyicileri */}
+          {/* TAB 4: Sistem Tetikleyicileri */}
           {activeTab === "actions" && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Sistem Kontrol Masası</h2>
-              <div className="grid grid-cols-1 gap-6">
-                {/* 1. Fiyat Güncelleme */}
-                <TriggerCard
-                  title="Anlık Fiyat Güncelleme (Refresh Prices)"
-                  description="Tüm kullanıcıların sahip olduğu enstrümanların anlık fiyatlarını ve dünün kapanış fiyatlarını çekip PriceSnapshot tablosunu günceller. (Her 30 dakikada bir otomatik çalışır)."
-                  btnText="Fiyatları Güncelle"
-                  onClick={() => runSystemAction("refresh", "/api/prices/refresh")}
-                  isRunning={runningAction === "refresh"}
-                  isAnyRunning={runningAction !== null}
-                  status={actionStatus["refresh"]}
-                />
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">Manuel Sistem Tetikleyicileri</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Action 1: Fiyatları Yenile */}
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 flex flex-col justify-between shadow-sm">
+                  <div>
+                    <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+                      <RefreshCw size={18} className="text-blue-400" /> Fiyatları ve Kurları Yenile
+                    </h3>
+                    <p className="text-xs text-[var(--color-muted)] mt-2 leading-relaxed">
+                      Yahoo Finance, TEFAS ve FX API kaynaklarından portföydeki tüm varlıkların güncel fiyatlarını anlık sorgular.
+                    </p>
+                  </div>
 
-                {/* 2. Yahoo Tarihçe Güncelleme */}
-                <TriggerCard
-                  title="Geriye Dönük Yahoo Fiyatları (Backfill Yahoo)"
-                  description="BIST ve Yabancı Borsa varlıklarının ilk işlem tarihinden itibaren ay sonu kapanış fiyatlarını geriye dönük olarak çekip kaydeder."
-                  btnText="Yahoo Geçmişini Güncelle"
-                  onClick={() => runSystemAction("backfillYahoo", "/api/history/backfill", { phase: "yahoo" })}
-                  isRunning={runningAction === "backfillYahoo"}
-                  isAnyRunning={runningAction !== null}
-                  status={actionStatus["backfillYahoo"]}
-                />
+                  <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                    <button
+                      onClick={() => runSystemAction("prices", "/api/prices/refresh")}
+                      disabled={runningAction !== null}
+                      className="w-full py-2.5 px-4 rounded-xl bg-[var(--color-brand)] hover:bg-[var(--color-brand-strong)] text-white text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                      {runningAction === "prices" ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                      <span>Fiyat Güncellemesini Başlat</span>
+                    </button>
 
-                {/* 3. TEFAS Tarihçe Güncelleme */}
-                <TriggerCard
-                  title="Geriye Dönük TEFAS Fiyatları (Backfill TEFAS)"
-                  description="Kullanıcı portföylerine yeni eklenen TEFAS fonlarının geçmiş ay sonu verilerini indirir. Her tıklamada 45 saniyelik paketler halinde tarihçeyi tamamlar."
-                  btnText="TEFAS Geçmişini Güncelle"
-                  onClick={() => runSystemAction("backfillTefas", "/api/history/backfill", { phase: "tefas" })}
-                  isRunning={runningAction === "backfillTefas"}
-                  isAnyRunning={runningAction !== null}
-                  status={actionStatus["backfillTefas"]}
-                />
-
-                {/* 4. Teknik Analiz Tetikleme */}
-                <TriggerCard
-                  title="Teknik Analizleri Yenile (Run Analysis)"
-                  description="Açık pozisyonu olan tüm hisse ve fonların RSI, MACD ve hareketli ortalama göstergelerini hesaplar (kural tabanlı teknik skor). AI briefing ayrıca Analiz sayfasından üretilir."
-                  btnText="Analizleri Yeniden Hesapla"
-                  onClick={() => runSystemAction("analysis", "/api/analysis/run")}
-                  isRunning={runningAction === "analysis"}
-                  isAnyRunning={runningAction !== null}
-                  status={actionStatus["analysis"]}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: Veritabanı Detayları */}
-          {activeTab === "tables" && (
-            <div className="space-y-6">
-              {/* Veritabanı Sistem Bilgisi */}
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Motor Bilgileri</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-                  <div className="text-xs text-[var(--color-muted)] font-medium">Veritabanı Motoru</div>
-                  <div className="text-base font-bold text-[var(--color-text)] mt-1">PostgreSQL</div>
+                    {actionStatus["prices"] && (
+                      <p className={cn("text-xs mt-3 flex items-center gap-1.5 font-medium", actionStatus["prices"]?.type === "success" ? "text-emerald-400" : "text-rose-400")}>
+                        {actionStatus["prices"]?.type === "success" ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                        {actionStatus["prices"]?.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-                  <div className="text-xs text-[var(--color-muted)] font-medium">Veritabanı Adı</div>
-                  <div className="text-base font-bold text-[var(--color-text)] mt-1">{dbEngine.databaseName}</div>
-                </div>
-                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-                  <div className="text-xs text-[var(--color-muted)] font-medium">Bağlantı Kullanıcısı</div>
-                  <div className="text-base font-bold text-[var(--color-text)] mt-1">{dbEngine.user}</div>
-                </div>
-                <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-                  <div className="text-xs text-[var(--color-muted)] font-medium">Toplam Veritabanı Boyutu</div>
-                  <div className="text-base font-bold text-[var(--color-brand)] mt-1">{dbEngine.totalSize}</div>
-                </div>
-              </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8 pt-4 border-t border-[var(--color-border)]">
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tabloları</h2>
-                  <p className="text-[11px] text-[var(--color-muted)] mt-0.5 leading-normal max-w-[800px]">{dbEngine.version}</p>
-                </div>
-                <a
-                  href="/api/admin/db/export"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white shadow-sm transition-all text-center focus:outline-none"
-                >
-                  <FileText size={16} />
-                  <span>Tüm Veritabanını Dışa Aktar (.json)</span>
-                </a>
-              </div>
+                {/* Action 2: TEFAS Geçmiş Ayları Tamamla */}
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 flex flex-col justify-between shadow-sm">
+                  <div>
+                    <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+                      <Database size={18} className="text-purple-400" /> TEFAS Fon Geçmişini Tamamla
+                    </h3>
+                    <p className="text-xs text-[var(--color-muted)] mt-2 leading-relaxed">
+                      Portföydeki TEFAS fonlarının eksik geçmiş ay sonu fiyat verilerini toplu olarak çekip veritabanına işler.
+                    </p>
+                  </div>
 
-              <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="theme-table-head">
-                      <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
-                        <th className="px-6 py-4">Tablo Adı</th>
-                        <th className="px-6 py-4 text-center">Kayıt Sayısı</th>
-                        <th className="px-6 py-4 text-center">Veri Boyutu</th>
-                        <th className="px-6 py-4 text-center">İndeks Boyutu</th>
-                        <th className="px-6 py-4 text-center">Toplam Boyut</th>
-                        <th className="px-6 py-4 text-right">Eylemler</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--color-border)] text-sm">
-                      {dbTables.map((t) => (
-                        <tr key={t.name} className="hover:bg-[var(--color-surface-hover)] transition-colors">
-                          <td className="px-6 py-4 font-semibold text-[var(--color-text)]">
-                            {t.name}
-                          </td>
-                          <td className="px-6 py-4 text-center font-medium text-[var(--color-text)]">
-                            {t.rowCount.toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4 text-center text-[var(--color-muted)] text-xs">
-                            {formatBytes(t.tableSize)}
-                          </td>
-                          <td className="px-6 py-4 text-center text-[var(--color-muted)] text-xs">
-                            {formatBytes(t.indexSize)}
-                          </td>
-                          <td className="px-6 py-4 text-center font-semibold text-[var(--color-text)] text-xs">
-                            {formatBytes(t.totalSize)}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => setSelectedSchemaTable(t)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-surface-muted)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
-                              >
-                                <Eye size={12} />
-                                <span>Şemayı İncele</span>
-                              </button>
-                              <a
-                                href={`/api/admin/db/export?table=${t.name}`}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-surface-muted)] border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
-                              >
-                                <FileText size={12} />
-                                <span>Dışa Aktar</span>
-                              </a>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                    <button
+                      onClick={() => runSystemAction("tefas", "/api/cron")}
+                      disabled={runningAction !== null}
+                      className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                      {runningAction === "tefas" ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                      <span>TEFAS Geçmişini Doldur</span>
+                    </button>
+
+                    {actionStatus["tefas"] && (
+                      <p className={cn("text-xs mt-3 flex items-center gap-1.5 font-medium", actionStatus["tefas"]?.type === "success" ? "text-emerald-400" : "text-rose-400")}>
+                        {actionStatus["tefas"]?.type === "success" ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                        {actionStatus["tefas"]?.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -444,68 +803,115 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
         </main>
       </div>
 
-      {/* Şema Detay Modalı */}
-      {selectedSchemaTable && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in duration-200">
-            {/* Modal Başlık */}
-            <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-[var(--color-text)]">
-                  "{selectedSchemaTable.name}" Tablo Şeması
-                </h3>
-                <p className="text-xs text-[var(--color-muted)] mt-0.5">
-                  Toplam {selectedSchemaTable.columns.length} kolon tanımlı
-                </p>
-              </div>
+      {/* Log Detay Modal */}
+      {selectedLogDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+              <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+                <Activity size={18} className="text-[var(--color-brand)]" />
+                Sistem Eylemi Detayı
+              </h3>
               <button
-                onClick={() => setSelectedSchemaTable(null)}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] transition-colors"
+                onClick={() => setSelectedLogDetails(null)}
+                className="p-1 rounded-lg hover:bg-[var(--color-bg)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Modal İçerik (Kolon Listesi) */}
-            <div className="p-6 overflow-y-auto flex-1">
-              <table className="w-full text-left border-collapse">
-                <thead className="theme-table-head">
-                  <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
-                    <th className="pb-3">Kolon Adı</th>
-                    <th className="pb-3">Veri Tipi</th>
-                    <th className="pb-3 text-right">Boş Geçilebilir</th>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="text-[var(--color-muted)] font-semibold block mb-0.5">Zaman Damgası</span>
+                <span className="font-mono text-[var(--color-text)]">
+                  {new Date(selectedLogDetails.createdAt).toLocaleString("tr-TR")}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[var(--color-muted)] font-semibold block mb-0.5">Eylem Türü</span>
+                <div>{getActionBadge(selectedLogDetails.action)}</div>
+              </div>
+
+              <div>
+                <span className="text-[var(--color-muted)] font-semibold block mb-0.5">Kullanıcı</span>
+                <span className="font-medium text-[var(--color-text)]">
+                  {selectedLogDetails.userEmail || "Sistem (Cron Görevi)"}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[var(--color-muted)] font-semibold block mb-0.5">IP Adresi</span>
+                <span className="font-mono text-[var(--color-text)]">{selectedLogDetails.ipAddress || "Bilinmiyor"}</span>
+              </div>
+
+              <div>
+                <span className="text-[var(--color-muted)] font-semibold block mb-0.5">Tarayıcı / Cihaz (User-Agent)</span>
+                <span className="font-mono text-[11px] text-[var(--color-muted)] break-all bg-[var(--color-bg)] p-2 rounded-lg block">
+                  {selectedLogDetails.userAgent || "Cihaz bilgisi yok"}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[var(--color-muted)] font-semibold block mb-0.5">Detay Açıklaması</span>
+                <div className="bg-[var(--color-bg)] border border-[var(--color-border)] p-3 rounded-xl font-mono text-[11px] text-[var(--color-text)] whitespace-pre-wrap leading-relaxed">
+                  {selectedLogDetails.details || "Açıklama bulunmuyor."}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setSelectedLogDetails(null)}
+                className="px-4 py-2 rounded-xl bg-[var(--color-brand)] text-white font-bold text-xs hover:bg-[var(--color-brand-strong)] transition-colors"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Şema Detay Modal */}
+      {selectedSchemaTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-xl max-h-[85vh] flex flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3 mb-4">
+              <div>
+                <h3 className="font-bold text-base text-[var(--color-text)] font-mono">
+                  {selectedSchemaTable.name}
+                </h3>
+                <span className="text-xs text-[var(--color-muted)]">Veritabanı Kolon & Şema Detayı</span>
+              </div>
+              <button
+                onClick={() => setSelectedSchemaTable(null)}
+                className="p-1 rounded-lg hover:bg-[var(--color-bg)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 pr-1">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)] font-semibold uppercase">
+                    <th className="py-2 px-3">Kolon Adı</th>
+                    <th className="py-2 px-3">Veri Tipi</th>
+                    <th className="py-2 px-3 text-right">Boş Olabilir mi?</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--color-border)] text-sm">
-                  {selectedSchemaTable.columns.map((c) => (
-                    <tr key={c.name} className="theme-surface-hover">
-                      <td className="py-3 font-mono font-medium text-[var(--color-brand)] text-xs">
-                        {c.name}
-                      </td>
-                      <td className="py-3 font-mono text-[var(--color-text)] text-xs">
-                        {c.type}
-                      </td>
-                      <td className="py-3 text-right text-xs">
-                        {c.nullable ? (
-                          <span className="text-emerald-500 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/10">Evet</span>
-                        ) : (
-                          <span className="text-[var(--color-muted)] font-semibold bg-[var(--color-surface-muted)] px-2 py-0.5 rounded-full border border-[var(--color-border)]">Hayır</span>
-                        )}
+                <tbody className="divide-y divide-[var(--color-border)] font-mono">
+                  {selectedSchemaTable.columns.map((col) => (
+                    <tr key={col.name} className="hover:bg-[var(--color-surface-hover)]">
+                      <td className="py-2.5 px-3 font-semibold text-[var(--color-brand)]">{col.name}</td>
+                      <td className="py-2.5 px-3 text-[var(--color-text)]">{col.type}</td>
+                      <td className="py-2.5 px-3 text-right text-[var(--color-muted)]">
+                        {col.nullable ? "EVET (NULL)" : "HAYIR"}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            {/* Modal Alt Alan */}
-            <div className="px-6 py-4 border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] flex justify-end">
-              <button
-                onClick={() => setSelectedSchemaTable(null)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] transition-colors"
-              >
-                Kapat
-              </button>
             </div>
           </div>
         </div>
@@ -514,86 +920,20 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
   );
 }
 
-/* Yardımcı Bileşen: İstatistik Kartı */
-interface StatCardProps {
-  title: string;
-  count: number;
-  icon: React.ReactNode;
-}
-
-function StatCard({ title, count, icon }: StatCardProps) {
+function StatCard({ title, count, icon }: { title: string; count: number; icon: React.ReactNode }) {
   return (
-    <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm flex items-center justify-between gap-4 hover:shadow-md transition-all">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm flex items-center justify-between">
       <div>
-        <div className="text-sm font-medium text-[var(--color-muted)]">{title}</div>
-        <div className="text-3xl font-bold text-[var(--color-text)] mt-1.5">{count.toLocaleString()}</div>
+        <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider block mb-1">
+          {title}
+        </span>
+        <span className="text-3xl font-extrabold text-[var(--color-text)] tracking-tight">
+          {count.toLocaleString("tr-TR")}
+        </span>
       </div>
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-surface-muted)] border border-[var(--color-border)]">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-bg)] border border-[var(--color-border)] shadow-inner">
         {icon}
       </div>
     </div>
   );
-}
-
-/* Yardımcı Bileşen: Tetikleyici Kartı */
-interface TriggerCardProps {
-  title: string;
-  description: string;
-  btnText: string;
-  onClick: () => void;
-  isRunning: boolean;
-  isAnyRunning: boolean;
-  status?: { type: "success" | "error"; message: string } | null;
-}
-
-function TriggerCard({ title, description, btnText, onClick, isRunning, isAnyRunning, status }: TriggerCardProps) {
-  return (
-    <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition-all">
-      <div className="space-y-1.5 flex-1">
-        <h3 className="font-semibold text-base text-[var(--color-text)]">{title}</h3>
-        <p className="text-sm text-[var(--color-muted)] leading-relaxed max-w-[800px]">{description}</p>
-        
-        {/* İşlem Sonu Bildirimi */}
-        {status && (
-          <div className={cn(
-            "flex items-start gap-2.5 p-3 rounded-xl text-xs mt-3 max-w-[800px] border",
-            status.type === "success"
-              ? "bg-emerald-500/5 text-emerald-500 border-emerald-500/10"
-              : "bg-rose-500/5 text-rose-500 border-rose-500/10"
-          )}>
-            {status.type === "success" ? <CheckCircle size={14} className="shrink-0 mt-0.5" /> : <XCircle size={14} className="shrink-0 mt-0.5" />}
-            <span className="leading-normal font-medium">{status.message}</span>
-          </div>
-        )}
-      </div>
-      <div className="shrink-0">
-        <button
-          onClick={onClick}
-          disabled={isAnyRunning}
-          className={cn(
-            "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2",
-            isRunning
-              ? "bg-[var(--color-surface-hover)] text-[var(--color-text)] cursor-wait"
-              : "bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] focus:ring-[var(--color-brand)] disabled:opacity-50"
-          )}
-        >
-          {isRunning ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Play size={16} />
-          )}
-          <span>{isRunning ? "Çalışıyor..." : btnText}</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Bayt değerlerini okunabilir KB, MB, GB biçimine dönüştürür. */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }

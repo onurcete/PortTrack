@@ -178,3 +178,20 @@ model Note {
   @@index([pinned])
   @@index([userId])
 }
+
+/// Sistem ve kullanıcı eylemleri audit log tablosu
+model SystemLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  action    String   // LOGIN | PRICE_REFRESH_MANUAL | CRON_PRICE_REFRESH | CRON_DAILY_DIGEST | TRANSACTION_ADD ...
+  status    String   // SUCCESS | FAILED
+  details   String?  // JSON veya detay açıklaması
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

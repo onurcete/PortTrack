@@ -5,6 +5,7 @@ import { generateDailyDigestEmailHtml } from "@/lib/dailyDigestEmail";
 import { sendEmail } from "@/lib/sendEmail";
 import { getPortfolio } from "@/lib/data";
 import { getPeriodReturns } from "@/lib/history";
+import { logSystemEvent } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -115,6 +116,17 @@ export async function GET(req: NextRequest) {
           to: user.email,
           subject: `📊 Günlük Portföy Özetiniz (${dateStr}) | PortTrack`,
           html,
+        });
+
+        await logSystemEvent({
+          userId: user.id,
+          userEmail: user.email,
+          action: "CRON_DAILY_DIGEST",
+          status: emailRes.ok ? "SUCCESS" : "FAILED",
+          details: emailRes.ok
+            ? `${user.email} adresine günlük bülten e-postası iletildi (${emailRes.id}).`
+            : `${user.email} e-posta gönderim hatası: ${emailRes.error}`,
+          req,
         });
 
         results.push({
