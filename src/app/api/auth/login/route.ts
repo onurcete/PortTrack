@@ -17,25 +17,42 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const user = await prisma.user.findFirst({
-    where: { email: { equals: email.trim().toLowerCase() } },
-  });
+  try {
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email.trim().toLowerCase() } },
+    });
 
-  if (!user || !(await verifyPassword(password, user.password))) {
+    if (!user || !(await verifyPassword(password, user.password))) {
+      return NextResponse.json(
+        { ok: false, error: "E-posta veya şifre hatalı." },
+        { status: 401 },
+      );
+    }
+
+    const token = await createSession(user.id);
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(AUTH_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 60, // 60 gun
+    });
+    return res;
+  } catch (err: any) {
+    console.error("❌ Login API Error:", err);
+    if (err?.message?.includes("exceeded the data transfer quota")) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Veritabanı (Neon PostgreSQL) veri transfer kotasına ulaştı. Lütfen Neon konsolundan (neon.tech) kotaları kontrol edin.",
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { ok: false, error: "E-posta veya şifre hatalı." },
-      { status: 401 },
+      { ok: false, error: "Sunucu/Veritabanı bağlantı hatası oluştu. Lütfen tekrar deneyin." },
+      { status: 500 }
     );
   }
-
-  const token = await createSession(user.id);
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(AUTH_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 60, // 60 gun
-  });
-  return res;
 }
