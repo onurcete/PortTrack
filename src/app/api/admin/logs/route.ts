@@ -36,22 +36,23 @@ export async function GET(req: NextRequest) {
       take: 150,
     });
 
-    // 2. Kullanıcı Giriş İstatistikleri (User Login Counts & Last Login)
+    // 2. Kullanıcı Giriş & Aktif Ziyaret İstatistikleri
     const allUsers = await prisma.user.findMany({
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
 
-    const loginLogs = await prisma.systemLog.findMany({
-      where: { action: "LOGIN", status: "SUCCESS" },
+    const activityLogs = await prisma.systemLog.findMany({
+      where: { action: { in: ["LOGIN", "ACTIVE_VISIT"] }, status: "SUCCESS" },
       orderBy: { createdAt: "desc" },
     });
 
     const userStats = allUsers.map((u) => {
-      const userLogins = loginLogs.filter(
+      const userLogs = activityLogs.filter(
         (l) => l.userId === u.id || (l.userEmail && l.userEmail.toLowerCase() === u.email.toLowerCase())
       );
-      const loginCount = userLogins.length;
-      const lastLogin = userLogins.length > 0 ? userLogins[0].createdAt : null;
+      const loginCount = userLogs.filter((l) => l.action === "LOGIN").length;
+      const activeVisitCount = userLogs.filter((l) => l.action === "ACTIVE_VISIT").length;
+      const lastActive = userLogs.length > 0 ? userLogs[0].createdAt : null;
 
       return {
         id: u.id,
@@ -60,23 +61,26 @@ export async function GET(req: NextRequest) {
         role: u.role,
         createdAt: u.createdAt,
         loginCount,
-        lastLogin,
+        activeVisitCount,
+        totalSessions: loginCount + activeVisitCount,
+        lastActive,
       };
     });
 
     // 3. Eylem Sayaçları Özetleri
     const totalLogins = await prisma.systemLog.count({ where: { action: "LOGIN", status: "SUCCESS" } });
+    const totalActiveVisits = await prisma.systemLog.count({ where: { action: "ACTIVE_VISIT", status: "SUCCESS" } });
     const totalManualRefreshes = await prisma.systemLog.count({ where: { action: "PRICE_REFRESH_MANUAL" } });
     const totalCronRefreshes = await prisma.systemLog.count({ where: { action: "CRON_PRICE_REFRESH" } });
     const totalDailyDigests = await prisma.systemLog.count({ where: { action: "CRON_DAILY_DIGEST" } });
 
-    // 4. Son 14 Günün Giriş Zaman Serisi (Chart verisi)
+    // 4. Son 14 Günün Giriş & Kullanım Zaman Serisi (Chart verisi)
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-    const recentLogins = await prisma.systemLog.findMany({
+    const recentActivities = await prisma.systemLog.findMany({
       where: {
-        action: "LOGIN",
+        action: { in: ["LOGIN", "ACTIVE_VISIT"] },
         status: "SUCCESS",
         createdAt: { gte: fourteenDaysAgo },
       },
@@ -91,7 +95,7 @@ export async function GET(req: NextRequest) {
       dailyLoginsMap.set(dayKey, 0);
     }
 
-    for (const l of recentLogins) {
+    for (const l of recentActivities) {
       const dayKey = l.createdAt.toISOString().split("T")[0];
       if (dailyLoginsMap.has(dayKey)) {
         dailyLoginsMap.set(dayKey, (dailyLoginsMap.get(dayKey) || 0) + 1);
@@ -119,6 +123,7 @@ export async function GET(req: NextRequest) {
       userStats,
       actionCounts: {
         totalLogins,
+        totalActiveVisits,
         totalManualRefreshes,
         totalCronRefreshes,
         totalDailyDigests,

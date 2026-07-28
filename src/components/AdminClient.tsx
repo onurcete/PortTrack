@@ -97,7 +97,9 @@ export interface UserStatDTO {
   role: string;
   createdAt: string;
   loginCount: number;
-  lastLogin: string | null;
+  activeVisitCount: number;
+  totalSessions: number;
+  lastActive: string | null;
 }
 
 export interface LogsDataResponse {
@@ -105,6 +107,7 @@ export interface LogsDataResponse {
   userStats: UserStatDTO[];
   actionCounts: {
     totalLogins: number;
+    totalActiveVisits: number;
     totalManualRefreshes: number;
     totalCronRefreshes: number;
     totalDailyDigests: number;
@@ -216,7 +219,9 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
   const getActionBadge = (action: string) => {
     switch (action) {
       case "LOGIN":
-        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><LogIn size={11} /> Giriş</span>;
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><LogIn size={11} /> Açık Giriş</span>;
+      case "ACTIVE_VISIT":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"><Activity size={11} /> Aktif Ziyaret</span>;
       case "LOGIN_FAILED":
         return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20"><XCircle size={11} /> Başarısız Giriş</span>;
       case "PRICE_REFRESH_MANUAL":
@@ -320,69 +325,82 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           {activeTab === "logs" && (
             <div className="space-y-8">
               {/* Özet Metrik Kartları */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Toplam Giriş</span>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
-                      <LogIn size={18} />
+                    <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Açık Girişler</span>
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+                      <LogIn size={16} />
                     </div>
                   </div>
-                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                  <div className="mt-2 text-xl font-bold text-[var(--color-text)]">
                     {logsData?.actionCounts.totalLogins ?? "-"}
                   </div>
-                  <span className="text-xs text-[var(--color-muted)] mt-1 block">Başarılı kullanıcı oturumları</span>
+                  <span className="text-[10px] text-[var(--color-muted)] mt-0.5 block">Formla oturum açma</span>
                 </div>
 
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Manuel Fiyat Tıklama</span>
-                    <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
-                      <RefreshCw size={18} />
+                    <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Aktif Ziyaretler</span>
+                    <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
+                      <Activity size={16} />
                     </div>
                   </div>
-                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                  <div className="mt-2 text-xl font-bold text-[var(--color-text)]">
+                    {logsData?.actionCounts.totalActiveVisits ?? "-"}
+                  </div>
+                  <span className="text-[10px] text-[var(--color-muted)] mt-0.5 block">Çerezle otomatik kullanım</span>
+                </div>
+
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Manuel Fiyat</span>
+                    <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
+                      <RefreshCw size={16} />
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xl font-bold text-[var(--color-text)]">
                     {logsData?.actionCounts.totalManualRefreshes ?? "-"}
                   </div>
-                  <span className="text-xs text-[var(--color-muted)] mt-1 block">Butonla tetiklenen güncellemeler</span>
+                  <span className="text-[10px] text-[var(--color-muted)] mt-0.5 block">Butonla güncelleme</span>
                 </div>
 
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Otomatik Cron Fiyat</span>
-                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
-                      <Zap size={18} />
+                    <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Cron Fiyat</span>
+                    <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400">
+                      <Zap size={16} />
                     </div>
                   </div>
-                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                  <div className="mt-2 text-xl font-bold text-[var(--color-text)]">
                     {logsData?.actionCounts.totalCronRefreshes ?? "-"}
                   </div>
-                  <span className="text-xs text-[var(--color-muted)] mt-1 block">Zamanlanmış otomatik güncellemeler</span>
+                  <span className="text-[10px] text-[var(--color-muted)] mt-0.5 block">Zamanlanmış otomatik</span>
                 </div>
 
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Bülten E-Postaları</span>
-                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
-                      <Mail size={18} />
+                    <span className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Bülten Mailleri</span>
+                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+                      <Mail size={16} />
                     </div>
                   </div>
-                  <div className="mt-3 text-2xl font-bold text-[var(--color-text)]">
+                  <div className="mt-2 text-xl font-bold text-[var(--color-text)]">
                     {logsData?.actionCounts.totalDailyDigests ?? "-"}
                   </div>
-                  <span className="text-xs text-[var(--color-muted)] mt-1 block">İletilen günlük portföy özetleri</span>
+                  <span className="text-[10px] text-[var(--color-muted)] mt-0.5 block">İletilen günlük özetler</span>
                 </div>
               </div>
 
-              {/* Kullanıcı Giriş & İstatistik Tablosu */}
+              {/* Kullanıcı Giriş & Aktif Ziyaret İstatistik Tablosu */}
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
                       <Users size={18} className="text-[var(--color-brand)]" />
-                      Kullanıcı Giriş & Aktivite Durumu
+                      Kullanıcı Aktivite & Oturum İstatistikleri
                     </h3>
-                    <p className="text-xs text-[var(--color-muted)] mt-0.5">Kullanıcıların toplam oturum açma sayıları ve son giriş zamanları</p>
+                    <p className="text-xs text-[var(--color-muted)] mt-0.5">Kullanıcıların şifreli girişleri, çerezli aktif ziyaretleri ve son görülme zamanları</p>
                   </div>
                 </div>
 
@@ -393,8 +411,10 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                         <th className="py-3 px-3">Kullanıcı</th>
                         <th className="py-3 px-3">E-Posta</th>
                         <th className="py-3 px-3">Rol</th>
-                        <th className="py-3 px-3 text-center">Giriş Sayısı</th>
-                        <th className="py-3 px-3 text-right">Son Giriş Tarihi</th>
+                        <th className="py-3 px-3 text-center">Form Girişi</th>
+                        <th className="py-3 px-3 text-center">Aktif Ziyaret</th>
+                        <th className="py-3 px-3 text-center">Toplam Oturum</th>
+                        <th className="py-3 px-3 text-right">Son Aktif Görülme</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-border)]">
@@ -408,14 +428,22 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                             </span>
                           </td>
                           <td className="py-3 px-3 text-center">
-                            <span className="inline-block px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="inline-block px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                               {u.loginCount} Kez
                             </span>
                           </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-block px-2 py-0.5 text-[11px] font-bold rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                              {u.activeVisitCount} Ziyaret
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center font-bold text-[var(--color-text)]">
+                            {u.totalSessions} Oturum
+                          </td>
                           <td className="py-3 px-3 text-right text-[var(--color-muted)]">
-                            {u.lastLogin
-                              ? new Date(u.lastLogin).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                              : "Henüz giriş yapmadı"}
+                            {u.lastActive
+                              ? new Date(u.lastActive).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                              : "Henüz aktifleflmedi"}
                           </td>
                         </tr>
                       ))}
@@ -431,9 +459,9 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                     <div>
                       <h3 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
                         <TrendingUp size={18} className="text-emerald-500" />
-                        Son 14 Günün Giriş Yoğunluğu
+                        Son 14 Günün Kullanım Yoğunluğu
                       </h3>
-                      <p className="text-xs text-[var(--color-muted)] mt-0.5">Günlere göre sisteme yapılan başarılı oturum açma grafiği</p>
+                      <p className="text-xs text-[var(--color-muted)] mt-0.5">Günlere göre sisteme yapılan giriş ve aktif kullanım grafiği</p>
                     </div>
                   </div>
 
@@ -497,6 +525,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                     >
                       <option value="ALL">Tüm Eylemler</option>
                       <option value="LOGIN">Kullanıcı Girişi (LOGIN)</option>
+                      <option value="ACTIVE_VISIT">Aktif Ziyaret (Session Active)</option>
                       <option value="LOGIN_FAILED">Başarısız Giriş</option>
                       <option value="PRICE_REFRESH_MANUAL">Manuel Fiyat Tıklama</option>
                       <option value="CRON_PRICE_REFRESH">Otomatik Cron Fiyat</option>

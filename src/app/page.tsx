@@ -3,6 +3,7 @@ import { getBenchmarkComparisonData, getPeriodReturns } from "@/lib/history";
 import { DashboardClient, type DashboardDTO } from "@/components/DashboardClient";
 import { LandingClient } from "@/components/LandingClient";
 import { getSessionUserIdOptional } from "@/lib/auth";
+import { trackUserActivity } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,9 @@ export default async function DashboardPage() {
   if (!userId) {
     return <LandingClient isLoggedIn={false} />;
   }
+
+  // Aktif Ziyaret / Kullanım Takibi (15 dakikada 1 kez kayıt düşer)
+  trackUserActivity(userId).catch(() => null);
 
   const [p, benchmarkData, periodReturns] = await Promise.all([
     getPortfolio(userId),
