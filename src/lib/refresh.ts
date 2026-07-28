@@ -233,6 +233,22 @@ export async function refreshPrices(): Promise<RefreshResult> {
     });
   }
 
+  // Guncelleme zaman damgasini kaydet
+  const now = new Date();
+  await prisma.priceSnapshot
+    .upsert({
+      where: { symbol_date: { symbol: "__LAST_REFRESH_TIME__", date: today } },
+      create: {
+        symbol: "__LAST_REFRESH_TIME__",
+        date: today,
+        close: now.getTime(),
+        currency: "TRY",
+        source: "system",
+      },
+      update: { close: now.getTime() },
+    })
+    .catch(() => null);
+
   return { usdTry, updated, failed };
 }
 

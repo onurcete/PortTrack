@@ -51,12 +51,18 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
     userSymbols.add(inst.symbol);
   }
 
-  const snaps = userSymbols.size > 0
-    ? await prisma.priceSnapshot.findMany({
-        where: { symbol: { in: Array.from(userSymbols) } },
-        orderBy: { date: "desc" },
-      })
-    : [];
+  const [snaps, systemSnap] = await Promise.all([
+    userSymbols.size > 0
+      ? prisma.priceSnapshot.findMany({
+          where: { symbol: { in: Array.from(userSymbols) } },
+          orderBy: { date: "desc" },
+        })
+      : Promise.resolve([]),
+    prisma.priceSnapshot.findFirst({
+      where: { symbol: "__LAST_REFRESH_TIME__" },
+      orderBy: { date: "desc" },
+    }),
+  ]);
 
   // Load cache files to resolve missing instrument names
   let tefasCache: { symbol: string; name: string }[] = [];
@@ -119,7 +125,7 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
     symbolAssetType.set(t.symbol, t.assetType as AssetType);
   }
 
-  const snapsBySymbol = new Map<string, typeof snaps>();
+  const snapsBySymbol = new Map<string, Array<(typeof snaps)[number]>>();
   for (const s of snaps) {
     let list = snapsBySymbol.get(s.symbol);
     if (!list) {
@@ -365,7 +371,7 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
     totals,
     allocation,
     currentUsdTry,
-    lastUpdated: snaps.length > 0 ? snaps[0].date : null,
+    lastUpdated: systemSnap && systemSnap.close > 0 ? new Date(systemSnap.close) : (snaps.length > 0 ? snaps[0].date : null),
     transactionCount: txRows.length,
     portfolioXirrTRY,
     portfolioXirrUSD,
