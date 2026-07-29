@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { loadAnalysisBundle } from "@/lib/analysisData";
-import { generateDailyDigestEmailHtml } from "@/lib/dailyDigestEmail";
+import { generateDailyDigestEmailHtml, type TefasInvestorItem } from "@/lib/dailyDigestEmail";
 import { sendEmail } from "@/lib/sendEmail";
 import { getPortfolio } from "@/lib/data";
 import { getPeriodReturns } from "@/lib/history";
 import { logSystemEvent } from "@/lib/logger";
+import { computeFundInvestorStats } from "@/lib/tefasInvestors";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -28,18 +29,8 @@ function authorized(req: NextRequest): boolean {
 }
 
 export async function runDailyDigest(req: NextRequest) {
-  // 1. Hedef Kullanıcıları Bul (ceteonur@gmail.com ve denizbag@gmail.com)
-  let users = await prisma.user.findMany({
-    where: {
-      email: {
-        in: ["ceteonur@gmail.com", "denizbag@gmail.com", "seay34@gmail.com"],
-      },
-    },
-  });
-
-  if (users.length === 0) {
-    users = await prisma.user.findMany({ take: 5 });
-  }
+  // 1. Tüm Kayıtlı Kullanıcıları Bul (Veritabanındaki tüm aktif kullanıcılar)
+  const users = await prisma.user.findMany();
 
   if (users.length === 0) {
     return { ok: false, error: "Gönderilecek kullanıcı bulunamadı." };
@@ -82,12 +73,61 @@ export async function runDailyDigest(req: NextRequest) {
         };
       });
 
-      // 1 günlük değişime göre en çok kazanan 3 ve en çok kaybeden 3 enstrüman
+      // 1 günlük değişime göre en çok kazanan 5 ve en çok kaybeden 5 enstrüman
       const sorted = [...holdingsWith1DayChange].sort(
         (a, b) => b.changePercent - a.changePercent
       );
-      const topGainers = sorted.slice(0, 3);
-      const topLosers = sorted.slice(-3).reverse();
+      const topGainers = sorted.slice(0, 5);
+      const topLosers = sorted.slice(-5).reverse();
+
+      // Kullanıcının elindeki TEFAS fonları için yatırımcı sayısı değişimi hesapla
+      const tefasHoldings = holdings.filter((h) => h.assetType === "TEFAS");
+      let topTefasInvestorGainers: TefasInvestorItem[] = [];
+      let topTefasInvestorLosers: TefasInvestorItem[] = [];
+
+      if (tefasHoldings.length > 0) {
+        const tefasSymbols = tefasHoldings.map((h) => h.symbol);
+        const tefasSnaps = await prisma.priceSnapshot.findMany({
+          where: {
+            symbol: { in: tefasSymbols },
+            investors: { not: null },
+          },
+          orderBy: { date: "desc" },
+        });
+
+        const tefasStats = tefasSymbols.map((sym) => {
+          const fundSnaps = tefasSnaps.filter((s) => s.symbol === sym);
+          return computeFundInvestorStats(sym, fundSnaps);
+        });
+
+        const validStats = tefasStats.filter(
+          (s) => s.latest != null && s.weekDelta != null && s.weekDeltaPct != null && s.weekDelta !== 0
+        );
+
+        // Yatırımcı sayısı en çok artan ilk 3
+        topTefasInvestorGainers = [...validStats]
+          .filter((s) => (s.weekDelta ?? 0) > 0)
+          .sort((a, b) => (b.weekDeltaPct ?? 0) - (a.weekDeltaPct ?? 0))
+          .slice(0, 3)
+          .map((s) => ({
+            symbol: s.symbol,
+            latestInvestors: s.latest!,
+            weekDelta: s.weekDelta!,
+            weekDeltaPct: s.weekDeltaPct!,
+          }));
+
+        // Yatırımcı sayısı en çok azalan ilk 3
+        topTefasInvestorLosers = [...validStats]
+          .filter((s) => (s.weekDelta ?? 0) < 0)
+          .sort((a, b) => (a.weekDeltaPct ?? 0) - (b.weekDeltaPct ?? 0))
+          .slice(0, 3)
+          .map((s) => ({
+            symbol: s.symbol,
+            latestInvestors: s.latest!,
+            weekDelta: Math.abs(s.weekDelta!),
+            weekDeltaPct: Math.abs(s.weekDeltaPct!),
+          }));
+      }
 
       // HTML Şablonunu Üret
       const html = generateDailyDigestEmailHtml({
@@ -103,6 +143,8 @@ export async function runDailyDigest(req: NextRequest) {
         ytdPctTRY: periodReturns.ytdTRY ?? null,
         topGainers,
         topLosers,
+        topTefasInvestorGainers,
+        topTefasInvestorLosers,
       });
 
       const sign = dailyAmtTRY >= 0 ? "+" : "";
@@ -133,25 +175,23 @@ export async function runDailyDigest(req: NextRequest) {
         ok: emailRes.ok,
         emailId: emailRes.id,
         error: emailRes.error,
-        stats: {
-          totalTRY,
-          totalUSD,
-          dailyAmtTRY,
-        },
+        stats: { totalTRY, totalUSD, dailyAmtTRY },
       });
-    } catch (userErr: any) {
-      console.error(`❌ ${user.email} için bülten oluşturma hatası:`, userErr);
+    } catch (err: any) {
+      console.error(`❌ ${user.email} için bülten oluşturma hatası:`, err);
       results.push({
         email: user.email,
+        userName: user.name,
         ok: false,
-        error: userErr.message,
+        error: err?.message || "Bülten oluşturulamadı.",
       });
     }
   }
 
+  const sentCount = results.filter((r) => r.ok).length;
   return {
     ok: true,
-    sentCount: results.filter((r) => r.ok).length,
+    sentCount,
     totalTargets: users.length,
     details: results,
   };
@@ -159,19 +199,18 @@ export async function runDailyDigest(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   if (!authorized(req)) {
-    return NextResponse.json({ ok: false, error: "Yetkisiz" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 401 });
   }
 
-  try {
-    const res = await runDailyDigest(req);
-    return NextResponse.json(res);
-  } catch (err: any) {
-    console.error("❌ Daily Digest Cron Error:", err);
-    return NextResponse.json(
-      { ok: false, error: (err as Error).message },
-      { status: 500 }
-    );
-  }
+  const res = await runDailyDigest(req);
+  return NextResponse.json(res);
 }
 
-export const POST = GET;
+export async function POST(req: NextRequest) {
+  if (!authorized(req)) {
+    return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 401 });
+  }
+
+  const res = await runDailyDigest(req);
+  return NextResponse.json(res);
+}

@@ -9,6 +9,13 @@ export interface PerformerItem {
   valueTRY: number;
 }
 
+export interface TefasInvestorItem {
+  symbol: string;
+  latestInvestors: number;
+  weekDelta: number;
+  weekDeltaPct: number;
+}
+
 export interface DailyDigestData {
   userName: string;
   userEmail: string;
@@ -25,9 +32,13 @@ export interface DailyDigestData {
   mtdPctTRY: number | null;
   ytdPctTRY: number | null;
 
-  // En Çok Kazanan 3 ve En Çok Kaybeden 3 Varlık
+  // En Çok Kazanan 5 ve En Çok Kaybeden 5 Varlık
   topGainers: PerformerItem[];
   topLosers: PerformerItem[];
+
+  // TEFAS Yatırımcı Sayısı En Çok Artan ve Azalan İlk 3 Fon
+  topTefasInvestorGainers?: TefasInvestorItem[];
+  topTefasInvestorLosers?: TefasInvestorItem[];
 }
 
 export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
@@ -43,36 +54,64 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
     new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.abs(val));
   const fmtPct = (val: number | null) =>
     val == null ? "%0,00" : `${val >= 0 ? "+" : ""}${val.toFixed(2).replace(".", ",")}%`;
+  const fmtNum = (val: number) =>
+    new Intl.NumberFormat("tr-TR").format(Math.abs(val));
 
   const uniqueRef = Date.now().toString(36);
 
-  // Gainers Rows
+  // Gainers Rows (Top 5)
   const gainersRows = data.topGainers
     .map(
       (item) => `
       <tr style="border-bottom: 1px solid #1e293b;">
-        <td style="padding: 12px 14px; font-weight: 800; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; font-size: 13px;">${item.symbol}</td>
-        <td style="padding: 12px 14px; color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; font-size: 11px; font-weight: 600;">
+        <td style="padding: 10px 14px; font-weight: 800; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; font-size: 13px;">${item.symbol}</td>
+        <td style="padding: 10px 14px; color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; font-size: 11px; font-weight: 600;">
           <span style="background-color: #1e293b; color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; padding: 3px 8px; border-radius: 6px;">${item.assetType}</span>
         </td>
-        <td style="padding: 12px 14px; text-align: right; color: #34d399 !important; -webkit-text-fill-color: #34d399 !important; font-weight: 800; font-size: 13px;">+${item.changePercent.toFixed(2).replace(".", ",")}%</td>
-        <td style="padding: 12px 14px; text-align: right; color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
+        <td style="padding: 10px 14px; text-align: right; color: #34d399 !important; -webkit-text-fill-color: #34d399 !important; font-weight: 800; font-size: 13px;">+${item.changePercent.toFixed(2).replace(".", ",")}%</td>
+        <td style="padding: 10px 14px; text-align: right; color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
       </tr>
     `
     )
     .join("");
 
-  // Losers Rows
+  // Losers Rows (Top 5)
   const losersRows = data.topLosers
     .map(
       (item) => `
       <tr style="border-bottom: 1px solid #1e293b;">
-        <td style="padding: 12px 14px; font-weight: 800; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; font-size: 13px;">${item.symbol}</td>
-        <td style="padding: 12px 14px; color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; font-size: 11px; font-weight: 600;">
+        <td style="padding: 10px 14px; font-weight: 800; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; font-size: 13px;">${item.symbol}</td>
+        <td style="padding: 10px 14px; color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; font-size: 11px; font-weight: 600;">
           <span style="background-color: #1e293b; color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; padding: 3px 8px; border-radius: 6px;">${item.assetType}</span>
         </td>
-        <td style="padding: 12px 14px; text-align: right; color: #fb7185 !important; -webkit-text-fill-color: #fb7185 !important; font-weight: 800; font-size: 13px;">${item.changePercent.toFixed(2).replace(".", ",")}%</td>
-        <td style="padding: 12px 14px; text-align: right; color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
+        <td style="padding: 10px 14px; text-align: right; color: #fb7185 !important; -webkit-text-fill-color: #fb7185 !important; font-weight: 800; font-size: 13px;">${item.changePercent.toFixed(2).replace(".", ",")}%</td>
+        <td style="padding: 10px 14px; text-align: right; color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; font-weight: 700; font-size: 12px;">${fmtTRY(item.valueTRY)} ₺</td>
+      </tr>
+    `
+    )
+    .join("");
+
+  // TEFAS Investor Gainers Rows (Top 3)
+  const tefasGainersRows = (data.topTefasInvestorGainers || [])
+    .map(
+      (item) => `
+      <tr style="border-bottom: 1px solid #1e293b;">
+        <td style="padding: 10px 14px; font-weight: 800; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; font-size: 13px;">${item.symbol}</td>
+        <td style="padding: 10px 14px; color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; font-size: 12px; font-weight: 600;">${fmtNum(item.latestInvestors)} kişi</td>
+        <td style="padding: 10px 14px; text-align: right; color: #34d399 !important; -webkit-text-fill-color: #34d399 !important; font-weight: 800; font-size: 12px;">+${fmtNum(item.weekDelta)} (+${item.weekDeltaPct.toFixed(2).replace(".", ",")}%)</td>
+      </tr>
+    `
+    )
+    .join("");
+
+  // TEFAS Investor Losers Rows (Top 3)
+  const tefasLosersRows = (data.topTefasInvestorLosers || [])
+    .map(
+      (item) => `
+      <tr style="border-bottom: 1px solid #1e293b;">
+        <td style="padding: 10px 14px; font-weight: 800; color: #f8fafc !important; -webkit-text-fill-color: #f8fafc !important; font-size: 13px;">${item.symbol}</td>
+        <td style="padding: 10px 14px; color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; font-size: 12px; font-weight: 600;">${fmtNum(item.latestInvestors)} kişi</td>
+        <td style="padding: 10px 14px; text-align: right; color: #fb7185 !important; -webkit-text-fill-color: #fb7185 !important; font-weight: 800; font-size: 12px;">-${fmtNum(item.weekDelta)} (${item.weekDeltaPct.toFixed(2).replace(".", ",")}%)</td>
       </tr>
     `
     )
@@ -187,23 +226,23 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
             </td>
           </tr>
 
-          <!-- Top Gainers Table (En Çok Kazandıran İlk 3) -->
+          <!-- Top Gainers Table (En Çok Kazandıran İlk 5) -->
           ${
             data.topGainers.length > 0
               ? `
           <tr>
             <td style="padding: 0 28px 20px;">
               <div style="font-size: 13px; font-weight: 900; color: #34d399 !important; -webkit-text-fill-color: #34d399 !important; margin-bottom: 12px; letter-spacing: -0.2px;">
-                🟢 Günün En Çok Kazandıran 3 Varlığı
+                🟢 Günün En Çok Kazandıran 5 Varlığı
               </div>
               <div style="background-color: #1e293b !important; border-radius: 16px; border: 1px solid #334155 !important; overflow: hidden;">
                 <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left;">
                   <thead>
                     <tr style="background-color: #0f172a !important; color: #94a3b8 !important; font-size: 10px; font-weight: 800; text-transform: uppercase;">
-                      <th style="padding: 12px 14px;">Varlık</th>
-                      <th style="padding: 12px 14px;">Tür</th>
-                      <th style="padding: 12px 14px; text-align: right;">Getiri</th>
-                      <th style="padding: 12px 14px; text-align: right;">Değer</th>
+                      <th style="padding: 10px 14px;">Varlık</th>
+                      <th style="padding: 10px 14px;">Tür</th>
+                      <th style="padding: 10px 14px; text-align: right;">Getiri</th>
+                      <th style="padding: 10px 14px; text-align: right;">Değer</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -217,27 +256,85 @@ export function generateDailyDigestEmailHtml(data: DailyDigestData): string {
               : ""
           }
 
-          <!-- Top Losers Table (En Çok Kaybettiren İlk 3) -->
+          <!-- Top Losers Table (En Çok Kaybettiren İlk 5) -->
           ${
             data.topLosers.length > 0
               ? `
           <tr>
             <td style="padding: 0 28px 24px;">
               <div style="font-size: 13px; font-weight: 900; color: #fb7185 !important; -webkit-text-fill-color: #fb7185 !important; margin-bottom: 12px; letter-spacing: -0.2px;">
-                🔴 Günün En Çok Kaybettiren 3 Varlığı
+                🔴 Günün En Çok Kaybettiren 5 Varlığı
               </div>
               <div style="background-color: #1e293b !important; border-radius: 16px; border: 1px solid #334155 !important; overflow: hidden;">
                 <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left;">
                   <thead>
                     <tr style="background-color: #0f172a !important; color: #94a3b8 !important; font-size: 10px; font-weight: 800; text-transform: uppercase;">
-                      <th style="padding: 12px 14px;">Varlık</th>
-                      <th style="padding: 12px 14px;">Tür</th>
-                      <th style="padding: 12px 14px; text-align: right;">Getiri</th>
-                      <th style="padding: 12px 14px; text-align: right;">Değer</th>
+                      <th style="padding: 10px 14px;">Varlık</th>
+                      <th style="padding: 10px 14px;">Tür</th>
+                      <th style="padding: 10px 14px; text-align: right;">Getiri</th>
+                      <th style="padding: 10px 14px; text-align: right;">Değer</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${losersRows}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          `
+              : ""
+          }
+
+          <!-- TEFAS Yatırımcı Sayısı En Çok Artan Fonlar (İlk 3) -->
+          ${
+            data.topTefasInvestorGainers && data.topTefasInvestorGainers.length > 0
+              ? `
+          <tr>
+            <td style="padding: 0 28px 20px;">
+              <div style="font-size: 13px; font-weight: 900; color: #38bdf8 !important; -webkit-text-fill-color: #38bdf8 !important; margin-bottom: 12px; letter-spacing: -0.2px;">
+                👥 TEFAS Fonlarınızda En Çok Yatırımcı Çeken İlk 3 Fon (Son 7 Gün)
+              </div>
+              <div style="background-color: #1e293b !important; border-radius: 16px; border: 1px solid #334155 !important; overflow: hidden;">
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left;">
+                  <thead>
+                    <tr style="background-color: #0f172a !important; color: #94a3b8 !important; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+                      <th style="padding: 10px 14px;">Fon Kodu</th>
+                      <th style="padding: 10px 14px;">Güncel Yatırımcı</th>
+                      <th style="padding: 10px 14px; text-align: right;">Haftalık Değişim</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${tefasGainersRows}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          `
+              : ""
+          }
+
+          <!-- TEFAS Yatırımcı Sayısı En Çok Azalan Fonlar (İlk 3) -->
+          ${
+            data.topTefasInvestorLosers && data.topTefasInvestorLosers.length > 0
+              ? `
+          <tr>
+            <td style="padding: 0 28px 24px;">
+              <div style="font-size: 13px; font-weight: 900; color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; margin-bottom: 12px; letter-spacing: -0.2px;">
+                📉 TEFAS Fonlarınızda En Çok Yatırımcı Kaybeden İlk 3 Fon (Son 7 Gün)
+              </div>
+              <div style="background-color: #1e293b !important; border-radius: 16px; border: 1px solid #334155 !important; overflow: hidden;">
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left;">
+                  <thead>
+                    <tr style="background-color: #0f172a !important; color: #94a3b8 !important; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+                      <th style="padding: 10px 14px;">Fon Kodu</th>
+                      <th style="padding: 10px 14px;">Güncel Yatırımcı</th>
+                      <th style="padding: 10px 14px; text-align: right;">Haftalık Değişim</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${tefasLosersRows}
                   </tbody>
                 </table>
               </div>
