@@ -29,7 +29,8 @@ function authorized(req: NextRequest): boolean {
 }
 
 export async function runDailyDigest(req: NextRequest) {
-  const isTest = req.nextUrl.searchParams.get("test") === "1";
+  const url = new URL(req.url);
+  const isTest = url.searchParams.get("test") === "1" || url.searchParams.has("test");
 
   // Canlı test modunda sadece admin kullanıcısı (ceteonur@gmail.com) ile çalış
   let users = await prisma.user.findMany(
