@@ -262,7 +262,7 @@ async function tefasPostRaw(
   return [];
 }
 
-/** Tek bir fonun gunluk fiyat gecmisi (28 gunluk parcalara bolerek). */
+/** Tek bir fonun gunluk fiyat gecmisi. */
 export async function fetchTefasHistory(
   code: string,
   from: Date,
@@ -272,9 +272,31 @@ export async function fetchTefasHistory(
   const points = new Map<string, { close: number; investors?: number }>();
   const CHUNK = 28;
 
+  // 1. Önce fon tipini 7 günlük test sorgusuyla anında tespit et (tek istek)
+  let targetKind: TefasKind | null = null;
+  const testEnd = new Date(to);
+  const testFrom = new Date(testEnd.getTime() - 7 * 86400000);
+
   for (const kind of TEFAS_KINDS) {
+    const rows = await tefasPost(kind, upper, testFrom, testEnd);
+    if (rows.length > 0) {
+      targetKind = kind;
+      for (const r of rows) {
+        if (r.fiyat != null && r.tarih) {
+          points.set(r.tarih, {
+            close: Number(r.fiyat),
+            investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
+          });
+        }
+      }
+      break;
+    }
+  }
+
+  const activeKinds = targetKind ? [targetKind] : TEFAS_KINDS;
+
+  for (const kind of activeKinds) {
     let cur = new Date(from);
-    let found = false;
     while (cur <= to) {
       const chunkEnd = new Date(cur);
       chunkEnd.setDate(chunkEnd.getDate() + CHUNK - 1);
@@ -286,13 +308,12 @@ export async function fetchTefasHistory(
             close: Number(r.fiyat),
             investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
           });
-          found = true;
         }
       }
       cur = new Date(end);
       cur.setDate(cur.getDate() + 1);
     }
-    if (found) break; // dogru fon tipi bulundu
+    if (points.size > 0) break;
   }
 
   return [...points.entries()]

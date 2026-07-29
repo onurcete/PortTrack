@@ -221,17 +221,22 @@ export async function backfillYahoo(): Promise<BackfillResult> {
   return { months: ends.length, symbols: count, snapshots };
 }
 
+import { setBackfillActive, setBackfillDone } from "./backfillState";
+
 /**
  * Yalnızca veri eksikliği olan sembollerin geçmiş fiyatlarını ultra-hızlı ve akıllı şekilde doldurur.
  * Zaten geçmiş verisi eksiksiz toplanmış semboller ANINDA (0 ms) atlanır.
  */
 export async function smartBackfillUserSymbols(userId?: string): Promise<{ processedSymbols: number; snapshotsAdded: number }> {
-  const txWhere = userId ? { userId } : {};
-  const earliestTx = await prisma.transaction.findFirst({
-    where: txWhere,
-    orderBy: { date: "asc" },
-    select: { date: true },
-  });
+  if (userId) setBackfillActive(userId);
+
+  try {
+    const txWhere = userId ? { userId } : {};
+    const earliestTx = await prisma.transaction.findFirst({
+      where: txWhere,
+      orderBy: { date: "asc" },
+      select: { date: true },
+    });
 
   if (!earliestTx) return { processedSymbols: 0, snapshotsAdded: 0 };
 
@@ -335,10 +340,13 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
     }
   });
 
-  // USD/TRY kur geçmişini de doldur
-  await backfillFxHistory().catch(() => 0);
+    // USD/TRY kur geçmişini de doldur
+    await backfillFxHistory().catch(() => 0);
 
-  return { processedSymbols, snapshotsAdded };
+    return { processedSymbols, snapshotsAdded };
+  } finally {
+    if (userId) setBackfillDone(userId);
+  }
 }
 
 export interface TefasProgress {

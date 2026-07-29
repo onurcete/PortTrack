@@ -14,6 +14,7 @@ import { Card, Badge } from "@/components/ui";
 import { ASSET_META, type AssetType } from "@/lib/assets";
 import { Modal } from "@/components/Modal";
 import { NotesDrawer } from "@/components/NotesDrawer";
+import { BackfillStatusBanner } from "@/components/BackfillStatusBanner";
 import { formatMoney, formatPercent, formatNumber, formatDate, monthLabel, cn } from "@/lib/utils";
 import { getCellStyle } from "@/components/PerformanceClient";
 import {
@@ -453,6 +454,9 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
           </Badge>
         </div>
       </div>
+
+      {/* Arka plan güncelleme bildirimi */}
+      <BackfillStatusBanner />
 
       {/* Kombine Portföy Değeri & Getiriler Kartı */}
       <div className="grid grid-cols-1 lg:grid-cols-5 card overflow-hidden">

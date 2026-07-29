@@ -6,6 +6,7 @@ import { Card } from "@/components/ui";
 import { ASSET_META, type AssetType } from "@/lib/assets";
 import { formatPercent, monthLabel, cn } from "@/lib/utils";
 import { Search } from "lucide-react";
+import { BackfillStatusBanner } from "@/components/BackfillStatusBanner";
 
 export interface ProductPerfRowDTO {
   symbol: string;
@@ -161,6 +162,8 @@ export function PerformanceClient({ data }: { data: ProductPerformanceDTO }) {
           Hâlâ elinizde olan ürünlerin ay-ay getirisi ({isTRY ? "₺ TL" : "$ USD"} bazında)
         </p>
       </div>
+
+      <BackfillStatusBanner />
 
       {/* Filtre ve Arama Barı */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] shadow-sm">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolvePriceMapping, type AssetType } from "@/lib/assets";
-import { fetchYahooHistory, currencyToTryRate } from "@/lib/prices";
+import { fetchYahooHistory, fetchTefasHistory, currencyToTryRate } from "@/lib/prices";
 import { buildFxLookup } from "@/lib/portfolio";
 import { requireUser } from "@/lib/auth";
 
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
 
     // 4. Fiyat geçmişini al
     const mapping = resolvePriceMapping(assetType, symbol);
-    let history: { date: Date; closeTRY: number; closeUSD: number; closeNative: number }[] = [];
+    let history: { date: Date; closeTRY: number; closeUSD: number; closeNative: number; investors?: number }[] = [];
 
     if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
       if (mapping.yahooSymbol) {
@@ -95,12 +95,39 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // TEFAS / Manual / BES - Veritabanı PriceSnapshot tablosundan çek
-      const snaps = await prisma.priceSnapshot.findMany({
+      let snaps = await prisma.priceSnapshot.findMany({
         where: { symbol, date: { gte: fromDate } },
         orderBy: { date: "asc" },
       });
 
-       history = snaps.map((s) => {
+      // TEFAS fonu veritabanında az veri içeriyorsa canlı TEFAS geçmişinden çek ve önbelleğe yaz
+      if (mapping.source === "tefas" && snaps.length < 5) {
+        const tefasHistory = await fetchTefasHistory(symbol, fromDate, new Date());
+        if (tefasHistory.length > 0) {
+          for (const item of tefasHistory) {
+            await prisma.priceSnapshot.upsert({
+              where: { symbol_date: { symbol, date: item.date } },
+              create: {
+                symbol,
+                date: item.date,
+                close: item.close,
+                native: item.close,
+                nativeCurrency: "TRY",
+                currency: "TRY",
+                source: "hist",
+                investors: item.investors,
+              },
+              update: { close: item.close, native: item.close, investors: item.investors },
+            }).catch(() => null);
+          }
+          snaps = await prisma.priceSnapshot.findMany({
+            where: { symbol, date: { gte: fromDate } },
+            orderBy: { date: "asc" },
+          });
+        }
+      }
+
+      history = snaps.map((s) => {
         const priceTRY = s.close;
         const priceUSD = priceTRY / fx(s.date);
         return {
@@ -108,7 +135,7 @@ export async function GET(req: NextRequest) {
           closeTRY: priceTRY,
           closeUSD: priceUSD,
           closeNative: s.native ?? priceTRY,
-          investors: s.investors,
+          investors: s.investors ?? undefined,
         };
       });
     }
