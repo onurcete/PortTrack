@@ -29,11 +29,17 @@ function authorized(req: NextRequest): boolean {
 }
 
 export async function runDailyDigest(req: NextRequest) {
-  // 1. Tüm Kayıtlı Kullanıcıları Bul (Veritabanındaki tüm aktif kullanıcılar)
-  const users = await prisma.user.findMany();
+  const isTest = req.nextUrl.searchParams.get("test") === "1";
+
+  // Canlı test modunda sadece admin kullanıcısı (ceteonur@gmail.com) ile çalış
+  let users = await prisma.user.findMany(
+    isTest
+      ? { where: { email: "ceteonur@gmail.com" } }
+      : undefined
+  );
 
   if (users.length === 0) {
-    return { ok: false, error: "Gönderilecek kullanıcı bulunamadı." };
+    users = await prisma.user.findMany({ take: 1 });
   }
 
   const dateStr = new Date().toLocaleDateString("tr-TR", {
