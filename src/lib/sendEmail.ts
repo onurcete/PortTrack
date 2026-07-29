@@ -10,11 +10,14 @@ export interface SendEmailOptions {
  * PortTrack Evrensel E-posta Gönderim Servisi (Gmail SMTP)
  */
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const gmailUser = process.env.GMAIL_USER?.trim() || "ceteonur@gmail.com";
-  const gmailPass = (process.env.GMAIL_APP_PASS?.trim() || "fliztpghqolxsmvu").replace(/\s+/g, "");
+  const rawUser = process.env.GMAIL_USER?.trim();
+  const rawPass = process.env.GMAIL_APP_PASS?.trim();
+
+  const gmailUser = rawUser && rawUser.length > 0 ? rawUser : "ceteonur@gmail.com";
+  const gmailPass = (rawPass && rawPass.length > 0 ? rawPass : "fliztpghqolxsmvu").replace(/\s+/g, "");
 
   if (!gmailUser || !gmailPass) {
-    return { ok: false, error: "Gmail SMTP kimlik bilgileri yapılandırılmamış." };
+    return { ok: false, error: "Gmail SMTP kimlik bilgileri eksik." };
   }
 
   try {
