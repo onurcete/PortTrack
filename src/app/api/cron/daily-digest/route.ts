@@ -105,10 +105,14 @@ export async function runDailyDigest(req: NextRequest) {
         topLosers,
       });
 
-      // Resend API ile Gönderim
+      const sign = dailyAmtTRY >= 0 ? "+" : "";
+      const formattedAmt = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(Math.abs(dailyAmtTRY));
+      const dailySubject = `📊 Portföy Özetiniz · ${dateStr} (Günlük: ${sign}${formattedAmt} ₺) | PortTrack`;
+
+      // E-posta Gönderimi
       const emailRes = await sendEmail({
         to: user.email,
-        subject: `📊 Günlük Portföy Özetiniz (${dateStr}) | PortTrack`,
+        subject: dailySubject,
         html,
       });
 
