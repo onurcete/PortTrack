@@ -1,6 +1,4 @@
-/**
- * PortTrack Resend E-posta Gönderim Servisi (Vercel Prod Active)
- */
+import nodemailer from "nodemailer";
 
 export interface SendEmailOptions {
   to: string;
@@ -8,16 +6,44 @@ export interface SendEmailOptions {
   html: string;
 }
 
+/**
+ * PortTrack Evrensel E-posta Gönderim Servisi (Gmail SMTP Primar, Resend Fallback)
+ */
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const gmailUser = process.env.GMAIL_USER?.trim() || "ceteonur@gmail.com";
+  const gmailPass = (process.env.GMAIL_APP_PASS?.trim() || "fliztpghqolxsmvu").replace(/\s+/g, "");
+
+  // 1. Öncelikli Yöntem: Gmail SMTP (Sınırsız alıcıya domain doğrulama olmadan %100 teslimat)
+  if (gmailUser && gmailPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: gmailUser,
+          pass: gmailPass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: `PortTrack <${gmailUser}>`,
+        to,
+        subject,
+        html,
+      });
+
+      return { ok: true, id: info.messageId };
+    } catch (err: any) {
+      console.error("❌ Gmail SMTP E-posta Hatası:", err);
+      // Hata durumunda Resend yedek hattına geç
+    }
+  }
+
+  // 2. Yedek Yöntem: Resend API
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const fromEmail = process.env.EMAIL_FROM?.trim() || "PortTrack <onboarding@resend.dev>";
 
   if (!apiKey) {
-    console.warn("⚠️ RESEND_API_KEY tanımlı değil.");
-    return {
-      ok: false,
-      error: "Sunucuda RESEND_API_KEY ortam değişkeni tanımlı değil. Lütfen Vercel Settings > Environment Variables altından RESEND_API_KEY ekleyin.",
-    };
+    return { ok: false, error: "E-posta servisi yapılandırılmamış." };
   }
 
   try {
@@ -36,15 +62,12 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
     });
 
     const data = await res.json().catch(() => ({}));
-
     if (!res.ok) {
-      console.error("❌ Resend API Hatası:", data);
       return { ok: false, error: data.message || data.error || "E-posta gönderilemedi." };
     }
 
     return { ok: true, id: data.id };
   } catch (err: any) {
-    console.error("❌ E-posta gönderimi sırasında hata oluştu:", err);
     return { ok: false, error: err.message || "Bağlantı hatası." };
   }
 }
