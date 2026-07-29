@@ -27,140 +27,144 @@ function authorized(req: NextRequest): boolean {
   return req.nextUrl.searchParams.get("key") === secret || req.nextUrl.searchParams.get("test") === "1";
 }
 
+export async function runDailyDigest(req: NextRequest) {
+  // 1. Hedef Kullanıcıları Bul (ceteonur@gmail.com ve denizbag@gmail.com)
+  let users = await prisma.user.findMany({
+    where: {
+      email: {
+        in: ["ceteonur@gmail.com", "denizbag@gmail.com"],
+      },
+    },
+  });
+
+  if (users.length === 0) {
+    users = await prisma.user.findMany({ take: 5 });
+  }
+
+  if (users.length === 0) {
+    return { ok: false, error: "Gönderilecek kullanıcı bulunamadı." };
+  }
+
+  const dateStr = new Date().toLocaleDateString("tr-TR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const results = [];
+
+  // 2. Her kullanıcı için kişiselleştirilmiş bülten üret ve gönder
+  for (const user of users) {
+    if (!user.email) continue;
+
+    try {
+      const [portfolio, bundle, periodReturns] = await Promise.all([
+        getPortfolio(user.id),
+        loadAnalysisBundle(user.id),
+        getPeriodReturns(user.id),
+      ]);
+
+      const { holdings } = bundle;
+
+      // Kâr/Zarar ve Değer Hesaplamaları
+      const totalTRY = portfolio.totals.valueTRY || 0;
+      const totalUSD = portfolio.totals.valueUSD || 0;
+
+      // Bugün Değişimi
+      const dailyAmtTRY = periodReturns.dailyAmtTRY ?? 0;
+
+      // Son 1 günlük değişim yüzdelerini eşle
+      const holdingsWith1DayChange = holdings.map((h) => {
+        const pos = portfolio.positions.find((p) => p.symbol === h.symbol);
+        return {
+          ...h,
+          changePercent: pos?.dailyChangePct ?? 0,
+        };
+      });
+
+      // 1 günlük değişime göre en çok kazanan 3 ve en çok kaybeden 3 enstrüman
+      const sorted = [...holdingsWith1DayChange].sort(
+        (a, b) => b.changePercent - a.changePercent
+      );
+      const topGainers = sorted.slice(0, 3);
+      const topLosers = sorted.slice(-3).reverse();
+
+      // HTML Şablonunu Üret
+      const html = generateDailyDigestEmailHtml({
+        userName: user.name || user.email.split("@")[0],
+        userEmail: user.email,
+        dateStr,
+        totalTRY,
+        totalUSD,
+        dailyAmtTRY,
+        dailyPctTRY: periodReturns.dailyTRY ?? 0,
+        weeklyPctTRY: periodReturns.weeklyTRY ?? null,
+        mtdPctTRY: periodReturns.mtdTRY ?? null,
+        ytdPctTRY: periodReturns.ytdTRY ?? null,
+        topGainers,
+        topLosers,
+      });
+
+      // Resend API ile Gönderim
+      const emailRes = await sendEmail({
+        to: user.email,
+        subject: `📊 Günlük Portföy Özetiniz (${dateStr}) | PortTrack`,
+        html,
+      });
+
+      await logSystemEvent({
+        userId: user.id,
+        userEmail: user.email,
+        action: "CRON_DAILY_DIGEST",
+        status: emailRes.ok ? "SUCCESS" : "FAILED",
+        details: emailRes.ok
+          ? `${user.email} adresine günlük bülten e-postası iletildi (${emailRes.id}).`
+          : `${user.email} e-posta gönderim hatası: ${emailRes.error}`,
+        req,
+      });
+
+      results.push({
+        email: user.email,
+        userName: user.name,
+        ok: emailRes.ok,
+        emailId: emailRes.id,
+        error: emailRes.error,
+        stats: {
+          totalTRY,
+          totalUSD,
+          dailyAmtTRY,
+        },
+      });
+    } catch (userErr: any) {
+      console.error(`❌ ${user.email} için bülten oluşturma hatası:`, userErr);
+      results.push({
+        email: user.email,
+        ok: false,
+        error: userErr.message,
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    sentCount: results.filter((r) => r.ok).length,
+    totalTargets: users.length,
+    details: results,
+  };
+}
+
 export async function GET(req: NextRequest) {
   if (!authorized(req)) {
     return NextResponse.json({ ok: false, error: "Yetkisiz" }, { status: 401 });
   }
 
   try {
-    // 1. Hedef Kullanıcıları Bul (ceteonur@gmail.com ve denizbag@gmail.com)
-    let users = await prisma.user.findMany({
-      where: {
-        email: {
-          in: ["ceteonur@gmail.com", "denizbag@gmail.com"],
-        },
-      },
-    });
-
-    if (users.length === 0) {
-      users = await prisma.user.findMany({ take: 5 });
-    }
-
-    if (users.length === 0) {
-      return NextResponse.json({ ok: false, error: "Gönderilecek kullanıcı bulunamadı." }, { status: 404 });
-    }
-
-    const dateStr = new Date().toLocaleDateString("tr-TR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-
-    const results = [];
-
-    // 2. Her kullanıcı için kişiselleştirilmiş bülten üret ve gönder
-    for (const user of users) {
-      if (!user.email) continue;
-
-      try {
-        const [portfolio, bundle, periodReturns] = await Promise.all([
-          getPortfolio(user.id),
-          loadAnalysisBundle(user.id),
-          getPeriodReturns(user.id),
-        ]);
-
-        const { holdings } = bundle;
-
-        // Kâr/Zarar ve Değer Hesaplamaları
-        const totalTRY = portfolio.totals.valueTRY || 0;
-        const totalUSD = portfolio.totals.valueUSD || 0;
-
-        // Bugün Değişimi
-        const dailyAmtTRY = periodReturns.dailyAmtTRY ?? 0;
-        const dailyPctTRY = periodReturns.dailyTRY ?? 0;
-
-        // Tüm varlıkların son 1 gündeki günlük performans verisi
-        const mappedHoldings = holdings.map((h) => ({
-          symbol: h.symbol,
-          assetType: h.assetType,
-          changePercent: h.dailyChangePct ?? 0,
-          valueTRY: h.valueTRY,
-        }));
-
-        // Günün En Çok Kazandıran İlk 3 Varlığı
-        const sortedDesc = [...mappedHoldings].sort((a, b) => b.changePercent - a.changePercent);
-        const topGainers = sortedDesc.slice(0, 3);
-
-        // Günün En Çok Kaybettiren İlk 3 Varlığı
-        const sortedAsc = [...mappedHoldings].sort((a, b) => a.changePercent - b.changePercent);
-        const topLosers = sortedAsc.slice(0, 3);
-
-        // Kişiselleştirilmiş E-Posta HTML
-        const html = generateDailyDigestEmailHtml({
-          userName: user.name || "Yatırımcı",
-          userEmail: user.email,
-          dateStr,
-          totalTRY,
-          totalUSD,
-          dailyAmtTRY,
-          dailyPctTRY,
-          weeklyPctTRY: periodReturns.weeklyTRY,
-          mtdPctTRY: periodReturns.mtdTRY,
-          ytdPctTRY: periodReturns.ytdTRY,
-          topGainers,
-          topLosers,
-        });
-
-        // Resend API ile Gönderim
-        const emailRes = await sendEmail({
-          to: user.email,
-          subject: `📊 Günlük Portföy Özetiniz (${dateStr}) | PortTrack`,
-          html,
-        });
-
-        await logSystemEvent({
-          userId: user.id,
-          userEmail: user.email,
-          action: "CRON_DAILY_DIGEST",
-          status: emailRes.ok ? "SUCCESS" : "FAILED",
-          details: emailRes.ok
-            ? `${user.email} adresine günlük bülten e-postası iletildi (${emailRes.id}).`
-            : `${user.email} e-posta gönderim hatası: ${emailRes.error}`,
-          req,
-        });
-
-        results.push({
-          email: user.email,
-          userName: user.name,
-          ok: emailRes.ok,
-          emailId: emailRes.id,
-          error: emailRes.error,
-          stats: {
-            totalTRY,
-            totalUSD,
-            dailyAmtTRY,
-          },
-        });
-      } catch (userErr: any) {
-        console.error(`❌ ${user.email} için bülten oluşturma hatası:`, userErr);
-        results.push({
-          email: user.email,
-          ok: false,
-          error: userErr.message,
-        });
-      }
-    }
-
-    return NextResponse.json({
-      ok: true,
-      sentCount: results.filter((r) => r.ok).length,
-      totalTargets: users.length,
-      details: results,
-    });
+    const res = await runDailyDigest(req);
+    return NextResponse.json(res);
   } catch (err: any) {
     console.error("❌ Daily Digest Cron Error:", err);
     return NextResponse.json(
-      { ok: false, error: err.message || "Günlük özet oluşturulurken hata oluştu." },
+      { ok: false, error: (err as Error).message },
       { status: 500 }
     );
   }

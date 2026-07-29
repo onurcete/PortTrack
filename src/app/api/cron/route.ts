@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { refreshPrices, backfillFxHistory } from "@/lib/refresh";
 import { backfillYahoo, backfillTefas } from "@/lib/history";
 import { runTechnicalAnalysis } from "@/app/api/analysis/run/route";
+import { runDailyDigest } from "@/app/api/cron/daily-digest/route";
 import { logSystemEvent } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -44,7 +45,10 @@ export async function GET(req: NextRequest) {
       req,
     });
 
-    return NextResponse.json({ ok: true, refresh, yahoo, tefas, analysis });
+    // Otomatik E-Posta Özetlerini Gönder
+    const digest = await runDailyDigest(req);
+
+    return NextResponse.json({ ok: true, refresh, yahoo, tefas, analysis, digest });
   } catch (err: any) {
     await logSystemEvent({
       action: "CRON_PRICE_REFRESH",
