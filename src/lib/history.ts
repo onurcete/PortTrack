@@ -85,6 +85,23 @@ function lookupOnOrBefore(points: PricePoint[], date: Date): number | null {
   return val;
 }
 
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  let i = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 async function getFxLookupAndCurrent(): Promise<{
   fx: FxLookup;
   current: number;
@@ -218,7 +235,10 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
 
   if (!earliestTx) return { processedSymbols: 0, snapshotsAdded: 0 };
 
-  const firstDate = new Date(earliestTx.date);
+  const fifteenMonthsAgo = new Date();
+  fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15);
+  const txDate = new Date(earliestTx.date);
+  const firstDate = txDate < fifteenMonthsAgo ? fifteenMonthsAgo : txDate;
   const ends = monthEnds(firstDate, new Date());
   if (ends.length === 0) return { processedSymbols: 0, snapshotsAdded: 0 };
 
@@ -238,7 +258,8 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
   let processedSymbols = 0;
   let snapshotsAdded = 0;
 
-  for (const [symbol, assetType] of symbolMap) {
+  const entries = [...symbolMap.entries()];
+  await mapLimit(entries, 4, async ([symbol, assetType]) => {
     const existingSnaps = await prisma.priceSnapshot.findMany({
       where: {
         symbol,
@@ -251,7 +272,7 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
     const missingEnds = ends.filter((e) => !existingDates.has(e.toISOString().slice(0, 7)));
 
     // Eğer bu sembol için tüm aylar zaten mevcutsa HIÇBIR ŞEY YAPMA (0ms)!
-    if (missingEnds.length === 0) continue;
+    if (missingEnds.length === 0) return;
 
     processedSymbols++;
     const mapping = resolvePriceMapping(assetType, symbol);
@@ -259,7 +280,7 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
     if (mapping.source === "tefas") {
       // TEFAS fonu için tüm geçmişi hızlıca çek
       const tefasHistory = await fetchTefasHistory(symbol, firstDate, new Date());
-      if (tefasHistory.length === 0) continue;
+      if (tefasHistory.length === 0) return;
 
       for (const end of missingEnds) {
         const p = lookupOnOrBefore(tefasHistory, end);
@@ -281,9 +302,9 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
         snapshotsAdded++;
       }
     } else if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
-      if (!mapping.yahooSymbol) continue;
+      if (!mapping.yahooSymbol) return;
       const yahooHistory = await fetchYahooHistory(mapping.yahooSymbol, firstDate);
-      if (yahooHistory.length === 0) continue;
+      if (yahooHistory.length === 0) return;
 
       for (const end of missingEnds) {
         const raw = lookupOnOrBefore(yahooHistory, end);
@@ -312,7 +333,7 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
         snapshotsAdded++;
       }
     }
-  }
+  });
 
   // USD/TRY kur geçmişini de doldur
   await backfillFxHistory().catch(() => 0);

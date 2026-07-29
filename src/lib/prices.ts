@@ -224,24 +224,14 @@ async function tefasPostRaw(
   from: Date,
   to: Date,
 ): Promise<TefasRow[]> {
-  const body = {
+  const body: Record<string, any> = {
     fonTipi: kind,
-    fonKodu: fonKodu,
-    aramaMetni: null,
-    fonTurKod: null,
-    fonGrubu: null,
-    sfonTurKod: null,
-    fonTurAciklama: null,
-    kurucuKod: null,
+    fonKodu: fonKodu || null,
     basTarih: fmtTefasDate(from),
     bitTarih: fmtTefasDate(to),
     basSira: 1,
     bitSira: 100000,
     dil: "TR",
-    sFonTurKod: "",
-    fonKod: fonKodu || "",
-    fonGrup: "",
-    fonUnvanTip: "",
   };
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
