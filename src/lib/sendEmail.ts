@@ -7,71 +7,38 @@ export interface SendEmailOptions {
 }
 
 /**
- * PortTrack Evrensel E-posta Gönderim Servisi (Gmail SMTP Primary, Resend Fallback)
+ * PortTrack Evrensel E-posta Gönderim Servisi (Gmail SMTP)
  */
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<{ ok: boolean; id?: string; error?: string }> {
   const gmailUser = process.env.GMAIL_USER?.trim() || "ceteonur@gmail.com";
   const gmailPass = (process.env.GMAIL_APP_PASS?.trim() || "fliztpghqolxsmvu").replace(/\s+/g, "");
 
-  // 1. Öncelikli Yöntem: Gmail SMTP (Sınırsız alıcıya domain doğrulama olmadan %100 teslimat)
-  if (gmailUser && gmailPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true, // SSL
-        auth: {
-          user: gmailUser,
-          pass: gmailPass,
-        },
-      });
-
-      const info = await transporter.sendMail({
-        from: `PortTrack <${gmailUser}>`,
-        to,
-        subject,
-        html,
-      });
-
-      return { ok: true, id: info.messageId };
-    } catch (err: any) {
-      console.error("❌ Gmail SMTP E-posta Hatası:", err?.message || err);
-      // Hata mesajını şeffaf şekilde dön
-      return { ok: false, error: `Gmail SMTP Hatası: ${err?.message || "Gönderim başarısız"}` };
-    }
-  }
-
-  // 2. Yedek Yöntem: Resend API
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const fromEmail = process.env.EMAIL_FROM?.trim() || "PortTrack <onboarding@resend.dev>";
-
-  if (!apiKey) {
-    return { ok: false, error: "E-posta servisi yapılandırılmamış." };
+  if (!gmailUser || !gmailPass) {
+    return { ok: false, error: "Gmail SMTP kimlik bilgileri yapılandırılmamış." };
   }
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // SSL
+      auth: {
+        user: gmailUser,
+        pass: gmailPass,
       },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [to],
-        subject,
-        html,
-      }),
     });
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return { ok: false, error: data.message || data.error || "E-posta gönderilemedi." };
-    }
+    const info = await transporter.sendMail({
+      from: `PortTrack <${gmailUser}>`,
+      to,
+      subject,
+      html,
+    });
 
-    return { ok: true, id: data.id };
+    return { ok: true, id: info.messageId };
   } catch (err: any) {
-    return { ok: false, error: err.message || "Bağlantı hatası." };
+    console.error("❌ Gmail SMTP E-posta Hatası:", err?.message || err);
+    return { ok: false, error: `Gmail SMTP Hatası: ${err?.message || "Gönderim başarısız"}` };
   }
 }
 
