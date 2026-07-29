@@ -269,7 +269,11 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       if (result.ok) {
         setImportModalOpen(false);
         setToast(result.message ?? "CSV başarıyla içe aktarıldı.");
-        router.refresh();
+        triggerBackfillBanner();
+        fetch("/api/history/backfill?mode=smart", { method: "POST" })
+          .then((r) => r.json())
+          .then(() => router.refresh())
+          .catch(() => null);
         setTimeout(() => setToast(null), 5000);
       } else {
         setUploadError(result.message ?? "İçe aktarım sırasında bir hata oluştu.");
@@ -941,8 +945,14 @@ function TransactionForm({
       const res = editing
         ? await updateTransaction(editing.id, formData)
         : await createTransaction(formData);
-      if (res.ok) onDone();
-      else setError(res.message ?? "Hata oluştu.");
+      if (res.ok) {
+        onDone();
+        // Güncel fiyatlar alındı, şimdi arka planda geçmiş doldurmayı başlat
+        triggerBackfillBanner();
+        fetch("/api/history/backfill?mode=smart", { method: "POST" }).catch(() => null);
+      } else {
+        setError(res.message ?? "Hata oluştu.");
+      }
     });
   }
 
@@ -1202,7 +1212,7 @@ function TransactionForm({
           {pending ? (
             <span className="flex items-center gap-1.5">
               <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              Kaydediliyor...
+              Kaydediliyor & Güncel Fiyat Alınıyor...
             </span>
           ) : (
             editing ? "Değişiklikleri Kaydet" : "Yeni İşlemi Kaydet"

@@ -81,14 +81,9 @@ export async function createTransaction(
     },
   });
 
-  // 1. Önce güncel fiyatları al (Modal kapanmadan önce eşzamanlı çalışır)
+  // 1. Önce güncel fiyatları yenile (Modal kapanmadan önce eşzamanlı çalışır)
   await refreshPrices().catch((err) =>
     console.error("Auto refreshPrices error on transaction create:", err)
-  );
-
-  // 2. Ardından arka planda geçmiş verilerini doldur
-  smartBackfillUserSymbols(userId).catch((err) =>
-    console.error("Auto smartBackfill error:", err)
   );
 
   revalidateAll();
