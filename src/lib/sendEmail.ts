@@ -7,7 +7,7 @@ export interface SendEmailOptions {
 }
 
 /**
- * PortTrack Evrensel E-posta Gönderim Servisi (Gmail SMTP Primar, Resend Fallback)
+ * PortTrack Evrensel E-posta Gönderim Servisi (Gmail SMTP Primary, Resend Fallback)
  */
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<{ ok: boolean; id?: string; error?: string }> {
   const gmailUser = process.env.GMAIL_USER?.trim() || "ceteonur@gmail.com";
@@ -17,7 +17,9 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   if (gmailUser && gmailPass) {
     try {
       const transporter = nodemailer.createTransport({
-        service: "gmail",
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true, // SSL
         auth: {
           user: gmailUser,
           pass: gmailPass,
@@ -33,8 +35,9 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
 
       return { ok: true, id: info.messageId };
     } catch (err: any) {
-      console.error("❌ Gmail SMTP E-posta Hatası:", err);
-      // Hata durumunda Resend yedek hattına geç
+      console.error("❌ Gmail SMTP E-posta Hatası:", err?.message || err);
+      // Hata mesajını şeffaf şekilde dön
+      return { ok: false, error: `Gmail SMTP Hatası: ${err?.message || "Gönderim başarısız"}` };
     }
   }
 
