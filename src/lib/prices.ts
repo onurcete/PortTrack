@@ -323,23 +323,42 @@ export async function fetchTefasHistory(
 
 /** Tek bir fonun guncel (son) fiyati. */
 export async function fetchTefasLatest(code: string): Promise<number | null> {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - 12);
-  const hist = await fetchTefasHistory(code, from, to);
-  if (hist.length === 0) return null;
-  return hist[hist.length - 1].close;
+  const detail = await fetchTefasLatestDetail(code);
+  return detail?.price ?? null;
 }
 
-/** Tek bir fonun detayli guncel fiyati ve yatirimci bilgisi. */
+/**
+ * Tek bir fonun detayli guncel fiyati ve yatirimci bilgisi.
+ * Tum fon tiplerini PARALEL sorgulayarak en hizli sonucu alir (tek tur istek).
+ */
 export async function fetchTefasLatestDetail(code: string): Promise<{ price: number; investors?: number } | null> {
+  const upper = code.toUpperCase();
   const to = new Date();
   const from = new Date();
-  from.setDate(from.getDate() - 12);
-  const hist = await fetchTefasHistory(code, from, to);
-  if (hist.length === 0) return null;
-  const latest = hist[hist.length - 1];
-  return { price: latest.close, investors: latest.investors };
+  from.setDate(from.getDate() - 10); // Son 10 gün yeterli
+
+  // Tüm fon tiplerini parallel sorgula — ilk sonucu döndür
+  const results = await Promise.all(
+    TEFAS_KINDS.map((kind) => tefasPostRaw(kind, upper, from, to))
+  );
+
+  // En son tarihe sahip kaydı bul
+  let latestDate = "";
+  let latestRow: TefasRow | null = null;
+  for (const rows of results) {
+    for (const r of rows) {
+      if (r.fiyat != null && r.tarih && r.tarih > latestDate) {
+        latestDate = r.tarih;
+        latestRow = r;
+      }
+    }
+  }
+
+  if (!latestRow) return null;
+  return {
+    price: Number(latestRow.fiyat),
+    investors: latestRow.kisiSayisi ? Number(latestRow.kisiSayisi) : undefined,
+  };
 }
 
 /** Belirli bir fon tipi ve tarih araligindaki tum fon satirlari. */
