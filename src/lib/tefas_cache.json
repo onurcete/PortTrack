@@ -2917,7 +2917,7 @@
   },
   {
     "symbol": "HIM",
-    "name": "HEDEF PORTFÖY İKİNCİ MUTLAK GETİRİ HEDEFLİ HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
+    "name": "HEDEF PORTFÖY BİRİNCİ İSTATİSTİKSEL ARBİTRAJ HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "HIP",
@@ -2925,7 +2925,7 @@
   },
   {
     "symbol": "HIS",
-    "name": "HEDEF PORTFÖY İKİNCİ İSTATİSTİKSEL ARBİTRAJ HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
+    "name": "HEDEF PORTFÖY ÜÇÜNCÜ SERBEST FON"
   },
   {
     "symbol": "HIZ",
@@ -3149,7 +3149,7 @@
   },
   {
     "symbol": "HVN",
-    "name": "HEDEF PORTFÖY MUTLAK GETİRİ HEDEFLİ HİSSE SENEDİ SERBEST FON (HİSSE SENEDİ YOĞUN FON)"
+    "name": "HEDEF PORTFÖY DÖRDÜNCÜ SERBEST FON"
   },
   {
     "symbol": "HVS",
@@ -4433,7 +4433,7 @@
   },
   {
     "symbol": "KZO",
-    "name": "AZİMUT PORTFÖY KOİ SERBEST ÖZEL FON"
+    "name": "AZİMUT PORTFÖY KOİ HİSSE SENEDİ SERBEST ÖZEL FON (HİSSE SENEDİ YOĞUN FON)"
   },
   {
     "symbol": "KZU",
@@ -5389,7 +5389,7 @@
   },
   {
     "symbol": "OTJ",
-    "name": "OYAK PORTFÖY KIYMETLİ MADENLER FON SEPETİ FONU"
+    "name": "OYAK PORTFÖY KIYMETLİ MADENLER KATILIM FON SEPETİ FONU"
   },
   {
     "symbol": "OTK",
@@ -7596,6 +7596,10 @@
     "name": "QNB PORTFÖY YMK PARA PİYASASI (TL) ÖZEL FON"
   },
   {
+    "symbol": "YNF",
+    "name": "AK PORTFÖY AKBANK YENİ NESİL FON SEPETİ ÖZEL FONU"
+  },
+  {
     "symbol": "YNK",
     "name": "YAPI KREDİ PORTFÖY NİŞANTAŞI KAR PAYI ÖDEYEN SERBEST (DÖVİZ) FON"
   },
@@ -8518,6 +8522,10 @@
   {
     "symbol": "AZY",
     "name": "ALLIANZ HAYAT VE EMEKLİLİK A.Ş. TARIM VE GIDA FON SEPETİ EMEKLİLİK YATIRIM FONU"
+  },
+  {
+    "symbol": "BAE",
+    "name": "ALLIANZ YAŞAM VE EMEKLİLİK A.Ş. BORÇLANMA ARAÇLARI EMEKLİLİK YATIRIM FONU"
   },
   {
     "symbol": "BBD",

@@ -626,6 +626,16 @@ export async function searchSymbols(
           });
         }
       }
+
+      // 3 harfli doğrudan kod araması için tam eşleşme yedeği (Örn: ALE)
+      if (q.length === 3 && !results.some((r) => r.symbol === q)) {
+        results.push({
+          symbol: q,
+          name: `${q} Fonu`,
+          assetType: "TEFAS",
+          source: "yahoo",
+        });
+      }
     } catch (err) {
       console.error("Error searching TEFAS funds:", err);
     }
