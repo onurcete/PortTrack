@@ -32,7 +32,7 @@ export async function runDailyDigest(req: NextRequest) {
   let users = await prisma.user.findMany({
     where: {
       email: {
-        in: ["ceteonur@gmail.com", "denizbag@gmail.com"],
+        in: ["ceteonur@gmail.com", "denizbag@gmail.com", "seay34@gmail.com"],
       },
     },
   });
