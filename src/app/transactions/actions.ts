@@ -47,6 +47,7 @@ function revalidateAll() {
 }
 
 import { smartBackfillUserSymbols } from "@/lib/history";
+import { refreshPrices } from "@/lib/refresh";
 
 export async function createTransaction(
   formData: FormData,
@@ -63,12 +64,14 @@ export async function createTransaction(
       ? d.total
       : d.unitPrice * d.quantity;
 
+  const symbol = d.symbol.trim().toUpperCase();
+
   await prisma.transaction.create({
     data: {
       userId,
       date: new Date(d.date),
       assetType: d.assetType,
-      symbol: d.symbol.trim().toUpperCase(),
+      symbol,
       side: d.side,
       unitPrice: d.unitPrice,
       quantity: d.quantity,
@@ -78,7 +81,12 @@ export async function createTransaction(
     },
   });
 
-  // Yeni sembol eklendiyse geçmiş fiyatlarını otomatik ve hızlıca doldur
+  // 1. Önce güncel fiyatları al (Modal kapanmadan önce eşzamanlı çalışır)
+  await refreshPrices().catch((err) =>
+    console.error("Auto refreshPrices error on transaction create:", err)
+  );
+
+  // 2. Ardından arka planda geçmiş verilerini doldur
   smartBackfillUserSymbols(userId).catch((err) =>
     console.error("Auto smartBackfill error:", err)
   );

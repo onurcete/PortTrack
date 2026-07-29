@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Modal } from "./Modal";
 import { Badge } from "./ui";
+import { BackfillStatusBanner, triggerBackfillBanner } from "./BackfillStatusBanner";
 import {
   CsvImportPreview,
   type CsvImportMode,
@@ -75,6 +76,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
 
   function handleHistoryBackfill() {
     setHistoryLoading(true);
+    triggerBackfillBanner();
     startTransition(async () => {
       try {
         const res = await fetch("/api/history/backfill?mode=smart", { method: "POST" });
@@ -409,6 +411,8 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         </div>
       </div>
 
+      <BackfillStatusBanner />
+
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -503,6 +507,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
           transactions={transactions}
           onDone={() => {
             setModalOpen(false);
+            triggerBackfillBanner();
             router.refresh();
           }}
         />

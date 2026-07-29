@@ -21,27 +21,36 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
 
         if (data.active) {
           setActive(true);
-          // 3 saniyede bir kontrol et
-          timer = setTimeout(checkStatus, 3000);
         } else {
           if (active) {
-            // Güncelleme yeni bitti, sayfayı otomatik tazele
+            // Güncelleme henüz bitti, sayfayı yenile
             setActive(false);
             router.refresh();
           }
         }
       } catch {
-        if (!cancelled && active) {
-          timer = setTimeout(checkStatus, 4000);
+        /* yoksay */
+      } finally {
+        if (!cancelled) {
+          // Her 3 saniyede bir düzenli sorgula
+          timer = setTimeout(checkStatus, 3000);
         }
       }
     }
 
+    // Anlık event dinleyici (İşlem ekleme veya buton tıklamalarında anında gösterir)
+    function handleBackfillStarted() {
+      setActive(true);
+      checkStatus();
+    }
+
+    window.addEventListener("backfill-started", handleBackfillStarted);
     checkStatus();
 
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      window.removeEventListener("backfill-started", handleBackfillStarted);
     };
   }, [active, router]);
 
@@ -50,7 +59,7 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold shadow-xs animate-pulse",
+        "flex items-center gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold shadow-xs animate-pulse my-3",
         className
       )}
     >
@@ -58,4 +67,10 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
       <span>Yeni eklenen işlemlerinizin geçmiş fiyatları ve performans verileri güncelleniyor...</span>
     </div>
   );
+}
+
+export function triggerBackfillBanner() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("backfill-started"));
+  }
 }

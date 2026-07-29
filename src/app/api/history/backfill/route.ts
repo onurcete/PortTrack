@@ -3,6 +3,8 @@ import { smartBackfillUserSymbols, backfillYahoo, backfillTefas } from "@/lib/hi
 import { backfillFxHistory } from "@/lib/refresh";
 import { requireUser } from "@/lib/auth";
 
+import { setBackfillActive, setBackfillDone } from "@/lib/backfillState";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -14,6 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 401 });
   }
 
+  setBackfillActive(userId);
   const mode = req.nextUrl.searchParams.get("mode") ?? "smart";
 
   try {
@@ -42,5 +45,7 @@ export async function POST(req: NextRequest) {
       { ok: false, error: err?.message || "Geçmiş güncellenirken hata oluştu." },
       { status: 500 },
     );
+  } finally {
+    setBackfillDone(userId);
   }
 }

@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logSystemEvent } from "@/lib/logger";
 
+import { setBackfillActive, setBackfillDone } from "@/lib/backfillState";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -14,6 +16,8 @@ export async function POST(req: NextRequest) {
   } catch (authErr) {
     return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 401 });
   }
+
+  setBackfillActive(userId);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -48,5 +52,7 @@ export async function POST(req: NextRequest) {
       { ok: false, error: (err as Error).message },
       { status: 500 },
     );
+  } finally {
+    setBackfillDone(userId);
   }
 }
