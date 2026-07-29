@@ -2,11 +2,13 @@
 import { prisma } from "./prisma";
 import {
   fetchYahooHistory,
+  fetchTefasHistory,
   fetchTefasAll,
   currencyToTryRate,
   ALL_TEFAS_KINDS,
   type PricePoint,
 } from "./prices";
+import { backfillFxHistory } from "./refresh";
 import {
   resolvePriceMapping,
   ASSET_TYPES,
@@ -200,6 +202,122 @@ export async function backfillYahoo(): Promise<BackfillResult> {
   }
 
   return { months: ends.length, symbols: count, snapshots };
+}
+
+/**
+ * Yalnızca veri eksikliği olan sembollerin geçmiş fiyatlarını ultra-hızlı ve akıllı şekilde doldurur.
+ * Zaten geçmiş verisi eksiksiz toplanmış semboller ANINDA (0 ms) atlanır.
+ */
+export async function smartBackfillUserSymbols(userId?: string): Promise<{ processedSymbols: number; snapshotsAdded: number }> {
+  const txWhere = userId ? { userId } : {};
+  const earliestTx = await prisma.transaction.findFirst({
+    where: txWhere,
+    orderBy: { date: "asc" },
+    select: { date: true },
+  });
+
+  if (!earliestTx) return { processedSymbols: 0, snapshotsAdded: 0 };
+
+  const firstDate = new Date(earliestTx.date);
+  const ends = monthEnds(firstDate, new Date());
+  if (ends.length === 0) return { processedSymbols: 0, snapshotsAdded: 0 };
+
+  const txRows = await prisma.transaction.findMany({
+    where: txWhere,
+    select: { symbol: true, assetType: true },
+  });
+
+  const symbolMap = new Map<string, AssetType>();
+  for (const r of txRows) {
+    if (!symbolMap.has(r.symbol)) {
+      symbolMap.set(r.symbol, r.assetType as AssetType);
+    }
+  }
+
+  const { fx } = await getFxLookupAndCurrent();
+  let processedSymbols = 0;
+  let snapshotsAdded = 0;
+
+  for (const [symbol, assetType] of symbolMap) {
+    const existingSnaps = await prisma.priceSnapshot.findMany({
+      where: {
+        symbol,
+        date: { in: ends },
+      },
+      select: { date: true },
+    });
+
+    const existingDates = new Set(existingSnaps.map((s) => s.date.toISOString().slice(0, 7)));
+    const missingEnds = ends.filter((e) => !existingDates.has(e.toISOString().slice(0, 7)));
+
+    // Eğer bu sembol için tüm aylar zaten mevcutsa HIÇBIR ŞEY YAPMA (0ms)!
+    if (missingEnds.length === 0) continue;
+
+    processedSymbols++;
+    const mapping = resolvePriceMapping(assetType, symbol);
+
+    if (mapping.source === "tefas") {
+      // TEFAS fonu için tüm geçmişi hızlıca çek
+      const tefasHistory = await fetchTefasHistory(symbol, firstDate, new Date());
+      if (tefasHistory.length === 0) continue;
+
+      for (const end of missingEnds) {
+        const p = lookupOnOrBefore(tefasHistory, end);
+        if (p == null || p <= 0) continue;
+
+        await prisma.priceSnapshot.upsert({
+          where: { symbol_date: { symbol, date: end } },
+          create: {
+            symbol,
+            date: end,
+            close: p,
+            native: p,
+            nativeCurrency: "TRY",
+            currency: "TRY",
+            source: "hist",
+          },
+          update: { close: p, native: p, nativeCurrency: "TRY" },
+        });
+        snapshotsAdded++;
+      }
+    } else if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
+      if (!mapping.yahooSymbol) continue;
+      const yahooHistory = await fetchYahooHistory(mapping.yahooSymbol, firstDate);
+      if (yahooHistory.length === 0) continue;
+
+      for (const end of missingEnds) {
+        const raw = lookupOnOrBefore(yahooHistory, end);
+        if (raw == null || raw <= 0) continue;
+
+        const adj = mapping.perGramDivisor ? raw / mapping.perGramDivisor : raw;
+        let priceTRY: number;
+        if (mapping.source === "yahoo-fx") priceTRY = adj;
+        else if (mapping.multiplyByUsdTry) priceTRY = adj * fx(end);
+        else if (mapping.currency === "TRY") priceTRY = adj;
+        else priceTRY = adj * fx(end);
+
+        await prisma.priceSnapshot.upsert({
+          where: { symbol_date: { symbol, date: end } },
+          create: {
+            symbol,
+            date: end,
+            close: priceTRY,
+            native: raw,
+            nativeCurrency: mapping.currency || "USD",
+            currency: "TRY",
+            source: "hist",
+          },
+          update: { close: priceTRY, native: raw, nativeCurrency: mapping.currency || "USD" },
+        });
+        snapshotsAdded++;
+      }
+    }
+  }
+
+  // USD/TRY kur geçmişini de doldur
+  await backfillFxHistory().catch(() => 0);
+
+  return { processedSymbols, snapshotsAdded };
 }
 
 export interface TefasProgress {

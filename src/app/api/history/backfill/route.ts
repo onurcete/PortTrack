@@ -1,31 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import { backfillYahoo, backfillTefas } from "@/lib/history";
+import { smartBackfillUserSymbols, backfillYahoo, backfillTefas } from "@/lib/history";
 import { backfillFxHistory } from "@/lib/refresh";
-import { requireAdmin } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  let userId: string;
   try {
-    await requireAdmin();
-  } catch (authErr) {
-    return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 403 });
+    userId = await requireUser();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 401 });
   }
 
-  const phase = req.nextUrl.searchParams.get("phase") ?? "yahoo";
+  const mode = req.nextUrl.searchParams.get("mode") ?? "smart";
+
   try {
-    if (phase === "tefas") {
-      const progress = await backfillTefas(45000);
-      return NextResponse.json({ ok: true, phase, ...progress });
+    if (mode === "smart") {
+      // Ultra-hızlı akıllı geçmiş doldurma (sadece eksik semboller için, ~1.5 sn)
+      const res = await smartBackfillUserSymbols(userId);
+      return NextResponse.json({
+        ok: true,
+        mode: "smart",
+        message: res.processedSymbols > 0
+          ? `${res.processedSymbols} sembolün eksik geçmiş verileri güncellendi (${res.snapshotsAdded} fiyat noktası eklendi).`
+          : "Tüm sembollerin geçmiş verileri zaten güncel!",
+        ...res,
+      });
     }
-    // phase === "yahoo": kur + yahoo gecmisi
+
+    // Tam geçmiş yenileme
     await backfillFxHistory();
     const yahoo = await backfillYahoo();
-    return NextResponse.json({ ok: true, phase: "yahoo", yahoo });
-  } catch (err) {
+    const tefas = await backfillTefas(45000);
+
+    return NextResponse.json({ ok: true, mode: "full", yahoo, tefas });
+  } catch (err: any) {
+    console.error("❌ History backfill error:", err);
     return NextResponse.json(
-      { ok: false, phase, error: (err as Error).message },
+      { ok: false, error: err?.message || "Geçmiş güncellenirken hata oluştu." },
       { status: 500 },
     );
   }

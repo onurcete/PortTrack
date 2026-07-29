@@ -11,6 +11,7 @@ import {
   Search,
   Download,
   FileSpreadsheet,
+  History,
   RotateCcw,
   ArrowLeft,
   ArrowRight,
@@ -69,7 +70,29 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   const [filter, setFilter] = useState<AssetType | "ALL">("ALL");
   const [query, setQuery] = useState("");
   const [importing, setImporting] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  function handleHistoryBackfill() {
+    setHistoryLoading(true);
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/history/backfill?mode=smart", { method: "POST" });
+        const data = await res.json();
+        if (data.ok) {
+          setToast(data.message || "Geçmiş verileri başarıyla güncellendi.");
+          router.refresh();
+        } else {
+          setToast(data.error || "Geçmiş güncellenemedi.");
+        }
+      } catch {
+        setToast("Geçmiş güncellenirken bağlantı hatası oluştu.");
+      } finally {
+        setHistoryLoading(false);
+        setTimeout(() => setToast(null), 6000);
+      }
+    });
+  }
 
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importStep, setImportStep] = useState<
@@ -261,7 +284,16 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             Toplam {transactions.length} kayıt
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleHistoryBackfill}
+            disabled={historyLoading || importing || pending}
+            className="btn btn-outline gap-1.5"
+            title="Sadece eksik sembollerin geçmiş verilerini ultra-hızlı günceller"
+          >
+            <History size={15} className={cn(historyLoading && "animate-spin")} />
+            <span className="hidden sm:inline">{historyLoading ? "Güncelleniyor..." : "Geçmişi Güncelle"}</span>
+          </button>
           <button
             onClick={() => {
               setImportStep("select");

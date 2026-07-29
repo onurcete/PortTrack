@@ -185,8 +185,8 @@ interface TefasRow {
   kisiSayisi?: number;
 }
 
-// --- TEFAS hiz sinirlayici (dakikada ~6 istek) ---
-const TEFAS_MIN_GAP_MS = 9500;
+// --- TEFAS hiz sinirlayici ---
+const TEFAS_MIN_GAP_MS = 300;
 let tefasQueue: Promise<unknown> = Promise.resolve();
 let tefasLastAt = 0;
 
@@ -239,7 +239,7 @@ async function tefasPostRaw(
     bitSira: 100000,
     dil: "TR",
     sFonTurKod: "",
-    fonKod: "",
+    fonKod: fonKodu || "",
     fonGrup: "",
     fonUnvanTip: "",
   };

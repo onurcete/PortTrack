@@ -46,6 +46,8 @@ function revalidateAll() {
   revalidatePath("/performance");
 }
 
+import { smartBackfillUserSymbols } from "@/lib/history";
+
 export async function createTransaction(
   formData: FormData,
 ): Promise<ActionResult> {
@@ -75,6 +77,12 @@ export async function createTransaction(
       note: d.note || null,
     },
   });
+
+  // Yeni sembol eklendiyse geçmiş fiyatlarını otomatik ve hızlıca doldur
+  smartBackfillUserSymbols(userId).catch((err) =>
+    console.error("Auto smartBackfill error:", err)
+  );
+
   revalidateAll();
   return { ok: true };
 }
