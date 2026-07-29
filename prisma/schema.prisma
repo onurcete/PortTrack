@@ -81,6 +81,7 @@ model PriceSnapshot {
 
   @@unique([symbol, date])
   @@index([symbol])
+  @@index([date])
 }
 
 /// USDTRY vb. kur gecmisi
@@ -92,6 +93,7 @@ model FxRate {
 
   @@unique([pair, date])
   @@index([pair])
+  @@index([date])
 }
 
 /// Manuel ay sonu bakiyeleri (backlog.xlsx ve BES guncellemeleri)

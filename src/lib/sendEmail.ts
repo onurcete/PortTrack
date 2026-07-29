@@ -11,7 +11,7 @@ export interface SendEmailOptions {
  */
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<{ ok: boolean; id?: string; error?: string }> {
   const gmailUser = process.env.GMAIL_USER?.trim() || "ceteonur@gmail.com";
-  const gmailPass = (process.env.GMAIL_APP_PASS?.trim() || "fliztpghqolxsmvu").replace(/\s+/g, "");
+  const gmailPass = (process.env.GMAIL_APP_PASS?.trim() || "").replace(/\s+/g, "");
 
   if (!gmailUser || !gmailPass) {
     return { ok: false, error: "Gmail SMTP kimlik bilgileri yapılandırılmamış." };

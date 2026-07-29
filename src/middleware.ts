@@ -13,7 +13,6 @@ const PUBLIC = [
   "/api/auth/register",
   "/api/auth/send-otp",
   "/api/auth/verify-otp",
-  "/api/debug-status",
   "/api/cron",
 ];
 
