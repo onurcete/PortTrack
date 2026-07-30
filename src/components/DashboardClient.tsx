@@ -941,7 +941,6 @@ function PositionsTable({
   const gridStyle = useMemo(() => {
     if (showClosed) {
       return {
-        display: "grid",
         gridTemplateColumns: "minmax(120px, 1.5fr) minmax(100px, 1.2fr) minmax(100px, 1.2fr) minmax(100px, 1.2fr) minmax(80px, 90px)",
         gap: "8px",
         alignItems: "center"
@@ -959,7 +958,6 @@ function PositionsTable({
         "minmax(80px, 90px)"    // Getiri
       ].join(" ");
       return {
-        display: "grid",
         gridTemplateColumns: cols,
         gap: "8px",
         alignItems: "center"
@@ -1114,7 +1112,7 @@ function PositionsTable({
           {showClosed ? "Kapalı pozisyon yok." : "Açık pozisyon yok."}
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="w-full">
           {sortedPositionsByType.map(({ assetType, positions }) => {
             const meta = ASSET_META[assetType];
             const sectionValue = positions.reduce(
