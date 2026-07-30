@@ -1333,6 +1333,14 @@ function PositionsTable({
                       )}
                     </div>
 
+                    {/* Mobil Başlık Satırı */}
+                    <div className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1fr] items-center gap-1.5 md:hidden px-4 py-2 bg-[var(--color-surface-muted)]/50 border-t border-b border-[var(--color-border)]/40 text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider select-none">
+                      <div>Sembol</div>
+                      <div className="text-right pr-1">Değer</div>
+                      <div className="text-center">Günlük %</div>
+                      <div className="text-right">Net %</div>
+                    </div>
+
                     {/* Pozisyon satırları & Mobil kartlar */}
                     {positions.map((p) => {
                       if (showClosed) {
@@ -1346,7 +1354,7 @@ function PositionsTable({
                             {/* Mobil Pozisyon Satırı (Tek Satır CSS Grid) */}
                             <div
                               onClick={() => onSelectPosition?.(p)}
-                              className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1.2fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
+                              className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
                               {/* Col 1: Sembol & Kapalı */}
                               <div className="min-w-0">
@@ -1359,22 +1367,19 @@ function PositionsTable({
                                 </p>
                               </div>
 
-                              {/* Col 2: Değer Rakamı (1 Basamak Yuvarlama) */}
+                              {/* Col 2: Değer Rakamı (0 Basamak Yuvarlama) */}
                               <div className="text-right min-w-0 pr-1">
                                 <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block truncate">
-                                  {formatMoney(sellVal, currency, { decimals: 1 })}
+                                  {formatMoney(sellVal, currency, { decimals: 0 })}
                                 </span>
                               </div>
 
-                              {/* Col 3: Bos Kolon (Kapalı için) */}
+                              {/* Col 3: Boş Kolon (Kapalı Pozisyon için) */}
                               <div className="flex justify-center min-w-0 text-[10px] text-[var(--color-muted)]">—</div>
 
-                              {/* Col 4: Net K/Z & Net % (1 Basamak Yuvarlama) */}
-                              <div className="flex flex-col items-end min-w-0 leading-tight">
-                                <PnlBadge value={pnlVal} currency={currency} decimals={1} />
-                                <span className="text-[10px] font-bold mt-0.5">
-                                  <PnlBadge value={pctVal} isPercent decimals={1} />
-                                </span>
+                              {/* Col 4: Sadece Net % (2 Basamak Yuvarlama) */}
+                              <div className="flex justify-end min-w-0">
+                                <PnlBadge value={pctVal} isPercent decimals={2} />
                               </div>
                             </div>
 
@@ -1475,7 +1480,7 @@ function PositionsTable({
                             {/* Mobil Pozisyon Satırı (Tek Satır CSS Grid) */}
                             <div
                               onClick={() => onSelectPosition?.(p)}
-                              className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1.2fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
+                              className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
                               {/* Col 1: Sembol & Adet */}
                               <div className="min-w-0">
@@ -1488,14 +1493,14 @@ function PositionsTable({
                                 </p>
                               </div>
 
-                              {/* Col 2: Değer Rakamı (1 Basamak Yuvarlama, Sabit Hizalı Kolon) */}
+                              {/* Col 2: Değer Rakamı (0 Basamak Yuvarlama, Virgül Sonrası Yok) */}
                               <div className="text-right min-w-0 pr-1">
                                 <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block truncate">
-                                  {formatMoney(value, currency, { decimals: 1 })}
+                                  {formatMoney(value, currency, { decimals: 0 })}
                                 </span>
                               </div>
 
-                              {/* Col 3: Günlük % (Şeffaf Kutu, 1 Basamak Yuvarlama) */}
+                              {/* Col 3: Günlük % (Şeffaf Kutu, 2 Basamak Yuvarlama) */}
                               <div className="flex justify-center min-w-0">
                                 {p.dailyChangePct !== null && p.dailyChangePct !== undefined ? (
                                   <span
@@ -1507,19 +1512,16 @@ function PositionsTable({
                                     )}
                                   >
                                     <span className="text-[8px] select-none">{p.dailyChangePct >= 0 ? "▲" : "▼"}</span>
-                                    <span>{formatPercent(p.dailyChangePct, 1)}</span>
+                                    <span>{formatPercent(p.dailyChangePct, 2)}</span>
                                   </span>
                                 ) : (
                                   <span className="text-[10px] text-[var(--color-muted)]">—</span>
                                 )}
                               </div>
 
-                              {/* Col 4: Net K/Z & Net % (1 Basamak Yuvarlama) */}
-                              <div className="flex flex-col items-end min-w-0 leading-tight">
-                                <PnlBadge value={pnl} currency={currency} decimals={1} />
-                                <span className="text-[10px] font-bold mt-0.5">
-                                  <PnlBadge value={pct} isPercent decimals={1} />
-                                </span>
+                              {/* Col 4: Sadece Net % (2 Basamak Yuvarlama) */}
+                              <div className="flex justify-end min-w-0">
+                                <PnlBadge value={pct} isPercent decimals={2} />
                               </div>
                             </div>
 
