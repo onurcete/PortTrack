@@ -33,20 +33,26 @@ export async function GET(req: NextRequest) {
     await backfillFxHistory();
     const refresh = await refreshPrices();
     const yahoo = await backfillYahoo();
-    // Bekleyen TEFAS gecmis aylari varsa bir parca isle
-    const tefas = await backfillTefas(30000);
     // Teknik analiz hesapla (fiyatlar güncellendikten sonra)
     const analysis = await runTechnicalAnalysis();
+
+    // Otomatik E-Posta Özetlerini Gönder (Zaman aşımına takılmamak için öncelikli çalıştırılır)
+    let digest = null;
+    try {
+      digest = await runDailyDigest(req);
+    } catch (digestErr: any) {
+      console.error("❌ Cron günlük bülten e-posta hatası:", digestErr);
+    }
 
     await logSystemEvent({
       action: "CRON_PRICE_REFRESH",
       status: "SUCCESS",
-      details: `Vercel Cron otomatik fiyat güncellemesi tamamlandı (${refresh.updated} enstrüman güncellendi).`,
+      details: `Vercel Cron otomatik fiyat güncellemesi tamamlandı (${refresh.updated} enstrüman güncellendi). Bülten gönderimi: ${digest?.sentCount ?? 0}/${digest?.totalTargets ?? 0}`,
       req,
     });
 
-    // Otomatik E-Posta Özetlerini Gönder
-    const digest = await runDailyDigest(req);
+    // Bekleyen TEFAS geçmiş ayları (Zaman aşımı ihtimali yüksek olduğu için en sona alındı)
+    const tefas = await backfillTefas(15000);
 
     return NextResponse.json({ ok: true, refresh, yahoo, tefas, analysis, digest });
   } catch (err: any) {
