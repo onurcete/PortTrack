@@ -10,6 +10,10 @@ import {
   StickyNote,
   ChevronDown,
   ChevronRight,
+  Search,
+  Filter,
+  X,
+  Flame,
 } from "lucide-react";
 import { useCurrency } from "@/context/currency";
 import { Card, Badge } from "@/components/ui";
@@ -774,6 +778,9 @@ function PositionsTable({
   const [selectedOptionalCols, setSelectedOptionalCols] = useState<string[]>([]);
   const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pnlFilter, setPnlFilter] = useState<"ALL" | "PROFIT" | "LOSS" | "TOP_GAINER">("ALL");
+
   const showRoi = getiriMode === "roi";
   const showXirr = getiriMode === "xirr";
   const [sortField, setSortField] = useState<SortField>("value");
@@ -803,6 +810,35 @@ function PositionsTable({
 
   const activePositions = showClosed ? closedPositions : openPositions;
 
+  const filteredPositions = useMemo(() => {
+    let list = activePositions;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((p) => p.symbol.toLowerCase().includes(q));
+    }
+
+    if (pnlFilter === "PROFIT") {
+      list = list.filter((p) => {
+        const pnl = showClosed
+          ? (isTRY ? p.realizedTRY : p.realizedUSD)
+          : (isTRY ? p.unrealizedTRY : p.unrealizedUSD);
+        return pnl > 0;
+      });
+    } else if (pnlFilter === "LOSS") {
+      list = list.filter((p) => {
+        const pnl = showClosed
+          ? (isTRY ? p.realizedTRY : p.realizedUSD)
+          : (isTRY ? p.unrealizedTRY : p.unrealizedUSD);
+        return pnl < 0;
+      });
+    } else if (pnlFilter === "TOP_GAINER") {
+      list = list.filter((p) => (p.dailyChangePct ?? 0) > 0);
+    }
+
+    return list;
+  }, [activePositions, searchQuery, pnlFilter, showClosed, isTRY]);
+
   const totalActivePortfolioValue = useMemo(() => {
     return activePositions.reduce(
       (s, p) => s + (showClosed ? (isTRY ? p.totalSellTRY : p.totalSellUSD) : (isTRY ? p.valueTRY : p.valueUSD)),
@@ -812,7 +848,7 @@ function PositionsTable({
 
   const positionsByType = useMemo(() => {
     const map = new Map<AssetType, PositionDTO[]>();
-    for (const p of activePositions) {
+    for (const p of filteredPositions) {
       const arr = map.get(p.assetType) ?? [];
       arr.push(p);
       map.set(p.assetType, arr);
@@ -821,7 +857,7 @@ function PositionsTable({
       assetType: t,
       positions: map.get(t)!,
     }));
-  }, [activePositions]);
+  }, [filteredPositions]);
 
   const sortedPositionsByType = useMemo(() => {
     return positionsByType.map(({ assetType, positions }) => {
@@ -933,8 +969,10 @@ function PositionsTable({
 
   return (
     <Card className="overflow-hidden">
-      <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
-        <div className="flex items-center gap-6">
+      {/* Tablo Üst Kontrol Barı (Arama, Hızlı Filtreler & Sütun Özelleştir) */}
+      <div className="px-6 py-4 border-b border-[var(--color-border)] flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        {/* Sol Taraf: Açık / Kapalı Sekmeleri */}
+        <div className="flex items-center gap-6 shrink-0">
           <button
             onClick={() => handleTabChange(false)}
             className={cn(
@@ -959,54 +997,117 @@ function PositionsTable({
           </button>
         </div>
 
-        {/* Özelleştir Açılır Menüsü */}
-        {!showClosed && (
-          <div className="relative">
-            <button
-              onClick={() => setShowCustomizeMenu(!showCustomizeMenu)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] transition-all cursor-pointer select-none"
-            >
-              <span>⚙️ Sütunları Özelleştir</span>
-            </button>
-
-            {showCustomizeMenu && (
-              <>
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setShowCustomizeMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl z-50 flex flex-col gap-2">
-                  <p className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1 px-1">
-                    Görüntülenecek Sütunlar
-                  </p>
-                  {OPTIONAL_COLUMNS.map((col) => {
-                    const isSelected = selectedOptionalCols.includes(col.key);
-                    return (
-                      <label 
-                        key={col.key} 
-                        className="flex items-center gap-2.5 px-1 py-1.5 hover:bg-[var(--color-surface-muted)]/40 rounded-lg cursor-pointer text-xs font-semibold text-[var(--color-text)] select-none"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {
-                            if (isSelected) {
-                              setSelectedOptionalCols(selectedOptionalCols.filter(k => k !== col.key));
-                            } else {
-                              setSelectedOptionalCols([...selectedOptionalCols, col.key]);
-                            }
-                          }}
-                          className="rounded border-[var(--color-border)] text-[var(--color-brand)] focus:ring-[var(--color-brand)] accent-[var(--color-brand)] h-4 w-4 cursor-pointer"
-                        />
-                        <span>{col.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </>
+        {/* Sağ Taraf: Arama Kutusu, Hızlı Filtre Butonları & Sütun Özelleştir */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Arama Input */}
+          <div className="relative flex-1 sm:w-52 min-w-[160px]">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Hisse / Fon ara..."
+              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 focus:outline-none focus:border-[var(--color-brand)] focus:ring-1 focus:ring-[var(--color-brand)] transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+              >
+                <X size={12} />
+              </button>
             )}
           </div>
-        )}
+
+          {/* Hızlı Filtre Pill Butonları */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+            <button
+              onClick={() => setPnlFilter(pnlFilter === "PROFIT" ? "ALL" : "PROFIT")}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap select-none",
+                pnlFilter === "PROFIT"
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+              )}
+            >
+              <span>🟢 Karda Olanlar</span>
+            </button>
+            <button
+              onClick={() => setPnlFilter(pnlFilter === "LOSS" ? "ALL" : "LOSS")}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap select-none",
+                pnlFilter === "LOSS"
+                  ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+              )}
+            >
+              <span>🔴 Zararda Olanlar</span>
+            </button>
+            {!showClosed && (
+              <button
+                onClick={() => setPnlFilter(pnlFilter === "TOP_GAINER" ? "ALL" : "TOP_GAINER")}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap select-none",
+                  pnlFilter === "TOP_GAINER"
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                )}
+              >
+                <Flame size={12} className="text-amber-500 shrink-0" />
+                <span>Yükselenler</span>
+              </button>
+            )}
+          </div>
+
+          {/* Özelleştir Açılır Menüsü */}
+          {!showClosed && (
+            <div className="relative">
+              <button
+                onClick={() => setShowCustomizeMenu(!showCustomizeMenu)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] transition-all cursor-pointer select-none"
+              >
+                <span>⚙️ Sütunlar</span>
+              </button>
+
+              {showCustomizeMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowCustomizeMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl z-50 flex flex-col gap-2">
+                    <p className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider mb-1 px-1">
+                      Görüntülenecek Sütunlar
+                    </p>
+                    {OPTIONAL_COLUMNS.map((col) => {
+                      const isSelected = selectedOptionalCols.includes(col.key);
+                      return (
+                        <label 
+                          key={col.key} 
+                          className="flex items-center gap-2.5 px-1 py-1.5 hover:bg-[var(--color-surface-muted)]/40 rounded-lg cursor-pointer text-xs font-semibold text-[var(--color-text)] select-none"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedOptionalCols(selectedOptionalCols.filter(k => k !== col.key));
+                              } else {
+                                setSelectedOptionalCols([...selectedOptionalCols, col.key]);
+                              }
+                            }}
+                            className="rounded border-[var(--color-border)] text-[var(--color-brand)] focus:ring-[var(--color-brand)] accent-[var(--color-brand)] h-4 w-4 cursor-pointer"
+                          />
+                          <span>{col.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       {activePositions.length === 0 ? (
         <p className="px-6 py-10 text-center text-sm text-[var(--color-muted)]">
@@ -1087,8 +1188,8 @@ function PositionsTable({
 
                 {!isCollapsed && (
                   <>
-                    {/* Tablo başlıkları */}
-                    <div className="theme-table-head grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40" style={gridStyle}>
+                    {/* Tablo başlıkları (Sadece Masaüstünde Görünür) */}
+                    <div className="hidden md:grid theme-table-head gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40" style={gridStyle}>
                       {showClosed ? (
                         <>
                           <SortHeader
@@ -1232,7 +1333,7 @@ function PositionsTable({
                       )}
                     </div>
 
-                    {/* Pozisyon satırları */}
+                    {/* Pozisyon satırları & Mobil kartlar */}
                     {positions.map((p) => {
                       if (showClosed) {
                         const buyVal = isTRY ? p.totalBuyTRY : p.totalBuyUSD;
@@ -1241,52 +1342,94 @@ function PositionsTable({
                         const pctVal = buyVal > 0 ? (pnlVal / buyVal) * 100 : 0;
 
                         return (
-                          <div
-                            key={`${p.assetType}-${p.symbol}`}
-                            onClick={() => onSelectPosition?.(p)}
-                            className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
-                            style={gridStyle}
-                          >
-                            {/* Sembol */}
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
-                                style={{
-                                  backgroundColor: `${meta.color}12`,
-                                  color: meta.color,
-                                }}
-                              >
-                                {p.symbol.slice(0, 3)}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
-                                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                                  {p.symbol}
-                                </p>
-                                <p className="text-[10px] text-[var(--color-muted)] leading-tight">
-                                  Kapalı Pozisyon
-                                </p>
+                          <div key={`${p.assetType}-${p.symbol}`}>
+                            {/* Mobil Kart */}
+                            <div
+                              onClick={() => onSelectPosition?.(p)}
+                              className="block md:hidden p-3.5 my-2 mx-4 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface-muted)]/20 hover:bg-[var(--color-surface-muted)]/50 transition-all cursor-pointer shadow-2xs"
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0 text-white shadow-2xs"
+                                    style={{ backgroundColor: meta.color }}
+                                  >
+                                    {p.symbol.slice(0, 3)}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                                      {p.symbol}
+                                    </p>
+                                    <p className="text-[10px] text-[var(--color-muted)] font-medium leading-tight">
+                                      Kapalı Pozisyon
+                                    </p>
+                                  </div>
+                                </div>
+                                <PnlBadge value={pctVal} isPercent />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 py-2 px-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/40 text-center">
+                                <div>
+                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Toplam Satış</p>
+                                  <p className="text-xs font-bold tabular-nums mt-0.5">{formatMoney(sellVal, currency)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Realize K/Z</p>
+                                  <div className="mt-0.5 flex justify-center">
+                                    <PnlBadge value={pnlVal} currency={currency} />
+                                  </div>
+                                </div>
                               </div>
                             </div>
 
-                            {/* Toplam Alış */}
-                            <p className="text-xs font-semibold tabular-nums text-right">
-                              {formatMoney(buyVal, currency)}
-                            </p>
+                            {/* Masaüstü Satırı */}
+                            <div
+                              onClick={() => onSelectPosition?.(p)}
+                              className="hidden md:grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 theme-surface-hover transition-colors cursor-pointer"
+                              style={gridStyle}
+                            >
+                              {/* Sembol */}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
+                                  style={{
+                                    backgroundColor: `${meta.color}12`,
+                                    color: meta.color,
+                                  }}
+                                >
+                                  {p.symbol.slice(0, 3)}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                                    {p.symbol}
+                                  </p>
+                                  <p className="text-[10px] text-[var(--color-muted)] leading-tight">
+                                    Kapalı Pozisyon
+                                  </p>
+                                </div>
+                              </div>
 
-                            {/* Toplam Satış */}
-                            <p className="text-xs font-semibold tabular-nums text-right">
-                              {formatMoney(sellVal, currency)}
-                            </p>
+                              {/* Toplam Alış */}
+                              <p className="text-xs font-semibold tabular-nums text-right">
+                                {formatMoney(buyVal, currency)}
+                              </p>
 
-                            {/* Realize K/Z */}
-                            <div className="flex justify-end">
-                              <PnlBadge value={pnlVal} currency={currency} />
-                            </div>
+                              {/* Toplam Satış */}
+                              <p className="text-xs font-semibold tabular-nums text-right">
+                                {formatMoney(sellVal, currency)}
+                              </p>
 
-                            {/* Yüzde badge */}
-                            <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
-                              <PnlBadge value={pctVal} isPercent />
+                              {/* Realize K/Z */}
+                              <div className="flex justify-end">
+                                <PnlBadge value={pnlVal} currency={currency} />
+                              </div>
+
+                              {/* Yüzde badge */}
+                              <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
+                                <PnlBadge value={pctVal} isPercent />
+                              </div>
                             </div>
                           </div>
                         );
@@ -1333,84 +1476,137 @@ function PositionsTable({
                             : "-";
 
                       return (
-                        <div
-                          key={`${p.assetType}-${p.symbol}`}
-                          onClick={() => onSelectPosition?.(p)}
-                          className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
-                          style={gridStyle}
-                        >
-                          {/* Sembol */}
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
-                              style={{
-                                backgroundColor: `${meta.color}12`,
-                                color: meta.color,
-                              }}
-                            >
-                              {p.symbol.slice(0, 3)}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
-                                {p.symbol}
-                              </p>
-                              <p className="text-[10px] text-[var(--color-muted)] leading-tight">
-                                {formatNumber(p.quantity, 4)} adet
-                              </p>
+                        <div key={`${p.assetType}-${p.symbol}`}>
+                          {/* Mobil Pozisyon Kartı */}
+                          <div
+                            onClick={() => onSelectPosition?.(p)}
+                            className="block md:hidden p-3.5 my-2 mx-4 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface-muted)]/20 hover:bg-[var(--color-surface-muted)]/50 transition-all cursor-pointer shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0 text-white shadow-2xs"
+                                  style={{ backgroundColor: meta.color }}
+                                >
+                                  {p.symbol.slice(0, 3)}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
+                                    {p.symbol}
+                                  </p>
+                                  <p className="text-[10px] text-[var(--color-muted)] font-medium leading-tight">
+                                    {formatNumber(p.quantity, 4)} adet {holdingDays !== "-" ? `· ${holdingDays}` : ""}
+                                  </p>
+                                </div>
+                              </div>
+                              <PnlBadge value={pct} isPercent />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 py-2 px-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/40 text-center">
+                              <div>
+                                <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Değer</p>
+                                <p className="text-xs font-bold tabular-nums mt-0.5">{formatMoney(value, currency)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Net K/Z</p>
+                                <div className="mt-0.5 flex justify-center">
+                                  <PnlBadge value={pnl} currency={currency} />
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Günlük %</p>
+                                <div className="mt-0.5 flex justify-center">
+                                  <PnlBadge value={p.dailyChangePct} isPercent />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[11px] font-medium text-[var(--color-muted)] mt-2 px-1">
+                              <span>Maliyet: <strong className="text-[var(--color-foreground)] font-semibold">{avgCostFormatted}</strong></span>
+                              <span>Güncel: <strong className="text-[var(--color-foreground)] font-semibold">{currentPriceFormatted}</strong></span>
                             </div>
                           </div>
 
-                          {/* Gün */}
-                          <p
-                            className="text-xs font-medium text-[var(--color-muted)] tabular-nums text-right cursor-help"
-                            title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
+                          {/* Masaüstü Tablo Satırı */}
+                          <div
+                            onClick={() => onSelectPosition?.(p)}
+                            className="hidden md:grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 theme-surface-hover transition-colors cursor-pointer"
+                            style={gridStyle}
                           >
-                            {holdingDays}
-                          </p>
-
-                          {/* Ortalama Fiyat */}
-                          <p className="text-xs font-semibold tabular-nums text-right">
-                            {avgCostFormatted}
-                          </p>
-
-                          {/* Güncel Fiyat */}
-                          <p className="text-xs font-semibold tabular-nums text-right">
-                            {currentPriceFormatted}
-                          </p>
-
-                          {/* Değer */}
-                          <p className="text-xs font-semibold tabular-nums text-right">
-                            {formatMoney(value, currency)}
-                          </p>
-
-                          {/* Günlük K/Z % */}
-                          <div className="flex justify-end">
-                            <PnlBadge value={p.dailyChangePct} isPercent />
-                          </div>
-
-                          {/* K/Z */}
-                          <div className="flex justify-end">
-                            <PnlBadge value={pnl} currency={currency} />
-                          </div>
-
-                          {/* Optional Column Values */}
-                          {selectedOptionalCols.map((colKey) => {
-                            const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
-                            if (!colDef) return null;
-                            const val = (isTRY
-                              ? p[colDef.fieldTRY]
-                              : p[colDef.fieldUSD]) as number | null;
-                            return (
-                              <div key={colKey} className="flex justify-end">
-                                <PnlBadge value={val} isPercent />
+                            {/* Sembol */}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
+                                style={{
+                                  backgroundColor: `${meta.color}12`,
+                                  color: meta.color,
+                                }}
+                              >
+                                {p.symbol.slice(0, 3)}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
+                                  {p.symbol}
+                                </p>
+                                <p className="text-[10px] text-[var(--color-muted)] leading-tight">
+                                  {formatNumber(p.quantity, 4)} adet
+                                </p>
                               </div>
-                            );
-                          })}
+                            </div>
 
-                          {/* Yüzde badge */}
-                          <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
-                            <PnlBadge value={pct} isPercent />
+                            {/* Gün */}
+                            <p
+                              className="text-xs font-medium text-[var(--color-muted)] tabular-nums text-right cursor-help"
+                              title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
+                            >
+                              {holdingDays}
+                            </p>
+
+                            {/* Ortalama Fiyat */}
+                            <p className="text-xs font-semibold tabular-nums text-right">
+                              {avgCostFormatted}
+                            </p>
+
+                            {/* Güncel Fiyat */}
+                            <p className="text-xs font-semibold tabular-nums text-right">
+                              {currentPriceFormatted}
+                            </p>
+
+                            {/* Değer */}
+                            <p className="text-xs font-semibold tabular-nums text-right">
+                              {formatMoney(value, currency)}
+                            </p>
+
+                            {/* Günlük K/Z % */}
+                            <div className="flex justify-end">
+                              <PnlBadge value={p.dailyChangePct} isPercent />
+                            </div>
+
+                            {/* K/Z */}
+                            <div className="flex justify-end">
+                              <PnlBadge value={pnl} currency={currency} />
+                            </div>
+
+                            {/* Optional Column Values */}
+                            {selectedOptionalCols.map((colKey) => {
+                              const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
+                              if (!colDef) return null;
+                              const val = (isTRY
+                                ? p[colDef.fieldTRY]
+                                : p[colDef.fieldUSD]) as number | null;
+                              return (
+                                <div key={colKey} className="flex justify-end">
+                                  <PnlBadge value={val} isPercent />
+                                </div>
+                              );
+                            })}
+
+                            {/* Yüzde badge */}
+                            <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
+                              <PnlBadge value={pct} isPercent />
+                            </div>
                           </div>
                         </div>
                       );
