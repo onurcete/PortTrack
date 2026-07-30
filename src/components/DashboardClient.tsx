@@ -1156,11 +1156,6 @@ function PositionsTable({
                     <span className="rounded-full bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-muted)] shrink-0">
                       {positions.length}
                     </span>
-                    {sectionSharePct > 0 && !showClosed && (
-                      <span className="rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold border border-[var(--color-brand)]/20 shrink-0">
-                        Portföyün %{sectionSharePct.toFixed(1)}'i
-                      </span>
-                    )}
                   </div>
                   <div className="flex items-center gap-3 sm:gap-6 shrink-0">
                     <div className="text-right">
