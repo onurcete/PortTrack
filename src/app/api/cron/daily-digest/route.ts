@@ -8,7 +8,7 @@ import { getPeriodReturns } from "@/lib/history";
 import { logSystemEvent } from "@/lib/logger";
 import { computeFundInvestorStats } from "@/lib/tefasInvestors";
 
-import { AUTH_COOKIE, getSessionUser } from "@/lib/auth";
+import { AUTH_COOKIE, getSessionUser, isAdminUser, ADMIN_EMAILS } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -33,7 +33,7 @@ async function authorized(req: NextRequest): Promise<boolean> {
     const userId = await getSessionUser(token);
     if (userId) {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, email: true } });
-      if (user && (user.role === "ADMIN" || user.email === "ceteonur@gmail.com")) {
+      if (isAdminUser(user)) {
         return true;
       }
     }
@@ -49,10 +49,10 @@ export async function runDailyDigest(req: NextRequest) {
   const url = new URL(req.url);
   const isTest = url.searchParams.get("test") === "1" || url.searchParams.has("test");
 
-  // Canlı test modunda sadece admin kullanıcısı (ceteonur@gmail.com) ile çalış
+  // Canlı test modunda sadece admin kullanıcıları ile çalış
   let users = await prisma.user.findMany(
     isTest
-      ? { where: { email: "ceteonur@gmail.com" } }
+      ? { where: { email: { in: ADMIN_EMAILS } } }
       : undefined
   );
 

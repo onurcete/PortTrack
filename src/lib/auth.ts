@@ -111,14 +111,23 @@ export async function getSessionUserIdOptional(): Promise<string | null> {
   }
 }
 
+export const ADMIN_EMAILS = ["ceteonur@gmail.com", "denizbag@gmail.com"];
+
+export function isAdminUser(user: { role?: string | null; email?: string | null } | null | undefined): boolean {
+  if (!user) return false;
+  if (user.role === "ADMIN") return true;
+  if (user.email && ADMIN_EMAILS.includes(user.email.trim().toLowerCase())) return true;
+  return false;
+}
+
 /** Sunucu eylemleri ve server component'leri için aktif admin kimliğini getirir. */
 export async function requireAdmin(): Promise<string> {
   const userId = await requireUser();
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    select: { role: true, email: true },
   });
-  if (!user || user.role !== "ADMIN") {
+  if (!isAdminUser(user)) {
     throw new Error("Unauthorized");
   }
   return userId;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUserIdOptional } from "@/lib/auth";
+import { getSessionUserIdOptional, isAdminUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +13,12 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ user: null });
   }
+  const isUserAdmin = isAdminUser(user);
   return NextResponse.json({
     user: {
       name: user.name ?? "",
       email: user.email,
-      role: user.role,
+      role: isUserAdmin ? "ADMIN" : user.role,
     },
   });
 }

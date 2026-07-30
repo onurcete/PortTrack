@@ -835,7 +835,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                       <Mail size={18} className="text-amber-400" /> Admin Bülten Maili Gönder (Test)
                     </h3>
                     <p className="text-xs text-[var(--color-muted)] mt-2 leading-relaxed">
-                      Sadece Admin e-posta adresine (<code className="text-amber-400 font-mono">ceteonur@gmail.com</code>) güncel portföy özet bültenini test amaçlı anlık olarak gönderir.
+                      Sadece Admin e-posta adreslerine (<code className="text-amber-400 font-mono">ceteonur@gmail.com, denizbag@gmail.com</code>) güncel portföy özet bültenini test amaçlı anlık olarak gönderir.
                     </p>
                   </div>
 
