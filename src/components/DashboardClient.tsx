@@ -1145,43 +1145,37 @@ function PositionsTable({
                     background: `linear-gradient(135deg, ${meta.color}0D, transparent)`,
                   }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="p-1 rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-transform">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="p-1 rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-muted)] shrink-0">
                       {isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
                     </span>
-                    <span
-                      className="flex h-8 w-8 items-center justify-center rounded-xl text-white text-[11px] font-bold shadow-2xs"
-                      style={{ backgroundColor: meta.color }}
-                    >
-                      {meta.label.charAt(0)}
-                    </span>
-                    <span className="font-bold text-sm inline-flex items-center gap-1.5">
+                    <span className="font-extrabold text-xs sm:text-sm truncate inline-flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
                       {meta.label}
                     </span>
-                    <span className="rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted)]">
+                    <span className="rounded-full bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-muted)] shrink-0">
                       {positions.length}
                     </span>
                     {sectionSharePct > 0 && !showClosed && (
-                      <span className="rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] px-2.5 py-0.5 text-[10px] font-extrabold border border-[var(--color-brand)]/20">
+                      <span className="rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold border border-[var(--color-brand)]/20 shrink-0">
                         Portföyün %{sectionSharePct.toFixed(1)}'i
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3 sm:gap-6 shrink-0">
                     <div className="text-right">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)]">
+                      <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
                         {showClosed ? "Toplam Gelir" : "Grup değeri"}
                       </p>
-                      <p className="text-sm font-bold tabular-nums">
-                        {formatMoney(sectionValue, currency)}
+                      <p className="text-xs sm:text-sm font-extrabold tabular-nums">
+                        {formatMoney(sectionValue, currency, { decimals: 0 })}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)] mb-0.5">
+                      <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)] mb-0.5">
                         {showClosed ? "Realize K/Z" : "Grup K/Z"}
                       </p>
-                      <PnlBadge value={sectionPnl} currency={currency} />
+                      <PnlBadge value={sectionPnl} currency={currency} decimals={0} />
                     </div>
                   </div>
                 </div>
