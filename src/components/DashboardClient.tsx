@@ -724,10 +724,12 @@ function PnlBadge({
   value,
   isPercent = false,
   currency,
+  decimals,
 }: {
   value: number | null | undefined;
   isPercent?: boolean;
   currency?: "TRY" | "USD";
+  decimals?: number;
 }) {
   if (value === null || value === undefined || isNaN(value)) {
     return <span className="text-xs font-medium text-[var(--color-muted)]">—</span>;
@@ -738,11 +740,11 @@ function PnlBadge({
 
   let formattedText: string;
   if (isPercent) {
-    formattedText = formatPercent(value);
+    formattedText = formatPercent(value, decimals ?? 2);
   } else if (currency) {
-    formattedText = formatMoney(value, currency);
+    formattedText = formatMoney(value, currency, { decimals });
   } else {
-    formattedText = formatNumber(value, 2);
+    formattedText = formatNumber(value, decimals ?? 2);
   }
 
   return (
@@ -1341,38 +1343,38 @@ function PositionsTable({
 
                         return (
                           <div key={`${p.assetType}-${p.symbol}`}>
-                            {/* Mobil Pozisyon Satırı (Tek Satır - Single Row) */}
+                            {/* Mobil Pozisyon Satırı (Tek Satır CSS Grid) */}
                             <div
                               onClick={() => onSelectPosition?.(p)}
-                              className="block md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
+                              className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1.2fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
-                              <div className="flex items-center justify-between gap-1.5">
-                                {/* Sol: Sembol & Kapalı */}
-                                <div className="min-w-0 shrink-0 max-w-[35%]">
-                                  <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                                    <span className="truncate">{p.symbol}</span>
-                                  </p>
-                                  <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
-                                    Kapalı Pozisyon
-                                  </p>
-                                </div>
+                              {/* Col 1: Sembol & Kapalı */}
+                              <div className="min-w-0">
+                                <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                                  <span className="truncate">{p.symbol}</span>
+                                </p>
+                                <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
+                                  Kapalı
+                                </p>
+                              </div>
 
-                                {/* Sağ: Değer Rakamı | Net K/Z & Net % */}
-                                <div className="flex items-center gap-2 min-w-0 justify-end flex-1">
-                                  <div className="text-right shrink-0">
-                                    <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block">
-                                      {formatMoney(sellVal, currency)}
-                                    </span>
-                                  </div>
+                              {/* Col 2: Değer Rakamı (1 Basamak Yuvarlama) */}
+                              <div className="text-right min-w-0 pr-1">
+                                <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block truncate">
+                                  {formatMoney(sellVal, currency, { decimals: 1 })}
+                                </span>
+                              </div>
 
-                                  <div className="flex flex-col items-end shrink-0 leading-tight">
-                                    <PnlBadge value={pnlVal} currency={currency} />
-                                    <span className="text-[10px] font-bold mt-0.5">
-                                      <PnlBadge value={pctVal} isPercent />
-                                    </span>
-                                  </div>
-                                </div>
+                              {/* Col 3: Bos Kolon (Kapalı için) */}
+                              <div className="flex justify-center min-w-0 text-[10px] text-[var(--color-muted)]">—</div>
+
+                              {/* Col 4: Net K/Z & Net % (1 Basamak Yuvarlama) */}
+                              <div className="flex flex-col items-end min-w-0 leading-tight">
+                                <PnlBadge value={pnlVal} currency={currency} decimals={1} />
+                                <span className="text-[10px] font-bold mt-0.5">
+                                  <PnlBadge value={pctVal} isPercent decimals={1} />
+                                </span>
                               </div>
                             </div>
 
@@ -1470,55 +1472,54 @@ function PositionsTable({
 
                       return (
                         <div key={`${p.assetType}-${p.symbol}`}>
-                            {/* Mobil Pozisyon Satırı (Tek Satır - Single Row) */}
+                            {/* Mobil Pozisyon Satırı (Tek Satır CSS Grid) */}
                             <div
                               onClick={() => onSelectPosition?.(p)}
-                              className="block md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
+                              className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1.2fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
-                              <div className="flex items-center justify-between gap-1.5">
-                                {/* Sol: Sembol & Adet */}
-                                <div className="min-w-0 shrink-0 max-w-[32%]">
-                                  <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
-                                    <span className="truncate">{p.symbol}</span>
-                                  </p>
-                                  <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
-                                    {formatNumber(p.quantity, 2)} adet
-                                  </p>
-                                </div>
+                              {/* Col 1: Sembol & Adet */}
+                              <div className="min-w-0">
+                                <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
+                                  <span className="truncate">{p.symbol}</span>
+                                </p>
+                                <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
+                                  {formatNumber(p.quantity, 2)} adet
+                                </p>
+                              </div>
 
-                                {/* Sağ: Değer Rakamı | Günlük % (Şeffaf Kutu) | Net K/Z & Net % */}
-                                <div className="flex items-center gap-2 min-w-0 justify-end flex-1">
-                                  {/* Değer Rakamı (Başlıksız, Sadece Rakam) */}
-                                  <div className="text-right shrink-0">
-                                    <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block">
-                                      {formatMoney(value, currency)}
-                                    </span>
-                                  </div>
+                              {/* Col 2: Değer Rakamı (1 Basamak Yuvarlama, Sabit Hizalı Kolon) */}
+                              <div className="text-right min-w-0 pr-1">
+                                <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block truncate">
+                                  {formatMoney(value, currency, { decimals: 1 })}
+                                </span>
+                              </div>
 
-                                  {/* Günlük % (Şeffaf Kutu) */}
-                                  {p.dailyChangePct !== null && p.dailyChangePct !== undefined && (
-                                    <span
-                                      className={cn(
-                                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tabular-nums border shrink-0 shadow-2xs whitespace-nowrap",
-                                        p.dailyChangePct >= 0
-                                          ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-emerald-500/20"
-                                          : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-rose-500/20"
-                                      )}
-                                    >
-                                      <span className="text-[8px] select-none">{p.dailyChangePct >= 0 ? "▲" : "▼"}</span>
-                                      <span>{formatPercent(p.dailyChangePct)}</span>
-                                    </span>
-                                  )}
+                              {/* Col 3: Günlük % (Şeffaf Kutu, 1 Basamak Yuvarlama) */}
+                              <div className="flex justify-center min-w-0">
+                                {p.dailyChangePct !== null && p.dailyChangePct !== undefined ? (
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tabular-nums border shadow-2xs whitespace-nowrap",
+                                      p.dailyChangePct >= 0
+                                        ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-emerald-500/20"
+                                        : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-rose-500/20"
+                                    )}
+                                  >
+                                    <span className="text-[8px] select-none">{p.dailyChangePct >= 0 ? "▲" : "▼"}</span>
+                                    <span>{formatPercent(p.dailyChangePct, 1)}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-[var(--color-muted)]">—</span>
+                                )}
+                              </div>
 
-                                  {/* Net K/Z & Net % */}
-                                  <div className="flex flex-col items-end shrink-0 leading-tight">
-                                    <PnlBadge value={pnl} currency={currency} />
-                                    <span className="text-[10px] font-bold mt-0.5">
-                                      <PnlBadge value={pct} isPercent />
-                                    </span>
-                                  </div>
-                                </div>
+                              {/* Col 4: Net K/Z & Net % (1 Basamak Yuvarlama) */}
+                              <div className="flex flex-col items-end min-w-0 leading-tight">
+                                <PnlBadge value={pnl} currency={currency} decimals={1} />
+                                <span className="text-[10px] font-bold mt-0.5">
+                                  <PnlBadge value={pct} isPercent decimals={1} />
+                                </span>
                               </div>
                             </div>
 
