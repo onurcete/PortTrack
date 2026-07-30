@@ -33,22 +33,27 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
           falseCountRef.current = 0;
           activeRef.current = true;
           setActive(true);
+          // İşlem devam ediyor, 3 sn sonra tekrar sorgula
+          timerRef.current = setTimeout(poll, 3000);
         } else {
           falseCountRef.current += 1;
-          // Eğer zaten aktifse ve 2 art arda false geldiyse: güncelleme bitti
-          if (activeRef.current && falseCountRef.current >= 2) {
-            activeRef.current = false;
-            setActive(false);
-            router.refresh();
-            return; // polling durdur
+          if (activeRef.current) {
+            // İşlem yeni bitti: 2. doğrulamada durdur ve sayfayı yenile
+            if (falseCountRef.current >= 2) {
+              activeRef.current = false;
+              setActive(false);
+              router.refresh();
+              return; // Polling durdur
+            }
+            // 1. false cevabı: emin olmak için 1.5 sn sonra bir kez daha sorgula
+            timerRef.current = setTimeout(poll, 1500);
           }
+          // Zaten aktif bir güncelleme yoksa polling yapma (lüzumsuz HTTP sorgularını engelle)
         }
       } catch {
-        /* bağlantı hatası - polling sürsün */
-      }
-
-      if (!cancelledRef.current) {
-        timerRef.current = setTimeout(poll, 3000);
+        if (!cancelledRef.current && activeRef.current) {
+          timerRef.current = setTimeout(poll, 5000);
+        }
       }
     }
 
