@@ -8,11 +8,16 @@ import { cn } from "@/lib/utils";
 export function BackfillStatusBanner({ className }: { className?: string }) {
   const router = useRouter();
   const [active, setActive] = useState(false);
+  const activeRef = useRef(false);
   // Kaç art arda "active: false" cevabı alındığını say — geç pozitif'e karşı bariyer
   const falseCountRef = useRef(0);
   // Polling timer referansı
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
 
   useEffect(() => {
     cancelledRef.current = false;
@@ -26,18 +31,16 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
 
         if (data.active) {
           falseCountRef.current = 0;
+          activeRef.current = true;
           setActive(true);
         } else {
           falseCountRef.current += 1;
           // Eğer zaten aktifse ve 2 art arda false geldiyse: güncelleme bitti
-          if (active && falseCountRef.current >= 2) {
+          if (activeRef.current && falseCountRef.current >= 2) {
+            activeRef.current = false;
             setActive(false);
             router.refresh();
             return; // polling durdur
-          }
-          // Aktif değilse sıfırla
-          if (!active) {
-            falseCountRef.current = 0;
           }
         }
       } catch {
@@ -52,10 +55,10 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
     // Anlık event: işlem kaydedildi ya da buton tıklandı
     function handleBackfillStarted() {
       falseCountRef.current = 0;
+      activeRef.current = true;
       setActive(true);
-      // 2 sn bekle sonra ilk kontrol yap (sunucu tarafı setBackfillActive'e zaman tanı)
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(poll, 2000);
+      timerRef.current = setTimeout(poll, 1500);
     }
 
     window.addEventListener("backfill-started", handleBackfillStarted);
@@ -67,8 +70,7 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
       if (timerRef.current) clearTimeout(timerRef.current);
       window.removeEventListener("backfill-started", handleBackfillStarted);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+  }, [router]);
 
   if (!active) return null;
 

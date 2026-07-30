@@ -172,10 +172,24 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
         native: latest.native,
         nativeCurrency: latest.nativeCurrency,
       };
-      if (filteredSnaps.length > 1) {
-        const prev = filteredSnaps[1];
-        info.prevPriceTRY = prev.close;
-        info.prevPriceNative = prev.native;
+
+      // Piyasalar kapalı olsa bile (hafta sonu / gece) en son işlem gününün değişim yüzdesini doğru göstermek için
+      // en son fiyattan farklı olan ilk önceki kapanış snapshot'ını bul
+      let prevSnap = filteredSnaps.find((s, idx) => {
+        if (idx === 0) return false;
+        if (latest.native != null && s.native != null) {
+          return Math.abs(latest.native - s.native) >= 1e-5;
+        }
+        return Math.abs(latest.close - s.close) >= 1e-5;
+      });
+
+      if (!prevSnap && filteredSnaps.length > 1) {
+        prevSnap = filteredSnaps[1];
+      }
+
+      if (prevSnap) {
+        info.prevPriceTRY = prevSnap.close;
+        info.prevPriceNative = prevSnap.native;
       }
       priceMap.set(symbol, info);
     }

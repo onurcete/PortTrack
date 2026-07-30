@@ -138,26 +138,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
       });
     }
 
-    if (assetType !== "CRYPTO") {
-      const lastSnap = await prisma.priceSnapshot.findFirst({
-        where: { symbol, date: { lt: today } },
-        orderBy: { date: "desc" },
-      });
-      if (lastSnap) {
-        const isPriceSame = (lastSnap.native !== null && native !== null)
-          ? isPriceSameEnough(lastSnap.native, native)
-          : isPriceSameEnough(lastSnap.close, priceTRY);
-        // Note: we only skip duplicate if investors count is also same
-        const isInvestorsSame = lastSnap.investors === investors;
-        if (isPriceSame && isInvestorsSame) {
-          // Clean up if a duplicate snapshot for today already exists
-          await prisma.priceSnapshot.deleteMany({
-            where: { symbol, date: today },
-          });
-          return;
-        }
-      }
-    }
+
 
     await prisma.priceSnapshot.upsert({
       where: { symbol_date: { symbol, date: today } },
