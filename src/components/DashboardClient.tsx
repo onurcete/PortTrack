@@ -8,6 +8,8 @@ import {
   Coins,
   PiggyBank,
   StickyNote,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useCurrency } from "@/context/currency";
 import { Card, Badge } from "@/components/ui";
@@ -771,10 +773,18 @@ function PositionsTable({
   const [getiriMode, setGetiriMode] = useState<"getiri" | "roi" | "xirr">("getiri");
   const [selectedOptionalCols, setSelectedOptionalCols] = useState<string[]>([]);
   const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const showRoi = getiriMode === "roi";
   const showXirr = getiriMode === "xirr";
   const [sortField, setSortField] = useState<SortField>("value");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+
+  const toggleSection = (type: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -792,6 +802,13 @@ function PositionsTable({
   };
 
   const activePositions = showClosed ? closedPositions : openPositions;
+
+  const totalActivePortfolioValue = useMemo(() => {
+    return activePositions.reduce(
+      (s, p) => s + (showClosed ? (isTRY ? p.totalSellTRY : p.totalSellUSD) : (isTRY ? p.valueTRY : p.valueUSD)),
+      0
+    );
+  }, [activePositions, showClosed, isTRY]);
 
   const positionsByType = useMemo(() => {
     const map = new Map<AssetType, PositionDTO[]>();
@@ -1011,6 +1028,8 @@ function PositionsTable({
                 : (isTRY ? p.unrealizedTRY : p.unrealizedUSD)),
               0,
             );
+            const isCollapsed = Boolean(collapsedSections[assetType]);
+            const sectionSharePct = totalActivePortfolioValue > 0 ? (sectionValue / totalActivePortfolioValue) * 100 : 0;
 
             return (
               <div
@@ -1019,14 +1038,18 @@ function PositionsTable({
               >
                 {/* Grup başlığı */}
                 <div
-                  className="flex items-center justify-between px-6 py-3"
+                  onClick={() => toggleSection(assetType)}
+                  className="flex items-center justify-between px-6 py-3 cursor-pointer hover:opacity-95 transition-all select-none"
                   style={{
-                    background: `linear-gradient(135deg, ${meta.color}08, transparent)`,
+                    background: `linear-gradient(135deg, ${meta.color}0D, transparent)`,
                   }}
                 >
                   <div className="flex items-center gap-3">
+                    <span className="p-1 rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-transform">
+                      {isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+                    </span>
                     <span
-                      className="flex h-8 w-8 items-center justify-center rounded-xl text-white text-[11px] font-bold"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl text-white text-[11px] font-bold shadow-2xs"
                       style={{ backgroundColor: meta.color }}
                     >
                       {meta.label.charAt(0)}
@@ -1038,6 +1061,11 @@ function PositionsTable({
                     <span className="rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted)]">
                       {positions.length}
                     </span>
+                    {sectionSharePct > 0 && !showClosed && (
+                      <span className="rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] px-2.5 py-0.5 text-[10px] font-extrabold border border-[var(--color-brand)]/20">
+                        Portföyün %{sectionSharePct.toFixed(1)}'i
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
@@ -1057,335 +1085,338 @@ function PositionsTable({
                   </div>
                 </div>
 
-                {/* Tablo başlıkları */}
-                <div className="theme-table-head grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40" style={gridStyle}>
-                  {showClosed ? (
-                    <>
-                      <SortHeader
-                        field="symbol"
-                        label="Sembol"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="left"
-                      />
-                      <SortHeader
-                        field="avgCost"
-                        label="Toplam Alış"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="currentPrice"
-                        label="Toplam Satış"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="pnl"
-                        label="Realize K/Z"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="pct"
-                        label="Getiri"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                        className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <SortHeader
-                        field="symbol"
-                        label="Sembol"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="left"
-                      />
-                      <SortHeader
-                        field="days"
-                        label="Gün"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="avgCost"
-                        label="Ort. Maliyet"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="currentPrice"
-                        label="Güncel Fiyat"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="value"
-                        label="Değer"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="dailyChange"
-                        label="Günlük Değişim"
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      <SortHeader
-                        field="pnl"
-                        label={getiriMode === "getiri" ? "Kar / Zarar" : "Net K/Z"}
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                      />
-                      {selectedOptionalCols.map((colKey) => {
-                        const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
-                        if (!colDef) return null;
-                        return (
-                          <span 
-                            key={colKey} 
-                            className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] text-right block pr-2 select-none"
-                          >
-                            {colDef.headerLabel}
-                          </span>
-                        );
-                      })}
-                      <SortHeader
-                        field="pct"
-                        label={
-                          <span
-                            className="inline-flex items-center gap-1 cursor-pointer select-none"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setGetiriMode((prev) => {
-                                if (prev === "getiri") return "roi";
-                                if (prev === "roi") return "xirr";
-                                  return "getiri";
-                              });
-                            }}
-                            title="Tıklayarak Getiri, ROI (Yatırım Getirisi) ve XIRR (Yıllıklandırılmış Getiri) arasında geçiş yapın"
-                          >
-                            {getiriMode === "getiri" ? "Getiri" : getiriMode === "roi" ? "ROI" : "XIRR"}
-                            <span className="text-[11px] opacity-75 font-normal">⇄</span>
-                          </span>
-                        }
-                        activeField={sortField}
-                        order={sortOrder}
-                        onSort={handleSort}
-                        align="right"
-                        className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
-                      />
-                    </>
-                  )}
-                </div>
-
-                {/* Pozisyon satırları */}
-                {positions.map((p) => {
-                  if (showClosed) {
-                    const buyVal = isTRY ? p.totalBuyTRY : p.totalBuyUSD;
-                    const sellVal = isTRY ? p.totalSellTRY : p.totalSellUSD;
-                    const pnlVal = isTRY ? p.realizedTRY : p.realizedUSD;
-                    const pctVal = buyVal > 0 ? (pnlVal / buyVal) * 100 : 0;
-                    const positiveVal = pnlVal >= 0;
-
-                    return (
-                      <div
-                        key={`${p.assetType}-${p.symbol}`}
-                        onClick={() => onSelectPosition?.(p)}
-                        className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
-                        style={gridStyle}
-                      >
-                        {/* Sembol */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
-                            style={{
-                              backgroundColor: `${meta.color}12`,
-                              color: meta.color,
-                            }}
-                          >
-                            {p.symbol.slice(0, 3)}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                              {p.symbol}
-                            </p>
-                            <p className="text-[10px] text-[var(--color-muted)] leading-tight">
-                              Kapalı Pozisyon
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Toplam Alış */}
-                        <p className="text-xs font-semibold tabular-nums text-right">
-                          {formatMoney(buyVal, currency)}
-                        </p>
-
-                        {/* Toplam Satış */}
-                        <p className="text-xs font-semibold tabular-nums text-right">
-                          {formatMoney(sellVal, currency)}
-                        </p>
-
-                        {/* Realize K/Z */}
-                        <div className="flex justify-end">
-                          <PnlBadge value={pnlVal} currency={currency} />
-                        </div>
-
-                        {/* Yüzde badge */}
-                        <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
-                          <PnlBadge value={pctVal} isPercent />
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Open positions rendering
-                  const value = isTRY ? p.valueTRY : p.valueUSD;
-                  const pnl = (showRoi || showXirr)
-                    ? (isTRY 
-                        ? p.unrealizedTRY + p.realizedTRY 
-                        : p.unrealizedUSD + p.realizedUSD)
-                    : (isTRY ? p.unrealizedTRY : p.unrealizedUSD);
-                  const pct = showXirr
-                    ? (isTRY ? p.xirrTRY : p.xirrUSD)
-                    : showRoi
-                      ? (isTRY
-                          ? (p.totalBuyTRY > 0 ? (pnl / p.totalBuyTRY) * 100 : 0)
-                          : (p.totalBuyUSD > 0 ? (pnl / p.totalBuyUSD) * 100 : 0))
-                      : (isTRY ? p.unrealizedPctTRY : p.unrealizedPctUSD);
-
-                  const holdingDays = (() => {
-                    if (!p.firstBuyDate) return "-";
-                    const firstBuy = new Date(p.firstBuyDate);
-                    const today = new Date();
-                    firstBuy.setHours(0, 0, 0, 0);
-                    today.setHours(0, 0, 0, 0);
-                    const diffTime = today.getTime() - firstBuy.getTime();
-                    const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
-                    return `${diffDays} g`;
-                  })();
-
-                  const formattedFirstBuy = p.firstBuyDate ? formatDate(p.firstBuyDate) : "";
-
-                  const avgCost = isTRY ? p.avgCostTRY : (p.costUSD / p.quantity);
-                  const avgCostFormatted = formatMoney(avgCost, currency, {
-                    decimals: avgCost < 1 ? 4 : 2,
-                  });
-
-                  const currentPrice = isTRY
-                    ? p.currentPriceTRY
-                    : (p.currentPriceTRY !== null ? p.currentPriceTRY / currentUsdTry : null);
-                  const currentPriceFormatted = currentPrice !== null
-                    ? formatMoney(currentPrice, currency, { decimals: currentPrice < 1 ? 4 : 2 })
-                        : "-";
-
-                  return (
-                    <div
-                      key={`${p.assetType}-${p.symbol}`}
-                      onClick={() => onSelectPosition?.(p)}
-                      className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
-                      style={gridStyle}
-                    >
-                      {/* Sembol */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
-                          style={{
-                            backgroundColor: `${meta.color}12`,
-                            color: meta.color,
-                          }}
-                        >
-                          {p.symbol.slice(0, 3)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
-                            {p.symbol}
-                          </p>
-                          <p className="text-[10px] text-[var(--color-muted)] leading-tight">
-                            {formatNumber(p.quantity, 4)} adet
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Gün */}
-                      <p
-                        className="text-xs font-medium text-[var(--color-muted)] tabular-nums text-right cursor-help"
-                        title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
-                      >
-                        {holdingDays}
-                      </p>
-
-                      {/* Ortalama Fiyat */}
-                      <p className="text-xs font-semibold tabular-nums text-right">
-                        {avgCostFormatted}
-                      </p>
-
-                      {/* Güncel Fiyat */}
-                      <p className="text-xs font-semibold tabular-nums text-right">
-                        {currentPriceFormatted}
-                      </p>
-
-                      {/* Değer */}
-                      <p className="text-xs font-semibold tabular-nums text-right">
-                        {formatMoney(value, currency)}
-                      </p>
-
-                      {/* Günlük K/Z % */}
-                      <div className="flex justify-end">
-                        <PnlBadge value={p.dailyChangePct} isPercent />
-                      </div>
-
-                      {/* K/Z */}
-                      <div className="flex justify-end">
-                        <PnlBadge value={pnl} currency={currency} />
-                      </div>
-
-                      {/* Optional Column Values */}
-                      {selectedOptionalCols.map((colKey) => {
-                        const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
-                        if (!colDef) return null;
-                        const val = (isTRY
-                          ? p[colDef.fieldTRY]
-                          : p[colDef.fieldUSD]) as number | null;
-                        return (
-                          <div key={colKey} className="flex justify-end">
-                            <PnlBadge value={val} isPercent />
-                          </div>
-                        );
-                      })}
-
-                      {/* Yüzde badge */}
-                      <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
-                        <PnlBadge value={pct} isPercent />
-                      </div>
+                {!isCollapsed && (
+                  <>
+                    {/* Tablo başlıkları */}
+                    <div className="theme-table-head grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/40" style={gridStyle}>
+                      {showClosed ? (
+                        <>
+                          <SortHeader
+                            field="symbol"
+                            label="Sembol"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="left"
+                          />
+                          <SortHeader
+                            field="avgCost"
+                            label="Toplam Alış"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="currentPrice"
+                            label="Toplam Satış"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="pnl"
+                            label="Realize K/Z"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="pct"
+                            label="Getiri"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                            className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <SortHeader
+                            field="symbol"
+                            label="Sembol"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="left"
+                          />
+                          <SortHeader
+                            field="days"
+                            label="Gün"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="avgCost"
+                            label="Ort. Maliyet"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="currentPrice"
+                            label="Güncel Fiyat"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="value"
+                            label="Değer"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="dailyChange"
+                            label="Günlük Değişim"
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          <SortHeader
+                            field="pnl"
+                            label={getiriMode === "getiri" ? "Kar / Zarar" : "Net K/Z"}
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                          />
+                          {selectedOptionalCols.map((colKey) => {
+                            const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
+                            if (!colDef) return null;
+                            return (
+                              <span 
+                                key={colKey} 
+                                className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)] text-right block pr-2 select-none"
+                              >
+                                {colDef.headerLabel}
+                              </span>
+                            );
+                          })}
+                          <SortHeader
+                            field="pct"
+                            label={
+                              <span
+                                className="inline-flex items-center gap-1 cursor-pointer select-none"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setGetiriMode((prev) => {
+                                    if (prev === "getiri") return "roi";
+                                    if (prev === "roi") return "xirr";
+                                      return "getiri";
+                                  });
+                                }}
+                                title="Tıklayarak Getiri, ROI (Yatırım Getirisi) ve XIRR (Yıllıklandırılmış Getiri) arasında geçiş yapın"
+                              >
+                                {getiriMode === "getiri" ? "Getiri" : getiriMode === "roi" ? "ROI" : "XIRR"}
+                                <span className="text-[11px] opacity-75 font-normal">⇄</span>
+                              </span>
+                            }
+                            activeField={sortField}
+                            order={sortOrder}
+                            onSort={handleSort}
+                            align="right"
+                            className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40 px-3 py-1.5"
+                          />
+                        </>
+                      )}
                     </div>
-                  );
-                })}
+
+                    {/* Pozisyon satırları */}
+                    {positions.map((p) => {
+                      if (showClosed) {
+                        const buyVal = isTRY ? p.totalBuyTRY : p.totalBuyUSD;
+                        const sellVal = isTRY ? p.totalSellTRY : p.totalSellUSD;
+                        const pnlVal = isTRY ? p.realizedTRY : p.realizedUSD;
+                        const pctVal = buyVal > 0 ? (pnlVal / buyVal) * 100 : 0;
+
+                        return (
+                          <div
+                            key={`${p.assetType}-${p.symbol}`}
+                            onClick={() => onSelectPosition?.(p)}
+                            className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
+                            style={gridStyle}
+                          >
+                            {/* Sembol */}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
+                                style={{
+                                  backgroundColor: `${meta.color}12`,
+                                  color: meta.color,
+                                }}
+                              >
+                                {p.symbol.slice(0, 3)}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                                  {p.symbol}
+                                </p>
+                                <p className="text-[10px] text-[var(--color-muted)] leading-tight">
+                                  Kapalı Pozisyon
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Toplam Alış */}
+                            <p className="text-xs font-semibold tabular-nums text-right">
+                              {formatMoney(buyVal, currency)}
+                            </p>
+
+                            {/* Toplam Satış */}
+                            <p className="text-xs font-semibold tabular-nums text-right">
+                              {formatMoney(sellVal, currency)}
+                            </p>
+
+                            {/* Realize K/Z */}
+                            <div className="flex justify-end">
+                              <PnlBadge value={pnlVal} currency={currency} />
+                            </div>
+
+                            {/* Yüzde badge */}
+                            <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
+                              <PnlBadge value={pctVal} isPercent />
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Open positions rendering
+                      const value = isTRY ? p.valueTRY : p.valueUSD;
+                      const pnl = (showRoi || showXirr)
+                        ? (isTRY 
+                            ? p.unrealizedTRY + p.realizedTRY 
+                            : p.unrealizedUSD + p.realizedUSD)
+                        : (isTRY ? p.unrealizedTRY : p.unrealizedUSD);
+                      const pct = showXirr
+                        ? (isTRY ? p.xirrTRY : p.xirrUSD)
+                        : showRoi
+                          ? (isTRY
+                              ? (p.totalBuyTRY > 0 ? (pnl / p.totalBuyTRY) * 100 : 0)
+                              : (p.totalBuyUSD > 0 ? (pnl / p.totalBuyUSD) * 100 : 0))
+                          : (isTRY ? p.unrealizedPctTRY : p.unrealizedPctUSD);
+
+                      const holdingDays = (() => {
+                        if (!p.firstBuyDate) return "-";
+                        const firstBuy = new Date(p.firstBuyDate);
+                        const today = new Date();
+                        firstBuy.setHours(0, 0, 0, 0);
+                        today.setHours(0, 0, 0, 0);
+                        const diffTime = today.getTime() - firstBuy.getTime();
+                        const diffDays = Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+                        return `${diffDays} g`;
+                      })();
+
+                      const formattedFirstBuy = p.firstBuyDate ? formatDate(p.firstBuyDate) : "";
+
+                      const avgCost = isTRY ? p.avgCostTRY : (p.costUSD / p.quantity);
+                      const avgCostFormatted = formatMoney(avgCost, currency, {
+                        decimals: avgCost < 1 ? 4 : 2,
+                      });
+
+                      const currentPrice = isTRY
+                        ? p.currentPriceTRY
+                        : (p.currentPriceTRY !== null ? p.currentPriceTRY / currentUsdTry : null);
+                      const currentPriceFormatted = currentPrice !== null
+                        ? formatMoney(currentPrice, currency, { decimals: currentPrice < 1 ? 4 : 2 })
+                            : "-";
+
+                      return (
+                        <div
+                          key={`${p.assetType}-${p.symbol}`}
+                          onClick={() => onSelectPosition?.(p)}
+                          className="theme-surface-hover grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 transition-colors cursor-pointer"
+                          style={gridStyle}
+                        >
+                          {/* Sembol */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
+                              style={{
+                                backgroundColor: `${meta.color}12`,
+                                color: meta.color,
+                              }}
+                            >
+                              {p.symbol.slice(0, 3)}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
+                                {p.symbol}
+                              </p>
+                              <p className="text-[10px] text-[var(--color-muted)] leading-tight">
+                                {formatNumber(p.quantity, 4)} adet
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Gün */}
+                          <p
+                            className="text-xs font-medium text-[var(--color-muted)] tabular-nums text-right cursor-help"
+                            title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
+                          >
+                            {holdingDays}
+                          </p>
+
+                          {/* Ortalama Fiyat */}
+                          <p className="text-xs font-semibold tabular-nums text-right">
+                            {avgCostFormatted}
+                          </p>
+
+                          {/* Güncel Fiyat */}
+                          <p className="text-xs font-semibold tabular-nums text-right">
+                            {currentPriceFormatted}
+                          </p>
+
+                          {/* Değer */}
+                          <p className="text-xs font-semibold tabular-nums text-right">
+                            {formatMoney(value, currency)}
+                          </p>
+
+                          {/* Günlük K/Z % */}
+                          <div className="flex justify-end">
+                            <PnlBadge value={p.dailyChangePct} isPercent />
+                          </div>
+
+                          {/* K/Z */}
+                          <div className="flex justify-end">
+                            <PnlBadge value={pnl} currency={currency} />
+                          </div>
+
+                          {/* Optional Column Values */}
+                          {selectedOptionalCols.map((colKey) => {
+                            const colDef = OPTIONAL_COLUMNS.find((c) => c.key === colKey);
+                            if (!colDef) return null;
+                            const val = (isTRY
+                              ? p[colDef.fieldTRY]
+                              : p[colDef.fieldUSD]) as number | null;
+                            return (
+                              <div key={colKey} className="flex justify-end">
+                                <PnlBadge value={val} isPercent />
+                              </div>
+                            );
+                          })}
+
+                          {/* Yüzde badge */}
+                          <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
+                            <PnlBadge value={pct} isPercent />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             );
           })}
