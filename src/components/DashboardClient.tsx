@@ -718,12 +718,10 @@ function PnlBadge({
   value,
   isPercent = false,
   currency,
-  showPlus = true,
 }: {
   value: number | null | undefined;
   isPercent?: boolean;
   currency?: "TRY" | "USD";
-  showPlus?: boolean;
 }) {
   if (value === null || value === undefined || isNaN(value)) {
     return <span className="text-xs font-medium text-[var(--color-muted)]">—</span>;
@@ -732,30 +730,24 @@ function PnlBadge({
   const isPositive = value >= 0;
   const isZero = Math.abs(value) < 1e-6;
 
-  let text: string;
+  let formattedText: string;
   if (isPercent) {
-    text = formatPercent(value);
+    formattedText = formatPercent(value);
   } else if (currency) {
-    text = `${isPositive && showPlus && !isZero ? "+" : ""}${formatMoney(value, currency)}`;
+    formattedText = formatMoney(value, currency);
   } else {
-    text = `${isPositive && showPlus && !isZero ? "+" : ""}${formatNumber(value, 2)}`;
+    formattedText = formatNumber(value, 2);
   }
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold tabular-nums transition-all border shadow-2xs whitespace-nowrap",
-        isPositive
-          ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-emerald-500/20"
-          : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-rose-500/20"
+        "text-xs font-bold tabular-nums text-right whitespace-nowrap inline-flex items-center justify-end gap-1",
+        isPositive ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
       )}
     >
-      {isPositive ? (
-        <TrendingUp size={11} className="shrink-0 text-emerald-500" />
-      ) : (
-        <TrendingDown size={11} className="shrink-0 text-rose-500" />
-      )}
-      <span>{text}</span>
+      <span className="text-[9px] select-none">{isZero ? "" : isPositive ? "▲" : "▼"}</span>
+      <span>{formattedText}</span>
     </span>
   );
 }
