@@ -125,10 +125,10 @@ type TabType = "logs" | "overview" | "users" | "actions" | "tables" | "browse";
 interface BrowseState {
   table: string;
   rows: any[];
-  columns: Array<{ name: string; type: string; nullable: boolean }>;
+  columns: Array<{ name: string; type: string; nullable: boolean; isVirtual?: boolean }>;
   pagination: { page: number; pageSize: number; totalRows: number; totalPages: number };
   sort: { column: string; direction: string };
-  fkColumns: Record<string, { table: string; column: string; displayColumn?: string }>;
+  hasUserJoin: boolean;
   loading: boolean;
   search: string;
   filterCol: string | null;
@@ -162,7 +162,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
     columns: [],
     pagination: { page: 1, pageSize: 50, totalRows: 0, totalPages: 0 },
     sort: { column: "", direction: "DESC" },
-    fkColumns: {},
+    hasUserJoin: false,
     loading: false,
     search: "",
     filterCol: null,
@@ -197,7 +197,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           columns: data.columns,
           pagination: data.pagination,
           sort: data.sort,
-          fkColumns: data.fkColumns || {},
+          hasUserJoin: Boolean(data.hasUserJoin),
           loading: false,
           search: search || "",
           filterCol: filterCol || null,
@@ -1101,26 +1101,33 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                             <thead>
                               <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
                                 <th className="py-3 px-3 text-[var(--color-muted)] font-semibold text-[10px] uppercase">#</th>
-                                {browse.columns.map((col) => (
-                                  <th
-                                    key={col.name}
-                                    onClick={() => {
-                                      const newDir = browse.sort.column === col.name && browse.sort.direction === "DESC" ? "asc" : "desc";
-                                      fetchBrowseData(browse.table, browse.pagination.page, col.name, newDir, browse.search, browse.filterCol, browse.filterVal);
-                                    }}
-                                    className="py-3 px-3 text-[var(--color-muted)] font-semibold text-[10px] uppercase cursor-pointer hover:text-[var(--color-brand)] select-none whitespace-nowrap"
-                                  >
-                                    <span className="flex items-center gap-1">
-                                      {col.name}
-                                      {browse.sort.column === col.name && (
-                                        <ArrowUpDown size={10} className="text-[var(--color-brand)]" />
+                                {browse.columns.map((col) => {
+                                  const isUserCol = col.name === "__userName";
+                                  const displayName = isUserCol ? "Kullanıcı Adı" : col.name;
+                                  return (
+                                    <th
+                                      key={col.name}
+                                      onClick={() => {
+                                        if (isUserCol) return;
+                                        const newDir = browse.sort.column === col.name && browse.sort.direction === "DESC" ? "asc" : "desc";
+                                        fetchBrowseData(browse.table, browse.pagination.page, col.name, newDir, browse.search, browse.filterCol, browse.filterVal);
+                                      }}
+                                      className={cn(
+                                        "py-3 px-3 font-semibold text-[10px] uppercase select-none whitespace-nowrap",
+                                        isUserCol
+                                          ? "text-cyan-400 bg-cyan-500/10 font-bold"
+                                          : "text-[var(--color-muted)] cursor-pointer hover:text-[var(--color-brand)]"
                                       )}
-                                      {browse.fkColumns[col.name] && (
-                                        <ExternalLink size={9} className="text-amber-400 ml-0.5" />
-                                      )}
-                                    </span>
-                                  </th>
-                                ))}
+                                    >
+                                      <span className="flex items-center gap-1">
+                                        {displayName}
+                                        {!isUserCol && browse.sort.column === col.name && (
+                                          <ArrowUpDown size={10} className="text-[var(--color-brand)]" />
+                                        )}
+                                      </span>
+                                    </th>
+                                  );
+                                })}
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
@@ -1138,8 +1145,26 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                                     </td>
                                     {browse.columns.map((col) => {
                                       const val = row[col.name];
-                                      const fk = browse.fkColumns[col.name];
-                                      const isFK = fk && val;
+                                      const isUserCol = col.name === "__userName";
+
+                                      if (isUserCol) {
+                                        const userName = row.__userName;
+                                        const userEmail = row.__userEmail;
+                                        return (
+                                          <td key={col.name} className="py-2.5 px-3 whitespace-nowrap bg-cyan-500/5 border-r border-cyan-500/10">
+                                            <div className="flex flex-col">
+                                              <span className="font-bold text-xs text-cyan-300">
+                                                {userName || "İsimsiz Kullanıcı"}
+                                              </span>
+                                              {userEmail && (
+                                                <span className="text-[10px] text-[var(--color-muted)]">
+                                                  {userEmail}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </td>
+                                        );
+                                      }
 
                                       // Format cell value
                                       let displayVal: string;
@@ -1159,20 +1184,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
 
                                       return (
                                         <td key={col.name} className="py-2.5 px-3 font-mono text-[11px] text-[var(--color-text)] whitespace-nowrap max-w-[300px] truncate" title={String(val ?? "")}>
-                                          {isFK ? (
-                                            <button
-                                              onClick={() => {
-                                                fetchBrowseData(fk.table, 1, fk.column, "asc", "", fk.column, String(val));
-                                              }}
-                                              className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 hover:underline font-semibold"
-                                              title={`${fk.table} tablosunda bu kayda git`}
-                                            >
-                                              {displayVal}
-                                              <ExternalLink size={10} />
-                                            </button>
-                                          ) : (
-                                            <span className={val === null ? "text-[var(--color-muted)] italic" : ""}>{displayVal}</span>
-                                          )}
+                                          <span className={val === null ? "text-[var(--color-muted)] italic" : ""}>{displayVal}</span>
                                         </td>
                                       );
                                     })}
