@@ -714,6 +714,52 @@ function SortHeader({
   );
 }
 
+function PnlBadge({
+  value,
+  isPercent = false,
+  currency,
+  showPlus = true,
+}: {
+  value: number | null | undefined;
+  isPercent?: boolean;
+  currency?: "TRY" | "USD";
+  showPlus?: boolean;
+}) {
+  if (value === null || value === undefined || isNaN(value)) {
+    return <span className="text-xs font-medium text-[var(--color-muted)]">—</span>;
+  }
+
+  const isPositive = value >= 0;
+  const isZero = Math.abs(value) < 1e-6;
+
+  let text: string;
+  if (isPercent) {
+    text = formatPercent(value);
+  } else if (currency) {
+    text = `${isPositive && showPlus && !isZero ? "+" : ""}${formatMoney(value, currency)}`;
+  } else {
+    text = `${isPositive && showPlus && !isZero ? "+" : ""}${formatNumber(value, 2)}`;
+  }
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold tabular-nums transition-all border shadow-2xs whitespace-nowrap",
+        isPositive
+          ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-emerald-500/20"
+          : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-rose-500/20"
+      )}
+    >
+      {isPositive ? (
+        <TrendingUp size={11} className="shrink-0 text-emerald-500" />
+      ) : (
+        <TrendingDown size={11} className="shrink-0 text-rose-500" />
+      )}
+      <span>{text}</span>
+    </span>
+  );
+}
+
 function PositionsTable({
   openPositions,
   closedPositions,
@@ -973,7 +1019,6 @@ function PositionsTable({
                 : (isTRY ? p.unrealizedTRY : p.unrealizedUSD)),
               0,
             );
-            const sectionPnlPositive = sectionPnl >= 0;
 
             return (
               <div
@@ -1012,20 +1057,10 @@ function PositionsTable({
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)]">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted)] mb-0.5">
                         {showClosed ? "Realize K/Z" : "Grup K/Z"}
                       </p>
-                      <p
-                        className={cn(
-                          "text-sm font-bold tabular-nums",
-                          sectionPnlPositive
-                            ? "text-[var(--color-profit)]"
-                            : "text-[var(--color-loss)]",
-                        )}
-                      >
-                        {sectionPnlPositive ? "+" : ""}
-                        {formatMoney(sectionPnl, currency)}
-                      </p>
+                      <PnlBadge value={sectionPnl} currency={currency} />
                     </div>
                   </div>
                 </div>
@@ -1224,30 +1259,13 @@ function PositionsTable({
                         </p>
 
                         {/* Realize K/Z */}
-                        <p
-                          className={cn(
-                            "text-xs font-semibold tabular-nums text-right",
-                            positiveVal
-                              ? "text-[var(--color-profit)]"
-                              : "text-[var(--color-loss)]",
-                          )}
-                        >
-                          {positiveVal ? "+" : ""}
-                          {formatMoney(pnlVal, currency)}
-                        </p>
+                        <div className="flex justify-end">
+                          <PnlBadge value={pnlVal} currency={currency} />
+                        </div>
 
                         {/* Yüzde badge */}
                         <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
-                          <span
-                            className={cn(
-                              "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px]",
-                              positiveVal
-                                ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
-                                : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
-                            )}
-                          >
-                            {formatPercent(pctVal)}
-                          </span>
+                          <PnlBadge value={pctVal} isPercent />
                         </div>
                       </div>
                     );
@@ -1267,9 +1285,6 @@ function PositionsTable({
                           ? (p.totalBuyTRY > 0 ? (pnl / p.totalBuyTRY) * 100 : 0)
                           : (p.totalBuyUSD > 0 ? (pnl / p.totalBuyUSD) * 100 : 0))
                       : (isTRY ? p.unrealizedPctTRY : p.unrealizedPctUSD);
-                  const positive = showXirr
-                    ? (pct !== null ? pct >= 0 : pnl >= 0)
-                    : pnl >= 0;
 
                   const holdingDays = (() => {
                     if (!p.firstBuyDate) return "-";
@@ -1350,34 +1365,13 @@ function PositionsTable({
 
                       {/* Günlük K/Z % */}
                       <div className="flex justify-end">
-                        {p.dailyChangePct !== null ? (
-                          <span
-                            className={cn(
-                              "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px]",
-                              p.dailyChangePct >= 0
-                                ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
-                                : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
-                            )}
-                          >
-                            {formatPercent(p.dailyChangePct)}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-medium text-[var(--color-muted)] pr-4">-</span>
-                        )}
+                        <PnlBadge value={p.dailyChangePct} isPercent />
                       </div>
 
                       {/* K/Z */}
-                      <p
-                        className={cn(
-                          "text-xs font-semibold tabular-nums text-right",
-                          positive
-                            ? "text-[var(--color-profit)]"
-                            : "text-[var(--color-loss)]",
-                        )}
-                      >
-                        {positive ? "+" : ""}
-                        {formatMoney(pnl, currency)}
-                      </p>
+                      <div className="flex justify-end">
+                        <PnlBadge value={pnl} currency={currency} />
+                      </div>
 
                       {/* Optional Column Values */}
                       {selectedOptionalCols.map((colKey) => {
@@ -1388,36 +1382,14 @@ function PositionsTable({
                           : p[colDef.fieldUSD]) as number | null;
                         return (
                           <div key={colKey} className="flex justify-end">
-                            {val !== null && val !== undefined ? (
-                              <span
-                                className={cn(
-                                  "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px] select-none",
-                                  val >= 0
-                                    ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
-                                    : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
-                                )}
-                              >
-                                {formatPercent(val)}
-                              </span>
-                            ) : (
-                              <span className="text-xs font-medium text-[var(--color-muted)] pr-4">-</span>
-                            )}
+                            <PnlBadge value={val} isPercent />
                           </div>
                         );
                       })}
 
                       {/* Yüzde badge */}
                       <div className="flex justify-end border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20 px-3 py-1">
-                        <span
-                          className={cn(
-                            "rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums text-center min-w-[56px]",
-                            positive
-                              ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
-                              : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
-                          )}
-                        >
-                          {pct !== null ? formatPercent(pct) : "-"}
-                        </span>
+                        <PnlBadge value={pct} isPercent />
                       </div>
                     </div>
                   );
