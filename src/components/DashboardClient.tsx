@@ -1341,34 +1341,47 @@ function PositionsTable({
 
                         return (
                           <div key={`${p.assetType}-${p.symbol}`}>
-                            {/* Mobil Kart (Yalın & Minimal) */}
+                            {/* Mobil Kart (Temiz, Ferah & Okunaklı) */}
                             <div
                               onClick={() => onSelectPosition?.(p)}
-                              className="block md:hidden p-3.5 my-2 mx-4 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)]/50 transition-all cursor-pointer shadow-2xs"
+                              className="block md:hidden mx-4 my-2.5 p-4 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)]/40 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
                             >
-                              <div className="flex items-center justify-between gap-2 mb-2.5">
+                              {/* Üst Satır: Sembol & Toplam Satış */}
+                              <div className="flex items-center justify-between gap-3 pb-3 border-b border-[var(--color-border)]/30">
                                 <div className="min-w-0">
-                                  <p className="font-extrabold text-sm truncate leading-tight inline-flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                                    {p.symbol}
-                                  </p>
-                                  <p className="text-[11px] text-[var(--color-muted)] font-medium mt-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                                    <span className="font-extrabold text-base tracking-tight text-[var(--color-foreground)] truncate">{p.symbol}</span>
+                                  </div>
+                                  <p className="text-[11px] font-medium text-[var(--color-muted)] mt-0.5 pl-4">
                                     Kapalı Pozisyon
                                   </p>
                                 </div>
-                                <PnlBadge value={pctVal} isPercent />
+
+                                <div className="text-right">
+                                  <p className="text-base font-extrabold tabular-nums text-[var(--color-foreground)]">
+                                    {formatMoney(sellVal, currency)}
+                                  </p>
+                                  <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mt-0.5">
+                                    Toplam Satış
+                                  </p>
+                                </div>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--color-border)]/40 text-center">
-                                <div className="text-left pl-1">
-                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Toplam Satış</p>
-                                  <p className="text-xs font-bold tabular-nums mt-0.5">{formatMoney(sellVal, currency)}</p>
+                              {/* Alt Satır: Realize K/Z & Getiri */}
+                              <div className="flex items-center justify-between pt-3">
+                                <div>
+                                  <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-0.5">
+                                    Realize K/Z
+                                  </p>
+                                  <PnlBadge value={pnlVal} currency={currency} />
                                 </div>
-                                <div className="text-right pr-1">
-                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Realize K/Z</p>
-                                  <div className="mt-0.5 flex justify-end">
-                                    <PnlBadge value={pnlVal} currency={currency} />
-                                  </div>
+
+                                <div className="text-right">
+                                  <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-0.5">
+                                    Getiri
+                                  </p>
+                                  <PnlBadge value={pctVal} isPercent />
                                 </div>
                               </div>
                             </div>
@@ -1467,48 +1480,57 @@ function PositionsTable({
 
                       return (
                         <div key={`${p.assetType}-${p.symbol}`}>
-                          {/* Mobil Pozisyon Kartı (Yalın & Minimal) */}
-                          <div
-                            onClick={() => onSelectPosition?.(p)}
-                            className="block md:hidden p-3.5 my-2 mx-4 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)]/50 transition-all cursor-pointer shadow-2xs"
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-2.5">
-                              <div className="min-w-0">
-                                <p className="font-extrabold text-sm truncate leading-tight inline-flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
-                                  {p.symbol}
-                                </p>
-                                <p className="text-[11px] text-[var(--color-muted)] font-medium mt-0.5">
-                                  {formatNumber(p.quantity, 4)} adet
-                                </p>
-                              </div>
-                              <PnlBadge value={pct} isPercent />
-                            </div>
+                            {/* Mobil Pozisyon Kartı (Temiz, Ferah & Okunaklı) */}
+                            <div
+                              onClick={() => onSelectPosition?.(p)}
+                              className="block md:hidden mx-4 my-2.5 p-4 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)]/40 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
+                            >
+                              {/* Üst Satır: Sembol & Toplam Değer */}
+                              <div className="flex items-center justify-between gap-3 pb-3 border-b border-[var(--color-border)]/30">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
+                                    <span className="font-extrabold text-base tracking-tight text-[var(--color-foreground)] truncate">{p.symbol}</span>
+                                  </div>
+                                  <p className="text-[11px] font-medium text-[var(--color-muted)] mt-0.5 pl-4">
+                                    {formatNumber(p.quantity, 4)} adet
+                                  </p>
+                                </div>
 
-                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--color-border)]/40 text-center">
-                              <div className="text-left pl-1">
-                                <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Değer</p>
-                                <p className="text-xs font-bold tabular-nums mt-0.5">{formatMoney(value, currency)}</p>
-                              </div>
-                              <div>
-                                <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Net K/Z</p>
-                                <div className="mt-0.5 flex justify-center">
-                                  <PnlBadge value={pnl} currency={currency} />
+                                <div className="text-right">
+                                  <p className="text-base font-extrabold tabular-nums text-[var(--color-foreground)]">
+                                    {formatMoney(value, currency)}
+                                  </p>
+                                  <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mt-0.5">
+                                    Değer
+                                  </p>
                                 </div>
                               </div>
-                              <div className="text-right pr-1">
-                                <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider">Günlük %</p>
-                                <div className="mt-0.5 flex justify-end">
+
+                              {/* Alt Satır: Net K/Z & Getiri & Günlük Değişim */}
+                              <div className="flex items-center justify-between pt-3">
+                                <div>
+                                  <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-0.5">
+                                    Net K/Z
+                                  </p>
+                                  <PnlBadge value={pnl} currency={currency} />
+                                </div>
+
+                                <div className="text-center">
+                                  <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-0.5">
+                                    Getiri
+                                  </p>
+                                  <PnlBadge value={pct} isPercent />
+                                </div>
+
+                                <div className="text-right">
+                                  <p className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-0.5">
+                                    Günlük
+                                  </p>
                                   <PnlBadge value={p.dailyChangePct} isPercent />
                                 </div>
                               </div>
                             </div>
-
-                            <div className="flex items-center justify-between text-[11px] font-medium text-[var(--color-muted)] mt-2 px-1">
-                              <span>Maliyet: <strong className="text-[var(--color-foreground)] font-semibold">{avgCostFormatted}</strong></span>
-                              <span>Güncel: <strong className="text-[var(--color-foreground)] font-semibold">{currentPriceFormatted}</strong></span>
-                            </div>
-                          </div>
 
                           {/* Masaüstü Tablo Satırı */}
                           <div
