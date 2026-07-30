@@ -28,6 +28,7 @@ import {
   TrendingUp,
   Mail,
   Zap,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -674,7 +675,16 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           {/* TAB 2: Veritabanı Detayları (Tablo İstatistikleri & Şemaları) */}
           {activeTab === "tables" && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tablo Metrikleri & Şema Yapısı</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tablo Metrikleri & Şema Yapısı</h2>
+                <a
+                  href="/api/admin/db/export"
+                  download="porttrack_full_database.json"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[var(--color-brand)] hover:bg-[var(--color-brand-strong)] text-white text-xs font-bold transition-colors shadow-sm"
+                >
+                  <Download size={15} /> tüm Veritabanını İndir (JSON)
+                </a>
+              </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {dbTables.map((table) => (
                   <div key={table.name} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
@@ -683,12 +693,22 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                         <h3 className="font-bold text-sm text-[var(--color-text)] font-mono">{table.name}</h3>
                         <span className="text-xs text-[var(--color-muted)]">{table.rowCount.toLocaleString("tr-TR")} Satır Kayıt</span>
                       </div>
-                      <button
-                        onClick={() => setSelectedSchemaTable(table)}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-brand)] hover:underline"
-                      >
-                        <Eye size={14} /> Şemayı Gör
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`/api/admin/db/export?table=${table.name}`}
+                          download={`porttrack_table_${table.name}.json`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold transition-colors border border-emerald-500/20"
+                          title={`${table.name} tablosunu JSON olarak indir`}
+                        >
+                          <Download size={13} /> İndir (JSON)
+                        </a>
+                        <button
+                          onClick={() => setSelectedSchemaTable(table)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-brand)] text-xs font-semibold transition-colors border border-[var(--color-border)]"
+                        >
+                          <Eye size={14} /> Şema
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -1006,6 +1026,22 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="pt-4 border-t border-[var(--color-border)] flex items-center justify-between mt-4">
+              <a
+                href={`/api/admin/db/export?table=${selectedSchemaTable.name}`}
+                download={`porttrack_table_${selectedSchemaTable.name}.json`}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors"
+              >
+                <Download size={15} /> Tablo Verisini İndir (JSON)
+              </a>
+              <button
+                onClick={() => setSelectedSchemaTable(null)}
+                className="px-4 py-2 rounded-xl bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)] font-bold text-xs transition-colors"
+              >
+                Kapat
+              </button>
             </div>
           </div>
         </div>
