@@ -1019,42 +1019,44 @@ function PositionsTable({
             )}
           </div>
 
-          {/* Hızlı Filtre Pill Butonları */}
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+          {/* Hızlı Filtre İkon Butonları */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setPnlFilter(pnlFilter === "PROFIT" ? "ALL" : "PROFIT")}
+              title="Karda Olanlar"
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap select-none",
+                "inline-flex items-center justify-center h-8 w-8 text-xs font-bold rounded-xl border transition-all cursor-pointer select-none active:scale-95",
                 pnlFilter === "PROFIT"
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-2xs scale-105"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)]"
               )}
             >
-              <span>🟢 Karda Olanlar</span>
+              <span className="text-sm select-none">🟢</span>
             </button>
             <button
               onClick={() => setPnlFilter(pnlFilter === "LOSS" ? "ALL" : "LOSS")}
+              title="Zararda Olanlar"
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap select-none",
+                "inline-flex items-center justify-center h-8 w-8 text-xs font-bold rounded-xl border transition-all cursor-pointer select-none active:scale-95",
                 pnlFilter === "LOSS"
-                  ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                  ? "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40 shadow-2xs scale-105"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)]"
               )}
             >
-              <span>🔴 Zararda Olanlar</span>
+              <span className="text-sm select-none">🔴</span>
             </button>
             {!showClosed && (
               <button
                 onClick={() => setPnlFilter(pnlFilter === "TOP_GAINER" ? "ALL" : "TOP_GAINER")}
+                title="Günlük Yükselenler"
                 className={cn(
-                  "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap select-none",
+                  "inline-flex items-center justify-center h-8 w-8 text-xs font-bold rounded-xl border transition-all cursor-pointer select-none active:scale-95",
                   pnlFilter === "TOP_GAINER"
-                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                    ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/40 shadow-2xs scale-105"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)]"
                 )}
               >
-                <Flame size={12} className="text-amber-500 shrink-0" />
-                <span>Yükselenler</span>
+                <Flame size={15} className="text-amber-500 shrink-0" />
               </button>
             )}
           </div>
