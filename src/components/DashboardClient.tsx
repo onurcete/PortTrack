@@ -1341,38 +1341,37 @@ function PositionsTable({
 
                         return (
                           <div key={`${p.assetType}-${p.symbol}`}>
-                            {/* Mobil Kart (Temiz, Ferah & Okunaklı) */}
+                            {/* Mobil Pozisyon Satırı (Tek Satır - Single Row) */}
                             <div
                               onClick={() => onSelectPosition?.(p)}
-                              className="block md:hidden mx-4 my-2.5 p-3.5 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)]/40 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
+                              className="block md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
-                              {/* Üst Satır: Sembol & Adet */}
-                              <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-[var(--color-border)]/30">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                                    <span className="font-extrabold text-base tracking-tight text-[var(--color-foreground)] truncate">{p.symbol}</span>
-                                  </div>
-                                  <p className="text-[11px] font-medium text-[var(--color-muted)] mt-0.5 pl-4">
+                              <div className="flex items-center justify-between gap-1.5">
+                                {/* Sol: Sembol & Kapalı */}
+                                <div className="min-w-0 shrink-0 max-w-[35%]">
+                                  <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                                    <span className="truncate">{p.symbol}</span>
+                                  </p>
+                                  <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
                                     Kapalı Pozisyon
                                   </p>
                                 </div>
-                              </div>
 
-                              {/* Alt Satır: Net % | Realize K/Z */}
-                              <div className="flex items-center justify-between pt-2.5 text-xs font-semibold">
-                                <div>
-                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                                    Net %
-                                  </p>
-                                  <PnlBadge value={pctVal} isPercent />
-                                </div>
+                                {/* Sağ: Değer Rakamı | Net K/Z & Net % */}
+                                <div className="flex items-center gap-2 min-w-0 justify-end flex-1">
+                                  <div className="text-right shrink-0">
+                                    <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block">
+                                      {formatMoney(sellVal, currency)}
+                                    </span>
+                                  </div>
 
-                                <div className="text-right">
-                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                                    Net K/Z
-                                  </p>
-                                  <PnlBadge value={pnlVal} currency={currency} />
+                                  <div className="flex flex-col items-end shrink-0 leading-tight">
+                                    <PnlBadge value={pnlVal} currency={currency} />
+                                    <span className="text-[10px] font-bold mt-0.5">
+                                      <PnlBadge value={pctVal} isPercent />
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1471,62 +1470,54 @@ function PositionsTable({
 
                       return (
                         <div key={`${p.assetType}-${p.symbol}`}>
-                            {/* Mobil Pozisyon Kartı */}
+                            {/* Mobil Pozisyon Satırı (Tek Satır - Single Row) */}
                             <div
                               onClick={() => onSelectPosition?.(p)}
-                              className="block md:hidden mx-4 my-2.5 p-3.5 rounded-2xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)]/40 transition-all cursor-pointer shadow-2xs active:scale-[0.99]"
+                              className="block md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
-                              {/* Üst Satır: Sembol & Adet */}
-                              <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-[var(--color-border)]/30">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
-                                    <span className="font-extrabold text-base tracking-tight text-[var(--color-foreground)] truncate">{p.symbol}</span>
-                                  </div>
-                                  <p className="text-[11px] font-medium text-[var(--color-muted)] mt-0.5 pl-4">
-                                    {formatNumber(p.quantity, 4)} adet
+                              <div className="flex items-center justify-between gap-1.5">
+                                {/* Sol: Sembol & Adet */}
+                                <div className="min-w-0 shrink-0 max-w-[32%]">
+                                  <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
+                                    <span className="truncate">{p.symbol}</span>
+                                  </p>
+                                  <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
+                                    {formatNumber(p.quantity, 2)} adet
                                   </p>
                                 </div>
-                              </div>
 
-                              {/* Alt Satır: Günlük % (Şeffaf Kutu) | Net % | Net K/Z */}
-                              <div className="flex items-center justify-between pt-2.5 text-xs font-semibold">
-                                {/* 1. Günlük % (Şeffaf Kutu) */}
-                                <div>
-                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                                    Günlük %
-                                  </p>
-                                  {p.dailyChangePct !== null && p.dailyChangePct !== undefined ? (
+                                {/* Sağ: Değer Rakamı | Günlük % (Şeffaf Kutu) | Net K/Z & Net % */}
+                                <div className="flex items-center gap-2 min-w-0 justify-end flex-1">
+                                  {/* Değer Rakamı (Başlıksız, Sadece Rakam) */}
+                                  <div className="text-right shrink-0">
+                                    <span className="text-xs font-extrabold tabular-nums text-[var(--color-foreground)] block">
+                                      {formatMoney(value, currency)}
+                                    </span>
+                                  </div>
+
+                                  {/* Günlük % (Şeffaf Kutu) */}
+                                  {p.dailyChangePct !== null && p.dailyChangePct !== undefined && (
                                     <span
                                       className={cn(
-                                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-extrabold tabular-nums border shadow-2xs whitespace-nowrap",
+                                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold tabular-nums border shrink-0 shadow-2xs whitespace-nowrap",
                                         p.dailyChangePct >= 0
                                           ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-emerald-500/20"
                                           : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-rose-500/20"
                                       )}
                                     >
-                                      <span className="text-[9px] select-none">{p.dailyChangePct >= 0 ? "▲" : "▼"}</span>
+                                      <span className="text-[8px] select-none">{p.dailyChangePct >= 0 ? "▲" : "▼"}</span>
                                       <span>{formatPercent(p.dailyChangePct)}</span>
                                     </span>
-                                  ) : (
-                                    <span className="text-xs font-medium text-[var(--color-muted)]">—</span>
                                   )}
-                                </div>
 
-                                {/* 2. Net % */}
-                                <div className="text-center">
-                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                                    Net %
-                                  </p>
-                                  <PnlBadge value={pct} isPercent />
-                                </div>
-
-                                {/* 3. Net K/Z */}
-                                <div className="text-right">
-                                  <p className="text-[9px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
-                                    Net K/Z
-                                  </p>
-                                  <PnlBadge value={pnl} currency={currency} />
+                                  {/* Net K/Z & Net % */}
+                                  <div className="flex flex-col items-end shrink-0 leading-tight">
+                                    <PnlBadge value={pnl} currency={currency} />
+                                    <span className="text-[10px] font-bold mt-0.5">
+                                      <PnlBadge value={pct} isPercent />
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
