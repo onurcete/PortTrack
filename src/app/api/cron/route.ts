@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refreshPrices, backfillFxHistory } from "@/lib/refresh";
-import { backfillYahoo, backfillTefas } from "@/lib/history";
 import { runTechnicalAnalysis } from "@/app/api/analysis/run/route";
 import { runDailyDigest } from "@/app/api/cron/daily-digest/route";
 import { logSystemEvent } from "@/lib/logger";
@@ -30,31 +29,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Yetkisiz" }, { status: 401 });
   }
   try {
+    // 1. Fiyatları ve Kurları Güncelle ('Fiyatları Güncelle' butonu ile aynı işlem)
     await backfillFxHistory();
     const refresh = await refreshPrices();
-    const yahoo = await backfillYahoo();
-    // Teknik analiz hesapla (fiyatlar güncellendikten sonra)
+
+    // 2. Teknik Analiz Hesapla
     const analysis = await runTechnicalAnalysis();
 
-    // Otomatik E-Posta Özetlerini Gönder (Zaman aşımına takılmamak için öncelikli çalıştırılır)
-    let digest = null;
-    try {
-      digest = await runDailyDigest(req);
-    } catch (digestErr: any) {
-      console.error("❌ Cron günlük bülten e-posta hatası:", digestErr);
-    }
+    // 3. Fiyat Güncellemesi Tamamlandıktan Hemen Sonra E-Posta Özetini Gönder
+    const digest = await runDailyDigest(req);
 
     await logSystemEvent({
       action: "CRON_PRICE_REFRESH",
       status: "SUCCESS",
-      details: `Vercel Cron otomatik fiyat güncellemesi tamamlandı (${refresh.updated} enstrüman güncellendi). Bülten gönderimi: ${digest?.sentCount ?? 0}/${digest?.totalTargets ?? 0}`,
+      details: `Otomatik fiyat güncellemesi tamamlandı (${refresh.updated} enstrüman güncellendi). Bülten gönderimi: ${digest?.sentCount ?? 0}/${digest?.totalTargets ?? 0} mail iletildi.`,
       req,
     });
 
-    // Bekleyen TEFAS geçmiş ayları (Zaman aşımı ihtimali yüksek olduğu için en sona alındı)
-    const tefas = await backfillTefas(15000);
-
-    return NextResponse.json({ ok: true, refresh, yahoo, tefas, analysis, digest });
+    return NextResponse.json({ ok: true, refresh, analysis, digest });
   } catch (err: any) {
     await logSystemEvent({
       action: "CRON_PRICE_REFRESH",
