@@ -29,6 +29,10 @@ import {
   Mail,
   Zap,
   Download,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -116,7 +120,20 @@ export interface LogsDataResponse {
   dailyLoginsSeries: Array<{ date: string; count: number }>;
 }
 
-type TabType = "logs" | "overview" | "users" | "actions" | "tables";
+type TabType = "logs" | "overview" | "users" | "actions" | "tables" | "browse";
+
+interface BrowseState {
+  table: string;
+  rows: any[];
+  columns: Array<{ name: string; type: string; nullable: boolean }>;
+  pagination: { page: number; pageSize: number; totalRows: number; totalPages: number };
+  sort: { column: string; direction: string };
+  fkColumns: Record<string, { table: string; column: string; displayColumn?: string }>;
+  loading: boolean;
+  search: string;
+  filterCol: string | null;
+  filterVal: string | null;
+}
 
 export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: AdminClientProps) {
   const router = useRouter();
@@ -137,6 +154,67 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
   const [runningAction, setRunningAction] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<Record<string, { type: "success" | "error"; message: string } | null>>({});
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Data Browser State
+  const [browse, setBrowse] = useState<BrowseState>({
+    table: "",
+    rows: [],
+    columns: [],
+    pagination: { page: 1, pageSize: 50, totalRows: 0, totalPages: 0 },
+    sort: { column: "", direction: "DESC" },
+    fkColumns: {},
+    loading: false,
+    search: "",
+    filterCol: null,
+    filterVal: null,
+  });
+
+  async function fetchBrowseData(
+    tableName: string,
+    page = 1,
+    sortCol?: string,
+    sortDir?: string,
+    search?: string,
+    filterCol?: string | null,
+    filterVal?: string | null
+  ) {
+    setBrowse((prev) => ({ ...prev, loading: true, table: tableName }));
+    try {
+      const params = new URLSearchParams({ table: tableName, page: String(page), pageSize: "50" });
+      if (sortCol) params.set("sort", sortCol);
+      if (sortDir) params.set("dir", sortDir);
+      if (search) params.set("search", search);
+      if (filterCol && filterVal) {
+        params.set("filterCol", filterCol);
+        params.set("filterVal", filterVal);
+      }
+      const res = await fetch(`/api/admin/db/browse?${params.toString()}`);
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setBrowse({
+          table: tableName,
+          rows: data.rows,
+          columns: data.columns,
+          pagination: data.pagination,
+          sort: data.sort,
+          fkColumns: data.fkColumns || {},
+          loading: false,
+          search: search || "",
+          filterCol: filterCol || null,
+          filterVal: filterVal || null,
+        });
+      } else {
+        setBrowse((prev) => ({ ...prev, loading: false }));
+      }
+    } catch {
+      setBrowse((prev) => ({ ...prev, loading: false }));
+    }
+  }
+
+  function openBrowseTable(tableName: string) {
+    setActiveTab("browse");
+    fetchBrowseData(tableName);
+  }
 
   // Load system logs data
   async function fetchLogs() {
@@ -318,6 +396,18 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           >
             <RefreshCw size={16} />
             <span>Sistem Tetikleyicileri</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("browse")}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full",
+              activeTab === "browse"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 font-bold"
+                : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+            )}
+          >
+            <Eye size={16} />
+            <span>Veri Tarayıcı</span>
           </button>
         </aside>
 
@@ -694,19 +784,26 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                         <span className="text-xs text-[var(--color-muted)]">{table.rowCount.toLocaleString("tr-TR")} Satır Kayıt</span>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openBrowseTable(table.name)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-brand)]/10 hover:bg-[var(--color-brand)]/20 text-[var(--color-brand)] text-xs font-bold transition-colors border border-[var(--color-brand)]/20"
+                          title={`${table.name} tablosunun verilerini incele`}
+                        >
+                          <Eye size={13} /> Verilere Göz At
+                        </button>
                         <a
                           href={`/api/admin/db/export?table=${table.name}`}
                           download={`porttrack_table_${table.name}.json`}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold transition-colors border border-emerald-500/20"
                           title={`${table.name} tablosunu JSON olarak indir`}
                         >
-                          <Download size={13} /> İndir (JSON)
+                          <Download size={13} /> İndir
                         </a>
                         <button
                           onClick={() => setSelectedSchemaTable(table)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-brand)] text-xs font-semibold transition-colors border border-[var(--color-border)]"
                         >
-                          <Eye size={14} /> Şema
+                          <Table size={13} /> Şema
                         </button>
                       </div>
                     </div>
@@ -912,6 +1009,209 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB 5: Veri Tarayıcı */}
+          {activeTab === "browse" && (
+            <div className="space-y-6">
+              {/* Tablo Seçici */}
+              {!browse.table ? (
+                <div>
+                  <h2 className="text-lg font-semibold text-[var(--color-text)] mb-4">Tablo Seçin</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {dbTables.map((t) => (
+                      <button
+                        key={t.name}
+                        onClick={() => openBrowseTable(t.name)}
+                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-left hover:bg-[var(--color-surface-hover)] hover:border-[var(--color-brand)]/30 transition-all group"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Table size={14} className="text-[var(--color-brand)]" />
+                          <span className="font-bold text-sm text-[var(--color-text)] font-mono">{t.name}</span>
+                        </div>
+                        <span className="text-xs text-[var(--color-muted)]">{t.rowCount.toLocaleString("tr-TR")} kayıt · {t.columns.length} kolon</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {/* Header: Tablo adı + Geri */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setBrowse((prev) => ({ ...prev, table: "", rows: [], columns: [], filterCol: null, filterVal: null, search: "" }))}
+                        className="p-2 rounded-lg bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] transition-colors"
+                        title="Tablo Listesine Dön"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <div>
+                        <h2 className="text-lg font-bold text-[var(--color-text)] font-mono flex items-center gap-2">
+                          <Table size={18} className="text-[var(--color-brand)]" />
+                          {browse.table}
+                        </h2>
+                        <span className="text-xs text-[var(--color-muted)]">
+                          {browse.pagination.totalRows.toLocaleString("tr-TR")} toplam kayıt
+                          {browse.filterCol && (
+                            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold">
+                              Filtre: {browse.filterCol} = {browse.filterVal}
+                              <button
+                                onClick={() => fetchBrowseData(browse.table, 1, browse.sort.column, browse.sort.direction, browse.search, null, null)}
+                                className="ml-1 hover:text-amber-200"
+                              >
+                                <X size={10} />
+                              </button>
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Arama kutusu */}
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+                      <input
+                        type="text"
+                        placeholder="Metin ara..."
+                        defaultValue={browse.search}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            fetchBrowseData(browse.table, 1, browse.sort.column, browse.sort.direction, (e.target as HTMLInputElement).value, browse.filterCol, browse.filterVal);
+                          }
+                        }}
+                        className="pl-9 pr-3 py-2 w-full sm:w-64 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-text)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-brand)]/50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Loading */}
+                  {browse.loading ? (
+                    <div className="flex items-center justify-center py-20">
+                      <Loader2 size={28} className="animate-spin text-[var(--color-brand)]" />
+                      <span className="ml-3 text-sm text-[var(--color-muted)]">Veriler yükleniyor...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Data Grid */}
+                      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs">
+                            <thead>
+                              <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+                                <th className="py-3 px-3 text-[var(--color-muted)] font-semibold text-[10px] uppercase">#</th>
+                                {browse.columns.map((col) => (
+                                  <th
+                                    key={col.name}
+                                    onClick={() => {
+                                      const newDir = browse.sort.column === col.name && browse.sort.direction === "DESC" ? "asc" : "desc";
+                                      fetchBrowseData(browse.table, browse.pagination.page, col.name, newDir, browse.search, browse.filterCol, browse.filterVal);
+                                    }}
+                                    className="py-3 px-3 text-[var(--color-muted)] font-semibold text-[10px] uppercase cursor-pointer hover:text-[var(--color-brand)] select-none whitespace-nowrap"
+                                  >
+                                    <span className="flex items-center gap-1">
+                                      {col.name}
+                                      {browse.sort.column === col.name && (
+                                        <ArrowUpDown size={10} className="text-[var(--color-brand)]" />
+                                      )}
+                                      {browse.fkColumns[col.name] && (
+                                        <ExternalLink size={9} className="text-amber-400 ml-0.5" />
+                                      )}
+                                    </span>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--color-border)]">
+                              {browse.rows.length === 0 ? (
+                                <tr>
+                                  <td colSpan={browse.columns.length + 1} className="py-12 text-center text-sm text-[var(--color-muted)]">
+                                    Kayıt bulunamadı.
+                                  </td>
+                                </tr>
+                              ) : (
+                                browse.rows.map((row, idx) => (
+                                  <tr key={idx} className="hover:bg-[var(--color-surface-hover)]">
+                                    <td className="py-2.5 px-3 text-[var(--color-muted)] font-mono text-[10px]">
+                                      {(browse.pagination.page - 1) * browse.pagination.pageSize + idx + 1}
+                                    </td>
+                                    {browse.columns.map((col) => {
+                                      const val = row[col.name];
+                                      const fk = browse.fkColumns[col.name];
+                                      const isFK = fk && val;
+
+                                      // Format cell value
+                                      let displayVal: string;
+                                      if (val === null || val === undefined) {
+                                        displayVal = "—";
+                                      } else if (col.type === "timestamp with time zone" || col.type === "timestamp without time zone") {
+                                        displayVal = new Date(val).toLocaleString("tr-TR");
+                                      } else if (col.type === "json" || col.type === "jsonb") {
+                                        displayVal = typeof val === "string" ? val : JSON.stringify(val);
+                                        if (displayVal.length > 60) displayVal = displayVal.slice(0, 60) + "...";
+                                      } else if (typeof val === "boolean") {
+                                        displayVal = val ? "Evet" : "Hayır";
+                                      } else {
+                                        displayVal = String(val);
+                                        if (displayVal.length > 80) displayVal = displayVal.slice(0, 80) + "...";
+                                      }
+
+                                      return (
+                                        <td key={col.name} className="py-2.5 px-3 font-mono text-[11px] text-[var(--color-text)] whitespace-nowrap max-w-[300px] truncate" title={String(val ?? "")}>
+                                          {isFK ? (
+                                            <button
+                                              onClick={() => {
+                                                fetchBrowseData(fk.table, 1, fk.column, "asc", "", fk.column, String(val));
+                                              }}
+                                              className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 hover:underline font-semibold"
+                                              title={`${fk.table} tablosunda bu kayda git`}
+                                            >
+                                              {displayVal}
+                                              <ExternalLink size={10} />
+                                            </button>
+                                          ) : (
+                                            <span className={val === null ? "text-[var(--color-muted)] italic" : ""}>{displayVal}</span>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Pagination */}
+                      {browse.pagination.totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-4">
+                          <span className="text-xs text-[var(--color-muted)]">
+                            Sayfa {browse.pagination.page} / {browse.pagination.totalPages}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => fetchBrowseData(browse.table, browse.pagination.page - 1, browse.sort.column, browse.sort.direction, browse.search, browse.filterCol, browse.filterVal)}
+                              disabled={browse.pagination.page <= 1}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)] text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <ChevronLeft size={14} /> Önceki
+                            </button>
+                            <button
+                              onClick={() => fetchBrowseData(browse.table, browse.pagination.page + 1, browse.sort.column, browse.sort.direction, browse.search, browse.filterCol, browse.filterVal)}
+                              disabled={browse.pagination.page >= browse.pagination.totalPages}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)] text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              Sonraki <ChevronRight size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </main>

@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     await backfillFxHistory();
     const refresh = await refreshPrices();
 
-    // 2. Teknik Analiz Hesapla
+    // 2. Teknik Analiz Hesapla 
     const analysis = await runTechnicalAnalysis();
 
     // 3. Fiyat Güncellemesi Tamamlandıktan Hemen Sonra E-Posta Özetini Gönder
