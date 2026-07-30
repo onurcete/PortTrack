@@ -38,7 +38,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-foreground)]">
       <Topbar />
-      <main className="flex-1 mx-auto w-full max-w-[1400px] px-5 py-7 md:px-10 md:py-9">
+      <main className="flex-1 mx-auto w-full max-w-[1400px] px-5 py-7 md:px-10 md:py-9 pb-20 md:pb-9">
         {children}
       </main>
 

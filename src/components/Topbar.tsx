@@ -13,18 +13,17 @@ import {
   LineChart,
   Activity,
   Shield,
-  Sparkles,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/", label: "Genel Bakış", icon: LayoutDashboard },
-  { href: "/transactions", label: "İşlemler", icon: ArrowLeftRight },
-  { href: "/growth", label: "Portföy Gelişimi", icon: TrendingUp },
-  { href: "/performance", label: "Ürün Performansı", icon: LineChart },
-  { href: "/analysis", label: "Analiz", icon: Activity },
+  { href: "/", label: "Genel Bakış", shortLabel: "Genel", icon: LayoutDashboard },
+  { href: "/transactions", label: "İşlemler", shortLabel: "İşlemler", icon: ArrowLeftRight },
+  { href: "/growth", label: "Portföy Gelişimi", shortLabel: "Gelişim", icon: TrendingUp },
+  { href: "/performance", label: "Ürün Performansı", shortLabel: "Performans", icon: LineChart },
+  { href: "/analysis", label: "Analiz", shortLabel: "Analiz", icon: Activity },
 ];
 
 export function Topbar() {
@@ -48,7 +47,7 @@ export function Topbar() {
 
   const navItems = [...NAV];
   if (user?.role === "ADMIN") {
-    navItems.push({ href: "/admin", label: "Yönetim", icon: Shield });
+    navItems.push({ href: "/admin", label: "Yönetim", shortLabel: "Yönetim", icon: Shield });
   }
 
   async function handleRefresh() {
@@ -71,23 +70,82 @@ export function Topbar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md">
-      <div className="mx-auto w-full max-w-[1400px] px-4 md:px-8 flex h-16 items-center justify-between gap-4">
-        {/* Sol Taraf: Logo ve İsim */}
-        <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand)] text-[var(--color-on-brand)] shadow-sm">
-            <Wallet size={18} />
-          </div>
-          <div className="hidden sm:block">
-            <p className="font-bold text-[14px] leading-tight">PortTrack</p>
-            <p className="text-[10px] text-[var(--color-muted)] leading-tight">
-              Yatırım Takip
-            </p>
-          </div>
-        </Link>
+    <>
+      {/* Üst Header Bar */}
+      <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md">
+        <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-4 md:px-8 flex h-16 items-center justify-between gap-2 md:gap-4">
+          {/* Sol Taraf: Logo ve İsim */}
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand)] text-[var(--color-on-brand)] shadow-sm">
+              <Wallet size={18} />
+            </div>
+            <div className="block">
+              <p className="font-bold text-[14px] leading-tight">PortTrack</p>
+              <p className="text-[10px] text-[var(--color-muted)] leading-tight hidden sm:block">
+                Yatırım Takip
+              </p>
+            </div>
+          </Link>
 
-        {/* Orta Bölüm: Yatay Menü Sekmeleri */}
-        <nav className="flex items-center gap-1 sm:gap-1.5 md:gap-2">
+          {/* Masaüstü Orta Bölüm: Yatay Menü Sekmeleri (Sadece md ve üzerinde görünür) */}
+          <nav className="hidden md:flex items-center gap-1 sm:gap-1.5 md:gap-2">
+            {navItems.map((item) => {
+              const active =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs md:text-sm font-bold transition-all duration-150 whitespace-nowrap",
+                    active
+                      ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shadow-xs"
+                      : "text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
+                  )}
+                >
+                  <Icon size={16} className="shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Sağ Taraf: Butonlar */}
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="btn btn-outline py-1.5 px-2.5 sm:px-3 text-xs h-9"
+              title="Güncel fiyatları çek"
+            >
+              <RefreshCw size={14} className={cn(refreshing && "animate-spin")} />
+              <span className="hidden sm:inline text-[11px] sm:text-xs">
+                {refreshing ? "Güncelleniyor..." : "Fiyatları Güncelle"}
+              </span>
+            </button>
+            
+            <CurrencyToggle />
+            <ThemeToggle />
+
+            <button
+              onClick={logout}
+              className="btn btn-ghost py-1.5 px-2 sm:px-2.5 h-9 text-xs flex items-center gap-1.5"
+              title="Çıkış Yap"
+            >
+              <LogOut size={16} />
+              <span className="hidden sm:inline">Çıkış</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobil Alt Sabit Navigasyon Barı (Mobil Finans Uygulaması Deneyimi - Sadece Mobilde Görünür) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl md:hidden px-1 py-1 shadow-lg">
+        <div className={cn("grid w-full gap-0.5", navItems.length === 6 ? "grid-cols-6" : "grid-cols-5")}>
           {navItems.map((item) => {
             const active =
               item.href === "/"
@@ -99,47 +157,24 @@ export function Topbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-xl px-2 py-1.5 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs md:text-sm font-bold transition-all duration-150 whitespace-nowrap",
+                  "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all duration-150 text-center relative",
                   active
-                    ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] shadow-xs"
-                    : "text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
+                    ? "text-[var(--color-brand)] font-bold bg-[var(--color-brand-soft)]/50"
+                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                 )}
               >
-                <Icon size={16} className="shrink-0" />
-                <span>{item.label}</span>
+                <Icon size={18} className={cn("transition-transform", active && "scale-110")} />
+                <span className="text-[10px] leading-tight mt-1 truncate max-w-full">
+                  {item.shortLabel || item.label}
+                </span>
+                {active && (
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" />
+                )}
               </Link>
             );
           })}
-        </nav>
-
-        {/* Sağ Taraf: Butonlar */}
-        <div className="flex items-center gap-1.5 md:gap-2">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="btn btn-outline py-1.5 px-2.5 sm:px-3 text-xs h-9"
-            title="Güncel fiyatları çek"
-          >
-            <RefreshCw size={14} className={cn(refreshing && "animate-spin")} />
-            <span className="inline text-[11px] sm:text-xs">
-              {refreshing ? "Güncelleniyor..." : "Fiyatları Güncelle"}
-            </span>
-          </button>
-          
-          <CurrencyToggle />
-          <ThemeToggle />
-
-          <button
-            onClick={logout}
-            className="btn btn-ghost py-1.5 px-2 sm:px-2.5 h-9 text-xs flex items-center gap-1.5"
-            title="Çıkış Yap"
-          >
-            <LogOut size={16} />
-            <span className="hidden sm:inline">Çıkış</span>
-          </button>
         </div>
-      </div>
-    </header>
+      </nav>
+    </>
   );
 }
