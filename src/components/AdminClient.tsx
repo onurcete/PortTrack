@@ -194,6 +194,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
         if (data.yahoo) msg += ` (Yahoo: ${data.yahoo.snapshots} snapshot eklendi)`;
         if (data.processed) msg += ` (TEFAS: ${data.processed} ay işlendi)`;
         if (data.analyzed) msg += ` (Analiz: ${data.analyzed} enstrüman güncellendi)`;
+        if (data.sentCount !== undefined) msg += ` (${data.sentCount}/${data.totalTargets} kullanıcının maili iletildi)`;
         setActionStatus((prev) => ({
           ...prev,
           [key]: { type: "success", message: msg },
@@ -822,6 +823,70 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                       <p className={cn("text-xs mt-3 flex items-center gap-1.5 font-medium", actionStatus["tefas"]?.type === "success" ? "text-emerald-400" : "text-rose-400")}>
                         {actionStatus["tefas"]?.type === "success" ? <CheckCircle size={14} /> : <XCircle size={14} />}
                         {actionStatus["tefas"]?.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action 3: Admin Bülten Maili Gönder (Test) */}
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 flex flex-col justify-between shadow-sm">
+                  <div>
+                    <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+                      <Mail size={18} className="text-amber-400" /> Admin Bülten Maili Gönder (Test)
+                    </h3>
+                    <p className="text-xs text-[var(--color-muted)] mt-2 leading-relaxed">
+                      Sadece Admin e-posta adresine (<code className="text-amber-400 font-mono">ceteonur@gmail.com</code>) güncel portföy özet bültenini test amaçlı anlık olarak gönderir.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                    <button
+                      onClick={() => runSystemAction("admin_mail", "/api/cron/daily-digest", { test: "1" })}
+                      disabled={runningAction !== null}
+                      className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                      {runningAction === "admin_mail" ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                      <span>Admin Maili Gönder (Test)</span>
+                    </button>
+
+                    {actionStatus["admin_mail"] && (
+                      <p className={cn("text-xs mt-3 flex items-center gap-1.5 font-medium", actionStatus["admin_mail"]?.type === "success" ? "text-emerald-400" : "text-rose-400")}>
+                        {actionStatus["admin_mail"]?.type === "success" ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                        {actionStatus["admin_mail"]?.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action 4: Tüm Kullanıcılara Bülten Maili Gönder */}
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 flex flex-col justify-between shadow-sm">
+                  <div>
+                    <h3 className="font-bold text-base text-[var(--color-text)] flex items-center gap-2">
+                      <Users size={18} className="text-emerald-400" /> Tüm Kullanıcılara Mail Gönder
+                    </h3>
+                    <p className="text-xs text-[var(--color-muted)] mt-2 leading-relaxed">
+                      Sistemde kayıtlı e-posta adresi olan tüm kullanıcılara kişiselleştirilmiş günlük portföy özet bültenini toplu olarak gönderir.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                    <button
+                      onClick={() => {
+                        if (confirm("Sistemdeki TÜM kullanıcılara bülten e-postası gönderilecek. Onaylıyor musunuz?")) {
+                          runSystemAction("all_users_mail", "/api/cron/daily-digest");
+                        }
+                      }}
+                      disabled={runningAction !== null}
+                      className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                      {runningAction === "all_users_mail" ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                      <span>Tüm Kullanıcılara Mail Gönder</span>
+                    </button>
+
+                    {actionStatus["all_users_mail"] && (
+                      <p className={cn("text-xs mt-3 flex items-center gap-1.5 font-medium", actionStatus["all_users_mail"]?.type === "success" ? "text-emerald-400" : "text-rose-400")}>
+                        {actionStatus["all_users_mail"]?.type === "success" ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                        {actionStatus["all_users_mail"]?.message}
                       </p>
                     )}
                   </div>

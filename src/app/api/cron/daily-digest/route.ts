@@ -8,10 +8,12 @@ import { getPeriodReturns } from "@/lib/history";
 import { logSystemEvent } from "@/lib/logger";
 import { computeFundInvestorStats } from "@/lib/tefasInvestors";
 
+import { AUTH_COOKIE, getSessionUser } from "@/lib/auth";
+
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function authorized(req: NextRequest): boolean {
+async function authorized(req: NextRequest): Promise<boolean> {
   // 1. Vercel Cron otomatik tetikleme kontrolü
   const isVercelCron =
     req.headers.get("x-vercel-cron") === "1" ||
@@ -20,12 +22,27 @@ function authorized(req: NextRequest): boolean {
 
   // 2. Secret / Bearer / Parametre kontrolü
   const secret = process.env.CRON_SECRET;
+  const auth = req.headers.get("authorization");
+  if (secret && (auth === `Bearer ${secret}` || req.nextUrl.searchParams.get("key") === secret)) {
+    return true;
+  }
+
+  // 3. Admin Oturum Çerezi Kontrolü
+  const token = req.cookies.get(AUTH_COOKIE)?.value;
+  if (token) {
+    const userId = await getSessionUser(token);
+    if (userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, email: true } });
+      if (user && (user.role === "ADMIN" || user.email === "ceteonur@gmail.com")) {
+        return true;
+      }
+    }
+  }
+
   if (!secret) {
     return process.env.NODE_ENV !== "production" || req.nextUrl.searchParams.get("test") === "1";
   }
-  const auth = req.headers.get("authorization");
-  if (auth === `Bearer ${secret}`) return true;
-  return req.nextUrl.searchParams.get("key") === secret || req.nextUrl.searchParams.get("test") === "1";
+  return req.nextUrl.searchParams.get("test") === "1";
 }
 
 export async function runDailyDigest(req: NextRequest) {
@@ -205,7 +222,7 @@ export async function runDailyDigest(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!(await authorized(req))) {
     return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 401 });
   }
 
@@ -214,7 +231,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!(await authorized(req))) {
     return NextResponse.json({ ok: false, error: "Yetkisiz erişim" }, { status: 401 });
   }
 
