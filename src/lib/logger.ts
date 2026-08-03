@@ -11,7 +11,8 @@ export type SystemAction =
   | "MANUAL_DAILY_DIGEST_EMAIL"
   | "TRANSACTION_ADD"
   | "TRANSACTION_DELETE"
-  | "NOTE_ADD";
+  | "NOTE_ADD"
+  | "FEEDBACK_SUBMITTED";
 
 export interface LogEventOptions {
   userId?: string | null;
