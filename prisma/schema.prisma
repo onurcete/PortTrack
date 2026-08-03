@@ -25,6 +25,7 @@ model User {
   portfolioMonthSnapshots PortfolioMonthSnapshot[]
   notes                   Note[]
   analysisBriefings       AnalysisBriefing[]
+  feedbacks               Feedback[]
 }
 
 /// Her alis/satis islemi (kendi para biriminde saklanir)
@@ -195,5 +196,26 @@ model SystemLog {
 
   @@index([userId])
   @@index([action])
+  @@index([createdAt])
+}
+
+/// Kullanıcı Geri Bildirimleri & İstekleri (Öneri, Hata, Şikayet)
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  userName  String?
+  type      String   // SUGGESTION | BUG | COMPLAINT | OTHER
+  subject   String?
+  message   String
+  status    String   @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | CLOSED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
   @@index([createdAt])
 }

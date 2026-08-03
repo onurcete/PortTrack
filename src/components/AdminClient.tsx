@@ -33,8 +33,24 @@ import {
   ChevronRight,
   ArrowUpDown,
   ExternalLink,
+  MessageSquare,
+  Lightbulb,
+  Bug,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export interface FeedbackDTO {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  userName: string | null;
+  type: string;
+  subject: string | null;
+  message: string;
+  status: string;
+  createdAt: string;
+}
 
 export interface AdminUserDTO {
   id: string;
@@ -120,7 +136,7 @@ export interface LogsDataResponse {
   dailyLoginsSeries: Array<{ date: string; count: number }>;
 }
 
-type TabType = "logs" | "overview" | "users" | "actions" | "tables" | "browse";
+type TabType = "logs" | "overview" | "users" | "actions" | "tables" | "browse" | "feedback";
 
 interface BrowseState {
   table: string;
@@ -154,6 +170,48 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
   const [runningAction, setRunningAction] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<Record<string, { type: "success" | "error"; message: string } | null>>({});
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Feedbacks State
+  const [feedbacks, setFeedbacks] = useState<FeedbackDTO[]>([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+  const [feedbackTypeFilter, setFeedbackTypeFilter] = useState<string>("ALL");
+  const [updatingFeedbackId, setUpdatingFeedbackId] = useState<string | null>(null);
+
+  async function fetchFeedbacks() {
+    setLoadingFeedbacks(true);
+    try {
+      const res = await fetch("/api/feedback");
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setFeedbacks(data.feedbacks || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingFeedbacks(false);
+    }
+  }
+
+  async function updateFeedbackStatus(id: string, status: string) {
+    setUpdatingFeedbackId(id);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setFeedbacks((prev) =>
+          prev.map((f) => (f.id === id ? { ...f, status } : f))
+        );
+      }
+    } catch {
+      // ignore
+    } finally {
+      setUpdatingFeedbackId(null);
+    }
+  }
 
   // Data Browser State
   const [browse, setBrowse] = useState<BrowseState>({
@@ -384,6 +442,28 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           >
             <Users size={16} />
             <span>Kullanıcı Yönetimi</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("feedback");
+              fetchFeedbacks();
+            }}
+            className={cn(
+              "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all text-left w-full cursor-pointer select-none",
+              activeTab === "feedback"
+                ? "bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 font-bold"
+                : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <MessageSquare size={16} />
+              <span>Geri Bildirimler</span>
+            </div>
+            {feedbacks.filter((f) => f.status === "OPEN").length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 text-xs font-black">
+                {feedbacks.filter((f) => f.status === "OPEN").length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("actions")}
@@ -1222,6 +1302,140 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                       )}
                     </>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 7: Geri Bildirimler & İstekler */}
+          {activeTab === "feedback" && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--color-text)] flex items-center gap-2">
+                    <MessageSquare size={20} className="text-[var(--color-brand)]" />
+                    Kullanıcı Geri Bildirimleri, Öneri ve Şikayetler
+                  </h2>
+                  <p className="text-xs text-[var(--color-muted)] mt-1 font-medium">
+                    Kullanıcıların site içindeki widget veya iletişim sayfasından gönderdikleri geri bildirimler.
+                  </p>
+                </div>
+
+                <button
+                  onClick={fetchFeedbacks}
+                  disabled={loadingFeedbacks}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[var(--color-border)] text-xs font-extrabold hover:bg-[var(--color-surface-hover)] transition-all shrink-0 cursor-pointer"
+                >
+                  <RefreshCw size={14} className={cn(loadingFeedbacks && "animate-spin")} />
+                  Yenile
+                </button>
+              </div>
+
+              {/* Type Filter Tabs */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {["ALL", "SUGGESTION", "BUG", "COMPLAINT", "OTHER"].map((typeKey) => {
+                  const labels: Record<string, string> = {
+                    ALL: "Tümü",
+                    SUGGESTION: "💡 İstek & Öneri",
+                    BUG: "🐛 Hata Bildirimi",
+                    COMPLAINT: "🔴 Şikayet",
+                    OTHER: "💬 Diğer",
+                  };
+                  const isSel = feedbackTypeFilter === typeKey;
+                  return (
+                    <button
+                      key={typeKey}
+                      onClick={() => setFeedbackTypeFilter(typeKey)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer whitespace-nowrap",
+                        isSel
+                          ? "bg-[var(--color-brand)]/15 border-[var(--color-brand)]/40 text-[var(--color-brand-strong)]"
+                          : "border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      )}
+                    >
+                      {labels[typeKey]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Feedback List */}
+              {loadingFeedbacks ? (
+                <div className="p-12 text-center text-xs font-bold text-[var(--color-muted)] flex items-center justify-center gap-2">
+                  <Loader2 size={18} className="animate-spin text-[var(--color-brand)]" />
+                  Geri bildirimler yükleniyor...
+                </div>
+              ) : feedbacks.length === 0 ? (
+                <div className="p-12 text-center border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] text-xs font-bold text-[var(--color-muted)] space-y-2">
+                  <MessageSquare size={32} className="mx-auto text-[var(--color-muted)]/50" />
+                  <p>Henüz geri bildirim kaydı bulunmuyor.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {feedbacks
+                    .filter((f) => feedbackTypeFilter === "ALL" || f.type === feedbackTypeFilter)
+                    .map((f) => {
+                      const typeBadgeMap: Record<string, { label: string; style: string }> = {
+                        SUGGESTION: { label: "💡 Öneri", style: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+                        BUG: { label: "🐛 Hata", style: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" },
+                        COMPLAINT: { label: "🔴 Şikayet", style: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" },
+                        OTHER: { label: "💬 Diğer", style: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+                      };
+                      const typeInfo = typeBadgeMap[f.type] || { label: f.type, style: "bg-gray-500/10 text-gray-400" };
+
+                      return (
+                        <div
+                          key={f.id}
+                          className="p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs space-y-3"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)]/40 pb-3">
+                            <div className="flex items-center gap-2.5">
+                              <span className={cn("px-2.5 py-1 rounded-xl text-xs font-extrabold border", typeInfo.style)}>
+                                {typeInfo.label}
+                              </span>
+                              <span className="font-extrabold text-xs text-[var(--color-foreground)]">
+                                {f.userName || "Kullanıcı"} ({f.userEmail || "Bilinmiyor"})
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-[11px] font-bold text-[var(--color-muted)]">
+                                {new Date(f.createdAt).toLocaleString("tr-TR")}
+                              </span>
+
+                              {/* Status Selector */}
+                              <select
+                                value={f.status}
+                                disabled={updatingFeedbackId === f.id}
+                                onChange={(e) => updateFeedbackStatus(f.id, e.target.value)}
+                                className={cn(
+                                  "px-2.5 py-1 rounded-xl text-xs font-extrabold border outline-none cursor-pointer",
+                                  f.status === "OPEN" && "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
+                                  f.status === "IN_PROGRESS" && "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
+                                  f.status === "RESOLVED" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+                                  f.status === "CLOSED" && "bg-slate-500/10 text-slate-400 border-slate-500/30"
+                                )}
+                              >
+                                <option value="OPEN">🟡 Açık (Bekliyor)</option>
+                                <option value="IN_PROGRESS">🔵 İnceleniyor</option>
+                                <option value="RESOLVED">🟢 Çözüldü</option>
+                                <option value="CLOSED">⚫ Kapatıldı</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {f.subject && (
+                            <h4 className="text-xs font-extrabold text-[var(--color-foreground)]">
+                              Konu: {f.subject}
+                            </h4>
+                          )}
+
+                          <p className="text-xs font-medium text-[var(--color-foreground)]/90 leading-relaxed bg-[var(--color-surface-muted)]/40 p-3.5 rounded-xl border border-[var(--color-border)]/40 whitespace-pre-wrap">
+                            {f.message}
+                          </p>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>
