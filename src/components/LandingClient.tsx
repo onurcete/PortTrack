@@ -1091,6 +1091,10 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-4 font-bold">
+              <Link href="/iletisim" className="hover:text-[var(--color-brand-strong)] transition-colors">
+                İletişim
+              </Link>
+              <span className="text-[var(--color-border)]">•</span>
               <Link href="/kullanim-kosullari" className="hover:text-[var(--color-brand-strong)] transition-colors">
                 Kullanım Koşulları
               </Link>

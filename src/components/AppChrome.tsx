@@ -24,6 +24,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     pathname === "/welcome" ||
     pathname === "/kullanim-kosullari" ||
     pathname === "/gizlilik-politikasi" ||
+    pathname === "/iletisim" ||
     (pathname === "/" && isAuth === false);
 
   if (isPublicPage) {
@@ -56,6 +57,12 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4 font-bold text-xs">
+            <Link
+              href="/iletisim"
+              className="hover:text-[var(--color-brand-strong)] transition-colors underline"
+            >
+              İletişim
+            </Link>
             <Link
               href="/kullanim-kosullari"
               className="hover:text-[var(--color-brand-strong)] transition-colors underline"
