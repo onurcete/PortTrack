@@ -346,28 +346,29 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         </div>
       </div>
 
-      {/* Arama, Filtreleme ve Dışa Aktarma Çubuğu */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-[var(--color-surface)] p-3 rounded-2xl border border-[var(--color-border)] shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Arama Kutusu */}
-          <div className="relative">
+      {/* Arama, Filtreleme ve Dışa Aktarma Çubuğu (Mobilde Tek Satır) */}
+      <div className="flex items-center justify-between gap-1.5 mb-6 bg-[var(--color-surface)] p-2.5 sm:p-3 rounded-2xl border border-[var(--color-border)] shadow-sm">
+        {/* Sol: Sembol Arama + Tür Seçici + Sıfırla */}
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          {/* Sembol Arama Input */}
+          <div className="relative flex-1 min-w-[90px] max-w-[170px] sm:max-w-[200px]">
             <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+              size={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
             />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Sembol ara..."
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-2 pl-9 pr-3 text-sm outline-none focus:border-[var(--color-brand)] w-full max-w-[200px]"
+              placeholder="Sembol..."
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-1.5 pl-8 pr-2 text-xs outline-none focus:border-[var(--color-brand)] font-semibold"
             />
           </div>
 
-          {/* Tür Filtresi */}
+          {/* Tür Filtresi Dropdown */}
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as AssetType | "ALL")}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)] cursor-pointer"
+            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-semibold outline-none focus:border-[var(--color-brand)] cursor-pointer min-w-[85px] sm:min-w-[120px]"
           >
             <option value="ALL">Tüm türler</option>
             {ASSET_TYPES.map((t) => (
@@ -384,41 +385,119 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
                 setQuery("");
                 setFilter("ALL");
               }}
-              className="btn btn-ghost text-xs py-1.5 px-2.5 flex items-center gap-1.5"
+              title="Filtreleri Sıfırla"
+              className="p-1.5 rounded-xl border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors shrink-0"
             >
               <RotateCcw size={13} />
-              <span>Sıfırla</span>
             </button>
           )}
         </div>
 
-        {/* Dışa Aktarma Butonları */}
-        <div className="flex gap-2">
+        {/* Sağ: Excel & CSV İndir Butonları */}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={exportToExcel}
             disabled={filtered.length === 0}
-            className="btn btn-outline py-1.5 px-3 text-xs flex items-center gap-1.5"
             title="Excel olarak indir"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold hover:bg-[var(--color-surface-muted)] transition-colors disabled:opacity-40"
           >
-            <FileSpreadsheet size={14} className="text-emerald-600" />
-            <span>Excel İndir</span>
+            <FileSpreadsheet size={14} className="text-emerald-500 shrink-0" />
+            <span className="hidden sm:inline">Excel İndir</span>
+            <span className="sm:hidden">Excel</span>
           </button>
           <button
             onClick={exportToCSV}
             disabled={filtered.length === 0}
-            className="btn btn-outline py-1.5 px-3 text-xs flex items-center gap-1.5"
             title="CSV olarak indir"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold hover:bg-[var(--color-surface-muted)] transition-colors disabled:opacity-40"
           >
-            <Download size={14} className="text-blue-500" />
-            <span>CSV İndir</span>
+            <Download size={14} className="text-blue-500 shrink-0" />
+            <span className="hidden sm:inline">CSV İndir</span>
+            <span className="sm:hidden">CSV</span>
           </button>
         </div>
       </div>
 
       <BackfillStatusBanner />
 
+      {/* İşlem Listesi (Mobil Kart + Masaüstü Tablo) */}
       <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobilde Görünüm (Mobil İşlem Kartları) */}
+        <div className="md:hidden divide-y divide-[var(--color-border)]/40">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-xs text-[var(--color-muted)] font-medium">
+              Kayıt yok. &quot;CSV İçe Aktar&quot; ile başlayabilirsiniz.
+            </div>
+          ) : (
+            filtered.map((t) => (
+              <div
+                key={t.id}
+                className="p-3.5 hover:bg-[var(--color-surface-muted)]/30 transition-colors flex items-center justify-between gap-2.5"
+              >
+                {/* Sol: Sembol, Tür & Tarih */}
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: ASSET_META[t.assetType]?.color || "#3b82f6" }}
+                    />
+                    <span className="font-black text-xs sm:text-sm text-[var(--color-foreground)] truncate">
+                      {t.symbol}
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider shrink-0",
+                        t.side === "BUY"
+                          ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)]"
+                          : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]"
+                      )}
+                    >
+                      {t.side === "BUY" ? "Alış" : "Satış"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-muted)] font-semibold truncate">
+                    <span>{ASSET_META[t.assetType]?.label ?? t.assetType}</span>
+                    <span>•</span>
+                    <span>{formatDate(t.date)}</span>
+                  </div>
+                </div>
+
+                {/* Sağ: Tutar, Adet × Fiyat & Butonlar */}
+                <div className="flex items-center gap-2 shrink-0 text-right">
+                  <div>
+                    <div className="text-xs font-black tabular-nums text-[var(--color-foreground)]">
+                      {formatNumber(t.total, 2)} {curSym(t.currency)}
+                    </div>
+                    <div className="text-[10px] text-[var(--color-muted)] font-semibold tabular-nums mt-0.5">
+                      {formatNumber(t.quantity, 4)} × {formatNumber(t.unitPrice, 2)} {curSym(t.currency)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-0.5 pl-1 border-l border-[var(--color-border)]/40">
+                    <button
+                      onClick={() => openEdit(t)}
+                      className="p-1 rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]"
+                      title="Düzenle"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(t.id)}
+                      className="p-1 rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-loss-soft)] hover:text-[var(--color-loss)]"
+                      title="Sil"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Masaüstünde Görünüm (Tablo) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="theme-table-head">
               <tr className="border-b border-[var(--color-border)] text-left text-xs uppercase tracking-wide text-[var(--color-muted)]">
