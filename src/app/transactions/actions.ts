@@ -669,11 +669,17 @@ export async function getSymbolPrice(
     const priceInfo = await resolveCurrentPriceTRY(assetType, symbol, usdTry);
     if (priceInfo) {
       let currency: "TRY" | "USD" = "TRY";
-      if (priceInfo.currency === "USD" || priceInfo.currency === "USDTRY") {
+      if (assetType === "FOREIGN") {
+        currency = "USD";
+      } else if (assetType === "METAL" || assetType === "BIST" || assetType === "TEFAS" || assetType === "FX") {
+        currency = "TRY";
+      } else if (priceInfo.currency === "USD" || priceInfo.currency === "USDTRY") {
         currency = "USD";
       }
+
+      const price = (currency === "TRY" && priceInfo.priceTRY != null) ? priceInfo.priceTRY : priceInfo.price;
       return {
-        price: priceInfo.price,
+        price,
         currency,
       };
     }

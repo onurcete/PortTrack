@@ -820,7 +820,7 @@ function TransactionForm({
     editing?.assetType ?? "FOREIGN",
   );
   const [currency, setCurrency] = useState<"TRY" | "USD">(
-    editing?.currency ?? "USD",
+    editing?.currency ?? (assetType === "FOREIGN" ? "USD" : "TRY"),
   );
   const [symbol, setSymbol] = useState(editing?.symbol ?? "");
   const [side, setSide] = useState<"BUY" | "SELL">(editing?.side ?? "BUY");
