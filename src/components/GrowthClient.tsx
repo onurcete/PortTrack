@@ -797,10 +797,10 @@ export function GrowthClient({
                 </div>
               </div>
 
-              {/* Toolbar Controls */}
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Toolbar Controls (Mobilde Taşmayı Önleyen Şerit) */}
+              <div className="flex flex-wrap items-center gap-2 max-w-full">
                 {/* Descriptive View Mode Selector */}
-                <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50 shadow-2xs">
+                <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50 shadow-2xs overflow-x-auto max-w-full">
                   <button
                     type="button"
                     onClick={() => {
@@ -808,13 +808,13 @@ export function GrowthClient({
                       setChartType("bar");
                     }}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all duration-200",
+                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap",
                       chartMetric === "return"
                         ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    <BarChart2 size={14} />
+                    <BarChart2 size={13} />
                     <span>Aylık Getiri %</span>
                   </button>
 
@@ -825,13 +825,13 @@ export function GrowthClient({
                       setChartType("area");
                     }}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all duration-200",
+                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap",
                       chartMetric === "value"
                         ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    <DollarSign size={14} />
+                    <DollarSign size={13} />
                     <span>Portföy Değeri</span>
                   </button>
 
@@ -842,20 +842,20 @@ export function GrowthClient({
                       setChartType("area");
                     }}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-extrabold transition-all duration-200",
+                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap",
                       chartMetric === "allocation"
                         ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    <PieChart size={14} />
+                    <PieChart size={13} />
                     <span>Varlık Dağılımı</span>
                   </button>
                 </div>
 
                 {/* Compact Year Selector Dropdown with Calendar Icon */}
-                <div className="flex items-center gap-2 bg-[var(--color-surface-muted)] px-3.5 py-1.5 rounded-xl border border-[var(--color-border)]/50 shadow-2xs">
-                  <Calendar size={14} className="text-[var(--color-brand-strong)]" />
+                <div className="flex items-center gap-2 bg-[var(--color-surface-muted)] px-3 py-1.5 rounded-xl border border-[var(--color-border)]/50 shadow-2xs">
+                  <Calendar size={13} className="text-[var(--color-brand-strong)]" />
                   <select
                     id="chart-year"
                     value={chartYearValue}
@@ -884,7 +884,7 @@ export function GrowthClient({
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    <BarChart2 size={15} />
+                    <BarChart2 size={14} />
                   </button>
                   <button
                     type="button"
@@ -897,7 +897,7 @@ export function GrowthClient({
                         : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                     )}
                   >
-                    <Activity size={15} />
+                    <Activity size={14} />
                   </button>
                 </div>
               </div>
@@ -905,7 +905,7 @@ export function GrowthClient({
 
             {/* Elevated Glassmorphic KPI Summary Cards */}
             {periodSummary && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                 <Card className="p-4 bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] border border-[var(--color-border)]/60 shadow-md rounded-2xl space-y-1 hover:border-[var(--color-brand)]/30 transition-all">
                   <div className="flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
                     <span>TOPLAM PORTFÖY</span>
@@ -1264,7 +1264,55 @@ export function GrowthClient({
                 </div>
               )}
             </div>
-            <div className="overflow-x-auto">
+            {/* Kümülatif Yıllık Performans — Mobilde Kart, Masaüstünde Tablo */}
+            {/* Mobilde Kart Görünümü */}
+            <div className="md:hidden divide-y divide-[var(--color-border)]/40">
+              {cumulativeYearlyRows.map((row) => (
+                <div
+                  key={row.label}
+                  className={cn(
+                    "p-4 space-y-2.5",
+                    row.isTotal && "bg-[var(--color-brand-soft)]/20 border-t border-b-2 border-t-[var(--color-border)]/80 border-b-[var(--color-border)]/80"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-extrabold text-xs sm:text-sm text-[var(--color-foreground)]">
+                      {row.label} {row.isTotal ? "PERFORMANSI" : "YILI"}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <ReturnCell pct={row.returnTRY} />
+                      {row.returnUSD != null && (
+                        <span className="text-[10px] font-extrabold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-md border border-indigo-500/20">
+                          USD: {formatPercent(row.returnUSD)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-[var(--color-surface-muted)]/50 text-xs font-semibold">
+                    <div>
+                      <span className="text-[9px] uppercase tracking-wider text-[var(--color-muted)] font-extrabold block">
+                        TRY Değer (Başlangıç → Bitiş)
+                      </span>
+                      <span className="text-xs font-black tabular-nums text-[var(--color-foreground)]">
+                        {formatMoney(row.startTRY, "TRY")} → {formatMoney(row.endTRY, "TRY")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase tracking-wider text-[var(--color-muted)] font-extrabold block">
+                        USD Değer (Başlangıç → Bitiş)
+                      </span>
+                      <span className="text-xs font-black tabular-nums text-indigo-400">
+                        {formatMoney(row.startUSD, "USD")} → {formatMoney(row.endUSD, "USD")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Masaüstünde Tablo Görünümü */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="theme-table-head">
                   <tr className="border-b border-[var(--color-border)] text-left">
@@ -1342,6 +1390,7 @@ export function GrowthClient({
             </div>
           </Card>
 
+          {/* Aylık Dağılım Tablosu — Mobilde Kart, Masaüstünde Tablo */}
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[var(--color-border)]">
               <div>
@@ -1374,7 +1423,98 @@ export function GrowthClient({
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobilde Görünüm (Aylık Dağılım Kartları) */}
+            <div className="md:hidden divide-y divide-[var(--color-border)]/40">
+              {monthlyRows.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[var(--color-muted)] font-medium">
+                  {selectYearValue === YEAR_FILTER_ALL
+                    ? "Kayıt yok."
+                    : "Bu yıl için kayıt yok."}
+                </div>
+              ) : (
+                monthlyRows.map((p) => {
+                  const prevKey = prevMonthKey(p.month);
+                  const prevPoint = comparablePoint(
+                    p,
+                    prevKey ? seriesByMonth.get(prevKey) : null
+                  );
+                  const total = totalValue(p, currency);
+                  const prevTotal = prevPoint ? totalValue(prevPoint, currency) : null;
+                  const momChange = prevTotal !== null ? total - prevTotal : null;
+
+                  return (
+                    <div key={p.month} className="p-4 space-y-3 hover:bg-[var(--color-surface-muted)]/20 transition-colors">
+                      {/* Header Row: Month Label + Total Value + MoM Change */}
+                      <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)]/30 pb-2.5">
+                        <div>
+                          <span className="font-extrabold text-sm text-[var(--color-foreground)] block">
+                            {monthTableLabel(p.month)}
+                          </span>
+                          <span className="text-[10px] text-[var(--color-muted)] font-semibold">
+                            Aylık Portföy Durumu
+                          </span>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="font-black text-sm tabular-nums text-[var(--color-foreground)]">
+                            {formatMoney(total, currency)}
+                          </div>
+                          {momChange !== null && (
+                            <span
+                              className={cn(
+                                "text-[10px] font-extrabold tabular-nums block",
+                                momChange > 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
+                              )}
+                            >
+                              {momChange > 0 ? "▲ +" : momChange < 0 ? "▼ " : ""}
+                              {formatMoney(momChange, currency)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Asset Breakdown Badges Grid */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {activeTypes.map((t) => {
+                          const val = typeValue(p, t, currency);
+                          if (val <= 0) return null;
+                          const prevVal = prevPoint ? typeValue(prevPoint, t, currency) : null;
+                          const pctChange = (val > 0 && prevVal != null && prevVal > 0) ? periodReturnPct(prevVal, val) : null;
+
+                          return (
+                            <div
+                              key={t}
+                              className="p-2 rounded-xl bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/40 flex flex-col justify-between"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ASSET_META[t].color }} />
+                                <span className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase tracking-wider truncate">
+                                  {ASSET_META[t].label}
+                                </span>
+                              </div>
+                              <div className="flex items-baseline justify-between mt-1 gap-1">
+                                <span className="text-xs font-black tabular-nums text-[var(--color-foreground)]">
+                                  {formatMoney(val, currency)}
+                                </span>
+                                {pctChange != null && (
+                                  <span className={cn("text-[9px] font-extrabold tabular-nums shrink-0", pctChange >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                                    {pctChange >= 0 ? "+" : ""}{pctChange.toFixed(1)}%
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Masaüstünde Görünüm (Tablo) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="theme-table-head">
                   <tr className="border-b border-[var(--color-border)] text-left">
