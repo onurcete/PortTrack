@@ -298,6 +298,20 @@ function LoginForm() {
                 )}
               </button>
             </form>
+
+            {/* Demo Button */}
+            <div className="relative flex items-center gap-3 my-4">
+              <span className="flex-1 h-px bg-[var(--color-border)]/60" />
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-[var(--color-muted)]">veya</span>
+              <span className="flex-1 h-px bg-[var(--color-border)]/60" />
+            </div>
+            <a
+              href="/api/auth/demo"
+              className="w-full inline-flex items-center justify-center gap-2 text-xs font-extrabold px-6 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/60 hover:bg-[var(--color-surface-muted)] hover:border-[var(--color-brand)]/40 text-[var(--color-foreground)] transition-all hover:scale-[1.01] active:scale-[0.98] shadow-sm"
+            >
+              <Zap size={14} className="text-[var(--color-brand)]" />
+              Hesap Oluşturmadan Demo'yu Dene
+            </a>
           </div>
 
           {/* Footer Register Link */}
