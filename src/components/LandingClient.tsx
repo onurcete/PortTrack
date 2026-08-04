@@ -81,7 +81,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Link
                 href={isLoggedIn ? "/" : "/register"}
                 className="btn btn-primary text-sm font-black px-8 py-3.5 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -89,12 +89,31 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                 {isLoggedIn ? "Portföy Paneline Git" : "Ücretsiz Hesabınızı Oluşturun"}
                 <ArrowRight size={16} />
               </Link>
-              <Link
-                href="/login"
-                className="btn btn-outline text-sm font-extrabold px-6 py-3.5 rounded-2xl hover:bg-[var(--color-surface-muted)] transition-all"
-              >
-                Giriş Yap
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/api/auth/demo"
+                  className="inline-flex items-center gap-2 text-sm font-extrabold px-6 py-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/60 hover:bg-[var(--color-surface-muted)] hover:border-[var(--color-brand)]/40 text-[var(--color-foreground)] transition-all hover:scale-[1.01] active:scale-[0.98] shadow-sm"
+                >
+                  <Zap size={15} className="text-[var(--color-brand)]" />
+                  Demo'yu Dene
+                </Link>
+              )}
+              {isLoggedIn && (
+                <Link
+                  href="/login"
+                  className="btn btn-outline text-sm font-extrabold px-6 py-3.5 rounded-2xl hover:bg-[var(--color-surface-muted)] transition-all"
+                >
+                  Giriş Yap
+                </Link>
+              )}
+              {!isLoggedIn && (
+                <Link
+                  href="/login"
+                  className="btn btn-outline text-sm font-extrabold px-6 py-3.5 rounded-2xl hover:bg-[var(--color-surface-muted)] transition-all"
+                >
+                  Giriş Yap
+                </Link>
+              )}
             </div>
           </div>
 

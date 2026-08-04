@@ -49,12 +49,17 @@ export async function runDailyDigest(req: NextRequest) {
   const url = new URL(req.url);
   const isTest = url.searchParams.get("test") === "1" || url.searchParams.has("test");
 
-  // Canlı test modunda sadece admin kullanıcıları ile çalış
-  let users = await prisma.user.findMany(
-    isTest
-      ? { where: { email: { in: ADMIN_EMAILS } } }
-      : undefined
-  );
+  // Demo kullanıcılar günlük bültenden hariç tutulur (isDemo: true)
+  let users;
+  if (isTest) {
+    users = await prisma.user.findMany({
+      where: { email: { in: ADMIN_EMAILS }, isDemo: false },
+    });
+  } else {
+    users = await prisma.user.findMany({
+      where: { isDemo: false },
+    });
+  }
 
   if (users.length === 0) {
     users = await prisma.user.findMany({ take: 1 });

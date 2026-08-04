@@ -17,6 +17,7 @@ model User {
   password  String
   name      String?
   role      String   @default("USER")
+  isDemo    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
