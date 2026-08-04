@@ -243,35 +243,44 @@ export function computePositions(
 
   for (const [symbol, r] of bySymbol) {
     const open = r.qty > EPS;
+    const isBes = r.assetType === "BES" || symbol.toUpperCase() === "BES";
     const priceInfo = prices.get(symbol);
-    const marketHasPrice = !!priceInfo && Number.isFinite(priceInfo.priceTRY);
-    // Yeni eklenen veya fiyatı henüz güncellenmemiş enstrümanlarda
-    // portföy değerinin sıfır görünüp sahte zarar yazmaması için
-    // fiyatı olmayan tüm enstrümanları geçici olarak maliyet bedelinden değerliyoruz.
-    const valueAtCost = !marketHasPrice;
-    const hasPrice = marketHasPrice || valueAtCost;
-    const currentPriceTRY = marketHasPrice ? priceInfo!.priceTRY : null;
-    const currentPriceNative =
-      priceInfo?.native != null
+    // BES gibi sabit bakiyeli kalemlerde sahte kâr/zarar oluşmasını önlemek için
+    const validPrice = priceInfo && Number.isFinite(priceInfo.priceTRY) && (!isBes || priceInfo.priceTRY > 1.01);
+    const marketHasPrice = !!validPrice;
+    const valueAtCost = !marketHasPrice || isBes;
+    const hasPrice = true;
+
+    const currentPriceTRY = isBes
+      ? (open ? r.costTRY / r.qty : null)
+      : marketHasPrice
+        ? priceInfo!.priceTRY
+        : null;
+
+    const currentPriceNative = isBes
+      ? (open ? r.costNative / r.qty : null)
+      : (priceInfo?.native != null
         ? priceInfo.native
         : currentPriceTRY != null && r.currency === "USD"
           ? currentPriceTRY / (currentUsdTry || 1)
-          : currentPriceTRY;
+          : currentPriceTRY);
 
     const costTRY = r.costTRY;
     const costUSD = r.costUSD;
     const valueTRY = open
-      ? currentPriceTRY != null
-        ? r.qty * currentPriceTRY
-        : valueAtCost
-          ? costTRY
-          : 0
+      ? isBes
+        ? costTRY
+        : currentPriceTRY != null
+          ? r.qty * currentPriceTRY
+          : valueAtCost
+            ? costTRY
+            : 0
       : 0;
     const valueUSD = open
       ? (currentUsdTry ? valueTRY / currentUsdTry : 0)
       : 0;
-    const unrealizedTRY = open && marketHasPrice ? valueTRY - costTRY : 0;
-    const unrealizedUSD = open && marketHasPrice ? valueUSD - costUSD : 0;
+    const unrealizedTRY = open && !isBes && marketHasPrice ? valueTRY - costTRY : 0;
+    const unrealizedUSD = open && !isBes && marketHasPrice ? valueUSD - costUSD : 0;
 
     const prevPriceNative = priceInfo?.prevPriceNative ?? null;
     const dailyChangePct = (prevPriceNative !== null && prevPriceNative > 0 && currentPriceNative !== null)

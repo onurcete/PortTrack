@@ -203,6 +203,10 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
   // Override or inject user-specific manual prices
   for (const inst of instruments) {
     if (inst.manualPrice !== null && inst.manualPrice !== undefined) {
+      // BES gibi sabit bakiyeli kalemlerde varsayılan dummy 1 ₺ manuel fiyatını es geç
+      if ((inst.assetType === "BES" || inst.symbol.toUpperCase() === "BES") && inst.manualPrice <= 1) {
+        continue;
+      }
       const map = resolvePriceMapping(inst.assetType as AssetType, inst.symbol);
       const price = inst.manualPrice;
       const priceTRY = map.currency === "USD" ? price * currentUsdTry : price;

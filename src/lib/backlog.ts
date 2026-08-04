@@ -134,10 +134,16 @@ export async function upsertBesMonth(
     });
   }
 
-  // BES sembollü işlemin toplam fiyatını da güncelleyelim
+  // BES sembollü işlemin toplam ve birim fiyatını güncelleyelim
   await prisma.transaction.updateMany({
     where: { symbol: "BES", userId },
-    data: { total: besTRY },
+    data: { total: besTRY, unitPrice: besTRY, quantity: 1 },
+  });
+
+  // Instrument üzerindeki dummy manualPrice temizlensin
+  await prisma.instrument.updateMany({
+    where: { symbol: "BES", userId },
+    data: { manualPrice: null },
   });
 }
 

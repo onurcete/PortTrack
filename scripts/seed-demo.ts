@@ -112,7 +112,7 @@ async function main() {
     { symbol: "GUMUS", assetType: "METAL", priceSource: "yahoo", yahooSymbol: "SI=F", currency: "TRY" },
     { symbol: "BTC", assetType: "CRYPTO", priceSource: "yahoo", yahooSymbol: "BTC-USD", currency: "USD" },
     { symbol: "ETH", assetType: "CRYPTO", priceSource: "yahoo", yahooSymbol: "ETH-USD", currency: "USD" },
-    { symbol: "BES", assetType: "BES", priceSource: "manual", manualPrice: 1, currency: "TRY" },
+    { symbol: "BES", assetType: "BES", priceSource: "manual", manualPrice: null, currency: "TRY" },
   ];
 
   // Mevcut instruments temizle
