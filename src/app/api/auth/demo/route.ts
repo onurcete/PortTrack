@@ -8,25 +8,30 @@ const DEMO_EMAIL = "demo@porttrack.app";
 
 export async function GET(req: NextRequest) {
   try {
+    // Önce email ile bul (isDemo filtresi olmadan), sorun teşhisi için
     const demoUser = await prisma.user.findFirst({
-      where: { email: DEMO_EMAIL, isDemo: true },
-      select: { id: true, email: true, name: true },
+      where: { email: DEMO_EMAIL },
+      select: { id: true, email: true, name: true, isDemo: true },
     });
 
     if (!demoUser) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Demo hesabı henüz oluşturulmamış. Lütfen yönetici ile iletişime geçin.",
-        },
-        { status: 404 }
+      console.error("❌ Demo user bulunamadı:", DEMO_EMAIL);
+      return NextResponse.redirect(
+        new URL("/login?error=demo_not_found", req.url)
       );
+    }
+
+    if (!demoUser.isDemo) {
+      console.error("❌ Demo user isDemo=false:", demoUser.id);
+      // isDemo flag'i eksikse güncelle ve devam et
+      await prisma.user.update({
+        where: { id: demoUser.id },
+        data: { isDemo: true },
+      });
     }
 
     const token = await createSession(demoUser.id);
 
-    // Demo session için 2 saatlik kısa ömür yeterli
     const res = NextResponse.redirect(new URL("/", req.url));
     res.cookies.set(AUTH_COOKIE, token, {
       httpOnly: true,
@@ -36,11 +41,12 @@ export async function GET(req: NextRequest) {
       maxAge: 60 * 60 * 2, // 2 saat
     });
 
+    console.log("✅ Demo girişi başarılı:", demoUser.email);
     return res;
   } catch (err: any) {
-    console.error("❌ Demo Login Error:", err);
+    console.error("❌ Demo Login Error:", err?.message ?? err);
     return NextResponse.redirect(
-      new URL("/login?error=demo_failed", req.url)
+      new URL(`/login?error=demo_failed&msg=${encodeURIComponent(err?.message ?? "unknown")}`, req.url)
     );
   }
 }

@@ -90,13 +90,13 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
                 <ArrowRight size={16} />
               </Link>
               {!isLoggedIn && (
-                <Link
+                <a
                   href="/api/auth/demo"
                   className="inline-flex items-center gap-2 text-sm font-extrabold px-6 py-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/60 hover:bg-[var(--color-surface-muted)] hover:border-[var(--color-brand)]/40 text-[var(--color-foreground)] transition-all hover:scale-[1.01] active:scale-[0.98] shadow-sm"
                 >
                   <Zap size={15} className="text-[var(--color-brand)]" />
                   Demo'yu Dene
-                </Link>
+                </a>
               )}
               {isLoggedIn && (
                 <Link
