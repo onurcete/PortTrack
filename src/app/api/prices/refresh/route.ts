@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await backfillFxHistory();
-    const result = await refreshPrices();
+    const result = await refreshPrices({ force: true });
 
     await logSystemEvent({
       userId,

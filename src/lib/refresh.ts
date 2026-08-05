@@ -51,7 +51,8 @@ export interface RefreshResult {
 }
 
 /** Tum tutulan sembollerin guncel fiyatini ve USDTRY kurunu yeniler. */
-export async function refreshPrices(): Promise<RefreshResult> {
+export async function refreshPrices(options?: { force?: boolean }): Promise<RefreshResult> {
+  const force = options?.force ?? false;
   const today = startOfDay(new Date());
   const usdTry = await getUsdTryRate();
 
@@ -75,9 +76,9 @@ export async function refreshPrices(): Promise<RefreshResult> {
   const tefasSymbols = symbols.filter((s) => s.assetType === "TEFAS");
   const otherSymbols = symbols.filter((s) => s.assetType !== "TEFAS");
 
-  // TEFAS fiyati gunde bir kez degisir: bugunku snapshot'i olan fonlari atla
+  // TEFAS fonları: force=true ise veya atlama yapılmıyorsa her zaman güncellenir
   let pendingTefas = tefasSymbols;
-  if (tefasSymbols.length > 0) {
+  if (!force && tefasSymbols.length > 0) {
     const todays = await prisma.priceSnapshot.findMany({
       where: {
         date: today,
@@ -86,14 +87,14 @@ export async function refreshPrices(): Promise<RefreshResult> {
       select: { symbol: true },
     });
     const doneToday = new Set(todays.map((t) => t.symbol));
+    // Sadece force değilse atla
     pendingTefas = tefasSymbols.filter((s) => !doneToday.has(s.symbol));
-    updated += tefasSymbols.length - pendingTefas.length; // zaten guncel
+    updated += tefasSymbols.length - pendingTefas.length;
   }
 
-  // TEFAS toplu cekimini paralel baslat (hiz siniri nedeniyle uzun surer);
-  // Yahoo tabanli semboller bu sirada beklemeden guncellenir.
-  const tefasMapPromise = pendingTefas.length
-    ? fetchTefasLatestMap(new Set(pendingTefas.map((s) => s.symbol))).catch(
+  // TEFAS toplu çekimini paralel başlat
+  const tefasMapPromise = tefasSymbols.length
+    ? fetchTefasLatestMap(new Set(tefasSymbols.map((s) => s.symbol))).catch(
         () => new Map<string, { price: number; investors?: number }>(),
       )
     : null;
@@ -194,7 +195,7 @@ export async function refreshPrices(): Promise<RefreshResult> {
   // TEFAS fonlari — toplu harita hazir olunca
   if (tefasMapPromise) {
     const tefasMap = await tefasMapPromise;
-    await mapLimit(pendingTefas, 6, async ({ symbol, assetType }) => {
+    await mapLimit(tefasSymbols, 6, async ({ symbol, assetType }) => {
       try {
         const tInfo = tefasMap.get(symbol);
         if (tInfo) {
