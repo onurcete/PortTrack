@@ -225,6 +225,7 @@ export function resolvePriceMapping(
     }
 
     case "BES":
+      return { source: "tefas", tefasCode: s, currency: "TRY" };
     default:
       return { source: "manual", currency: "TRY" };
   }

@@ -13,6 +13,7 @@ import {
   type AllocationSlice,
 } from "./portfolio";
 import { resolvePriceMapping, type AssetType } from "./assets";
+import tefasCacheData from "./tefas_cache.json";
 
 const FALLBACK_USDTRY = 40;
 
@@ -79,6 +80,9 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
     bistCache = JSON.parse(bistRaw);
   } catch (e) {
     console.error("Error reading cache files for instrument names", e);
+  }
+  if (!tefasCache.length) {
+    tefasCache = tefasCacheData as { symbol: string; name: string }[];
   }
 
   const cacheMap = new Map<string, string>();

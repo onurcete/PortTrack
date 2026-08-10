@@ -13,6 +13,7 @@ import {
 import { resolveAssetType, ASSET_TYPES, type AssetType } from "@/lib/assets";
 import { resolveCurrentPriceTRY, getUsdTryRate } from "@/lib/prices";
 import { requireUser } from "@/lib/auth";
+import tefasCacheData from "@/lib/tefas_cache.json";
 
 const txSchema = z.object({
   date: z.string().min(1),
@@ -335,7 +336,8 @@ async function getCachedTefasFunds(): Promise<TefasCachedFund[]> {
     const stats = await fs.stat(TEFAS_CACHE_FILE);
     if (Date.now() - stats.mtimeMs < 3 * 24 * 60 * 60 * 1000) {
       const content = await fs.readFile(TEFAS_CACHE_FILE, "utf-8");
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch {
     // Cache geçersiz veya mevcut değil
@@ -367,56 +369,61 @@ async function getCachedTefasFunds(): Promise<TefasCachedFund[]> {
         fonUnvanTip: "",
       };
 
-      const res = await fetch("https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "*/*",
-          Origin: "https://www.tefas.gov.tr",
-          Referer: "https://www.tefas.gov.tr/tr/fon-verileri",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        },
-        body: JSON.stringify(body),
-      });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch("https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "*/*",
+              Origin: "https://www.tefas.gov.tr",
+              Referer: "https://www.tefas.gov.tr/tr/fon-verileri",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            },
+            body: JSON.stringify(body),
+          });
 
-      if (res.ok) {
-        const json = await res.json();
-        const resultList = json.resultList || [];
-        for (const row of resultList) {
-          if (row.fonKodu) {
-            funds.push({
-              symbol: row.fonKodu.trim().toUpperCase(),
-              name: row.fonUnvan ? row.fonUnvan.trim() : row.fonKodu,
-            });
+          if (res.status === 429) {
+            await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+            continue;
           }
+
+          if (res.ok) {
+            const json = await res.json();
+            const resultList = json.resultList || [];
+            for (const row of resultList) {
+              if (row.fonKodu) {
+                funds.push({
+                  symbol: row.fonKodu.trim().toUpperCase(),
+                  name: row.fonUnvan ? row.fonUnvan.trim() : row.fonKodu,
+                });
+              }
+            }
+            break;
+          }
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     if (funds.length > 0) {
-      await fs.mkdir(path.dirname(TEFAS_CACHE_FILE), { recursive: true });
-      await fs.writeFile(TEFAS_CACHE_FILE, JSON.stringify(funds, null, 2), "utf-8");
+      try {
+        await fs.mkdir(path.dirname(TEFAS_CACHE_FILE), { recursive: true });
+        await fs.writeFile(TEFAS_CACHE_FILE, JSON.stringify(funds, null, 2), "utf-8");
+      } catch {
+        // Ignored if disk writing fails
+      }
       return funds;
     }
   } catch (err) {
     console.error("Error fetching TEFAS funds list:", err);
   }
 
-  // Fallback popüler fonlar
-  return [
-    { symbol: "MAC", name: "Marmara Capital Portföy Hisse Senedi Fonu" },
-    { symbol: "TCD", name: "Tacirler Portföy Değişken Fon" },
-    { symbol: "GMR", name: "Garanti Portföy Hisse Senedi Fonu" },
-    { symbol: "TI1", name: "İş Portföy Hisse Senedi Fonu" },
-    { symbol: "IYZ", name: "İş Portföy Teknoloji Karma Fonu" },
-    { symbol: "AFT", name: "Ak Portföy Yeni Teknolojiler Yabancı Hisse Senedi Fonu" },
-    { symbol: "YAY", name: "Yapı Kredi Portföy Yabancı Teknoloji Sektörü Hisse Senedi Fonu" },
-    { symbol: "AAS", name: "Ata Portföy Fon Sepeti Fonu" },
-    { symbol: "TDF", name: "TEB Portföy Hisse Senedi Fonu" },
-    { symbol: "OPH", name: "Osmanlı Portföy Hisse Senedi Fonu" },
-  ];
+  // Fallback: Statik gömülü JSON önbelleği (2,461 fon, AH9 dahil)
+  return tefasCacheData as TefasCachedFund[];
 }
 
 interface BistCachedStock {
@@ -617,33 +624,40 @@ export async function searchSymbols(
     }
   }
 
-  // 4. Search TEFAS cached list
-  if (assetType === "TEFAS") {
+  // 4. Search TEFAS cached list (both for TEFAS and BES asset types)
+  if (assetType === "TEFAS" || assetType === "BES") {
     try {
       const tefasFunds = await getCachedTefasFunds();
-      const matches = tefasFunds.filter(
-        (f) =>
-          f.symbol.includes(normalizedQ) ||
-          normalizeTurkish(f.name.toUpperCase()).includes(normalizedQ)
-      );
+      const cleanQ = normalizedQ.replace(/[\s\-_]/g, "");
+
+      const matches = tefasFunds.filter((f) => {
+        const sym = f.symbol.toUpperCase();
+        const cleanSym = sym.replace(/[\s\-_]/g, "");
+        const normName = normalizeTurkish(f.name.toUpperCase());
+        return (
+          sym.includes(normalizedQ) ||
+          cleanSym.includes(cleanQ) ||
+          normName.includes(normalizedQ)
+        );
+      });
 
       for (const match of matches) {
         if (!results.some((r) => r.symbol === match.symbol)) {
           results.push({
             symbol: match.symbol,
             name: match.name,
-            assetType: "TEFAS",
+            assetType: assetType,
             source: "yahoo",
           });
         }
       }
 
-      // 3 harfli doğrudan kod araması için tam eşleşme yedeği (Örn: ALE)
+      // 3 harfli doğrudan kod araması için tam eşleşme yedeği (Örn: ALE, AH9)
       if (q.length === 3 && !results.some((r) => r.symbol === q)) {
         results.push({
           symbol: q,
           name: `${q} Fonu`,
-          assetType: "TEFAS",
+          assetType: assetType,
           source: "yahoo",
         });
       }
