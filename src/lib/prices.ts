@@ -270,7 +270,6 @@ export async function fetchTefasHistory(
 ): Promise<Array<PricePoint & { investors?: number }>> {
   const upper = code.toUpperCase();
   const points = new Map<string, { close: number; investors?: number }>();
-  const CHUNK = 28;
 
   // 1. Önce fon tipini 7 günlük test sorgusuyla anında tespit et (tek istek)
   let targetKind: TefasKind | null = null;
@@ -295,23 +294,17 @@ export async function fetchTefasHistory(
 
   const activeKinds = targetKind ? [targetKind] : TEFAS_KINDS;
 
+  // TEFAS API'si tek bir fon kodu (upper) verildiğinde tüm tarih aralığını TEK BİR istekte döndürür.
+  // 28 günlük parçalara bölmek 15+ istek atarak 429 Hız Sınırı engeline takılıyordu.
   for (const kind of activeKinds) {
-    let cur = new Date(from);
-    while (cur <= to) {
-      const chunkEnd = new Date(cur);
-      chunkEnd.setDate(chunkEnd.getDate() + CHUNK - 1);
-      const end = chunkEnd > to ? to : chunkEnd;
-      const rows = await tefasPost(kind, upper, cur, end);
-      for (const r of rows) {
-        if (r.fiyat != null && r.tarih) {
-          points.set(r.tarih, {
-            close: Number(r.fiyat),
-            investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
-          });
-        }
+    const rows = await tefasPost(kind, upper, from, to);
+    for (const r of rows) {
+      if (r.fiyat != null && r.tarih) {
+        points.set(r.tarih, {
+          close: Number(r.fiyat),
+          investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
+        });
       }
-      cur = new Date(end);
-      cur.setDate(cur.getDate() + 1);
     }
     if (points.size > 0) break;
   }

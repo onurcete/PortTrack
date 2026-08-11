@@ -330,96 +330,12 @@ const TEFAS_CACHE_FILE = path.join(process.cwd(), "src/lib/tefas_cache.json");
 
 async function getCachedTefasFunds(): Promise<TefasCachedFund[]> {
   try {
-    const stats = await fs.stat(TEFAS_CACHE_FILE);
-    if (Date.now() - stats.mtimeMs < 3 * 24 * 60 * 60 * 1000) {
-      const content = await fs.readFile(TEFAS_CACHE_FILE, "utf-8");
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
+    const content = await fs.readFile(TEFAS_CACHE_FILE, "utf-8");
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
   } catch {
-    // Cache geçersiz veya mevcut değil
+    // Disk önbelleği yoksa gömülü statik önbelleği dön (2,461 fon)
   }
-
-  try {
-    const funds: TefasCachedFund[] = [];
-    const kinds = ["YAT", "EMK", "BYF"];
-    const tradingDate = getRecentTradingDate();
-
-    for (const kind of kinds) {
-      const body = {
-        fonTipi: kind,
-        fonKodu: null,
-        aramaMetni: null,
-        fonTurKod: null,
-        fonGrubu: null,
-        sfonTurKod: null,
-        fonTurAciklama: null,
-        kurucuKod: null,
-        basTarih: tradingDate,
-        bitTarih: tradingDate,
-        basSira: 1,
-        bitSira: 100000,
-        dil: "TR",
-        sFonTurKod: "",
-        fonKod: "",
-        fonGrup: "",
-        fonUnvanTip: "",
-      };
-
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const res = await fetch("https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "*/*",
-              Origin: "https://www.tefas.gov.tr",
-              Referer: "https://www.tefas.gov.tr/tr/fon-verileri",
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            },
-            body: JSON.stringify(body),
-          });
-
-          if (res.status === 429) {
-            await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
-            continue;
-          }
-
-          if (res.ok) {
-            const json = await res.json();
-            const resultList = json.resultList || [];
-            for (const row of resultList) {
-              if (row.fonKodu) {
-                funds.push({
-                  symbol: row.fonKodu.trim().toUpperCase(),
-                  name: row.fonUnvan ? row.fonUnvan.trim() : row.fonKodu,
-                });
-              }
-            }
-            break;
-          }
-        } catch {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    if (funds.length > 0) {
-      try {
-        await fs.mkdir(path.dirname(TEFAS_CACHE_FILE), { recursive: true });
-        await fs.writeFile(TEFAS_CACHE_FILE, JSON.stringify(funds, null, 2), "utf-8");
-      } catch {
-        // Ignored if disk writing fails
-      }
-      return funds;
-    }
-  } catch (err) {
-    console.error("Error fetching TEFAS funds list:", err);
-  }
-
-  // Fallback: Statik gömülü JSON önbelleği (2,461 fon, AH9 dahil)
   return tefasCacheData as TefasCachedFund[];
 }
 
