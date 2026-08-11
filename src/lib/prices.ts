@@ -293,66 +293,64 @@ async function tefasPostRaw(
   return [];
 }
 
-/** Tek bir fonun gunluk fiyat gecmisi. */
+/** Tek bir fonun gunluk fiyat gecmisi (TEFAS 2026 New Endpoint: fonFiyatBilgiGetir). */
 export async function fetchTefasHistory(
   code: string,
   from: Date,
   to: Date = new Date(),
 ): Promise<Array<PricePoint & { investors?: number }>> {
   const upper = code.toUpperCase();
-  const points = new Map<string, { close: number; investors?: number }>();
+  const now = new Date();
+  const diffDays = Math.ceil((now.getTime() - from.getTime()) / (1000 * 3600 * 24));
 
-  // 1. Önce fon tipini 7 günlük test sorgusuyla anında tespit et (tek istek)
-  let targetKind: TefasKind | null = null;
-  const testEnd = new Date(to);
-  const testFrom = new Date(testEnd.getTime() - 7 * 86400000);
+  // TEFAS Periyod Kodlari: 1: 1 Ay, 3: 3 Ay, 6: 6 Ay, 12: 1 Yil, 36: 3 Yil, 60: 5 Yil
+  let periyod = 12;
+  if (diffDays <= 31) periyod = 1;
+  else if (diffDays <= 95) periyod = 3;
+  else if (diffDays <= 190) periyod = 6;
+  else if (diffDays <= 380) periyod = 12;
+  else if (diffDays <= 1100) periyod = 36;
+  else periyod = 60;
 
-  for (const kind of TEFAS_KINDS) {
-    const rows = await tefasPost(kind, upper, testFrom, testEnd);
-    if (rows.length > 0) {
-      targetKind = kind;
-      for (const r of rows) {
-        if (r.fiyat != null && r.tarih) {
-          points.set(r.tarih, {
+  try {
+    const res = await fetch("https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=UTF-8",
+        Accept: "application/json, text/plain, */*",
+        "X-Requested-With": "XMLHttpRequest",
+        Origin: "https://www.tefas.gov.tr",
+        Referer: "https://www.tefas.gov.tr/tr/fon-verileri",
+        "User-Agent": UA,
+      },
+      body: JSON.stringify({
+        fonKodu: upper,
+        dil: "TR",
+        periyod: periyod,
+      }),
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const rows: Array<{ tarih: string; fiyat: number; kisiSayisi?: number }> = json?.resultList ?? [];
+
+      if (rows.length > 0) {
+        return rows
+          .filter((r) => r.fiyat != null && r.tarih)
+          .map((r) => ({
+            date: new Date(r.tarih),
             close: Number(r.fiyat),
             investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
-          });
-        }
-      }
-      break;
-    }
-  }
-
-  const primaryKinds = targetKind ? [targetKind, ...TEFAS_KINDS.filter((k) => k !== targetKind)] : TEFAS_KINDS;
-  const CHUNK_DAYS = 90;
-
-  let cur = new Date(from);
-  while (cur <= to) {
-    const chunkEnd = new Date(cur);
-    chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS - 1);
-    const end = chunkEnd > to ? to : chunkEnd;
-
-    for (const kind of primaryKinds) {
-      const rows = await tefasPost(kind, upper, cur, end);
-      if (rows.length > 0) {
-        for (const r of rows) {
-          if (r.fiyat != null && r.tarih) {
-            points.set(r.tarih, {
-              close: Number(r.fiyat),
-              investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
-            });
-          }
-        }
-        break;
+          }))
+          .sort((a, b) => a.date.getTime() - b.date.getTime());
       }
     }
-    cur = new Date(end);
-    cur.setDate(cur.getDate() + 1);
+  } catch (e) {
+    console.error(`[TEFAS fonFiyatBilgiGetir Error for ${upper}]:`, e);
   }
 
-  return [...points.entries()]
-    .map(([date, item]) => ({ date: new Date(date), close: item.close, investors: item.investors }))
-    .sort((a, b) => a.date.getTime() - b.date.getTime());
+  return [];
 }
 
 /** Tek bir fonun guncel (son) fiyati. */
