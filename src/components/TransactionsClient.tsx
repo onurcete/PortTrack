@@ -1393,7 +1393,7 @@ function SymbolCombobox({
       } finally {
         setLoading(false);
       }
-    }, 400);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [inputValue, assetType, isOpen, portfolioSymbols]);
@@ -1432,6 +1432,17 @@ function SymbolCombobox({
     );
   }, [defaultSuggestions, inputValue]);
 
+  const matchingServerSuggestions = useMemo(() => {
+    if (!suggestions.length) return [];
+    if (!inputValue) return suggestions;
+    const cleanInput = inputValue.trim().toUpperCase();
+    return suggestions.filter(
+      (item) =>
+        item.symbol.includes(cleanInput) ||
+        item.name.toUpperCase().includes(cleanInput)
+    );
+  }, [suggestions, inputValue]);
+
   const allOptions = useMemo(() => {
     const list: Array<{ symbol: string; name: string; isPortfolio: boolean; isDefault: boolean }> = [];
     matchingPortfolioSymbols.forEach((p) => {
@@ -1442,13 +1453,26 @@ function SymbolCombobox({
         list.push({ symbol: d.symbol, name: d.name, isPortfolio: false, isDefault: true });
       }
     });
-    suggestions.forEach((s) => {
+    matchingServerSuggestions.forEach((s) => {
       if (!list.some(item => item.symbol === s.symbol)) {
         list.push({ symbol: s.symbol, name: s.name, isPortfolio: false, isDefault: false });
       }
     });
+
+    if (inputValue.trim().length >= 2) {
+      const cleanUpper = inputValue.trim().toUpperCase();
+      if (!list.some((item) => item.symbol === cleanUpper)) {
+        list.push({
+          symbol: cleanUpper,
+          name: `${cleanUpper} (İşleme Ekle)`,
+          isPortfolio: false,
+          isDefault: false,
+        });
+      }
+    }
+
     return list;
-  }, [matchingPortfolioSymbols, matchingDefaultSuggestions, suggestions]);
+  }, [matchingPortfolioSymbols, matchingDefaultSuggestions, matchingServerSuggestions, inputValue]);
 
   useEffect(() => {
     setActiveIndex(-1);

@@ -14,6 +14,7 @@ import { resolveAssetType, ASSET_TYPES, type AssetType } from "@/lib/assets";
 import { resolveCurrentPriceTRY, getUsdTryRate } from "@/lib/prices";
 import { requireUser } from "@/lib/auth";
 import tefasCacheData from "@/lib/tefas_cache.json";
+import bistCacheData from "@/lib/bist_cache.json";
 
 const txSchema = z.object({
   date: z.string().min(1),
@@ -347,49 +348,9 @@ interface BistCachedStock {
 const BIST_CACHE_FILE = path.join(process.cwd(), "src/lib/bist_cache.json");
 
 async function getCachedBistStocks(): Promise<BistCachedStock[]> {
-  try {
-    const stats = await fs.stat(BIST_CACHE_FILE);
-    // Cache is valid for 7 days
-    if (Date.now() - stats.mtimeMs < 7 * 24 * 60 * 60 * 1000) {
-      const content = await fs.readFile(BIST_CACHE_FILE, "utf-8");
-      return JSON.parse(content);
-    }
-  } catch {
-    // Cache doesn't exist or is invalid
+  if (Array.isArray(bistCacheData) && bistCacheData.length > 0) {
+    return bistCacheData as BistCachedStock[];
   }
-
-  try {
-    const res = await fetch("https://raw.githubusercontent.com/ahmeterenodaci/Istanbul-Stock-Exchange--BIST--including-symbols-and-logos/main/without_logo.csv");
-    if (res.ok) {
-      const text = await res.text();
-      const lines = text.split("\n");
-      const stocks: BistCachedStock[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        const lastCommaIndex = line.lastIndexOf(",");
-        if (lastCommaIndex !== -1) {
-          const name = line.substring(0, lastCommaIndex).trim();
-          const symbol = line.substring(lastCommaIndex + 1).trim().toUpperCase();
-          if (symbol) {
-            stocks.push({ symbol, name });
-          }
-        }
-      }
-
-      if (stocks.length > 0) {
-        await fs.mkdir(path.dirname(BIST_CACHE_FILE), { recursive: true });
-        await fs.writeFile(BIST_CACHE_FILE, JSON.stringify(stocks, null, 2), "utf-8");
-        return stocks;
-      }
-    }
-  } catch (err) {
-    console.error("Error fetching BIST stocks list:", err);
-  }
-
-  // Fallback popüler BIST hisseleri
   return [
     { symbol: "THYAO", name: "TÜRK HAVA YOLLARI A.O." },
     { symbol: "EREGL", name: "EREĞLİ DEMİR VE ÇELİK FABRİKALARI T.A.Ş." },
@@ -397,15 +358,7 @@ async function getCachedBistStocks(): Promise<BistCachedStock[]> {
     { symbol: "ASELS", name: "ASELSAN ELEKTRONİK SANAYİ VE TİCARET A.Ş." },
     { symbol: "GARAN", name: "T. GARANTİ BANKASI A.Ş." },
     { symbol: "AKBNK", name: "AKBANK T.A.Ş." },
-    { symbol: "YKBNK", name: "YAPI VE KREDİ BANKASI A.Ş." },
-    { symbol: "ISCTR", name: "T. İŞ BANKASI A.Ş." },
-    { symbol: "SAHOL", name: "HACI ÖMER SABANCI HOLDİNG A.Ş." },
-    { symbol: "KCHOL", name: "KOÇ HOLDİNG A.Ş." },
-    { symbol: "SASA", name: "SASA POLYESTER SANAYİ A.Ş." },
-    { symbol: "HEKTS", name: "HEKTAŞ TİCARET T.A.Ş." },
-    { symbol: "PETKM", name: "PETKİM PETROKİMYA HOLDİNG A.Ş." },
-    { symbol: "BIMAS", name: "BİM BİRLEŞİK MAĞAZALAR A.Ş." },
-    { symbol: "SISE", name: "TÜRKİYE ŞİŞE VE CAM FABRİKALARI A.Ş." },
+    { symbol: "AHGAZ", name: "AHLATCI DOĞAL GAZ DAĞITIM ENERJİ VE YATIRIM A.Ş." },
   ];
 }
 
@@ -442,8 +395,11 @@ export async function searchSymbols(
   if (assetType === "BIST") {
     try {
       const bistStocks = await getCachedBistStocks();
+      const cleanQ = normalizedQ.replace(/[\s\-_]/g, "");
+
       const matches = bistStocks.filter((s) => {
         const sym = s.symbol.toUpperCase();
+        const cleanSym = sym.replace(/[\s\-_]/g, "");
         const nameNormalized = normalizeTurkish(s.name.toUpperCase());
 
         // Özel kısaltma eşleşmeleri
@@ -453,6 +409,7 @@ export async function searchSymbols(
 
         return (
           sym.includes(normalizedQ) ||
+          cleanSym.includes(cleanQ) ||
           nameNormalized.includes(normalizedQ)
         );
       });
@@ -466,6 +423,16 @@ export async function searchSymbols(
             source: "yahoo",
           });
         }
+      }
+
+      // 2+ harfli doğrudan kod araması için tam eşleşme yedeği (Örn: AHGAZ, ASTOR)
+      if (q.length >= 2 && !results.some((r) => r.symbol === q)) {
+        results.push({
+          symbol: q,
+          name: `${q} Hissesi`,
+          assetType: "BIST",
+          source: "yahoo",
+        });
       }
     } catch (err) {
       console.error("Error searching BIST stocks:", err);
