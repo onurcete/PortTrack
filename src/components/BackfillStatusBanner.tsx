@@ -75,6 +75,8 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
       if (timerRef.current) clearTimeout(timerRef.current);
       window.removeEventListener("backfill-started", handleBackfillStarted);
     };
+  }, [router]);
+
   if (!active) return null;
 
   return (
