@@ -67,10 +67,12 @@ export async function createTransaction(
 
   const symbol = d.symbol.trim().toUpperCase();
 
+  const txDate = new Date(d.date);
+
   await prisma.transaction.create({
     data: {
       userId,
-      date: new Date(d.date),
+      date: txDate,
       assetType: d.assetType,
       symbol,
       side: d.side,
@@ -82,8 +84,45 @@ export async function createTransaction(
     },
   });
 
-  // İşlem veritabanına kaydedildi, sayfa verileri yenileniyor.
-  // Fiyat ve geçmiş veri güncellemeleri istemci tarafından asenkron arka planda tetiklenecek.
+  // Garanti Fiyat Snapshot'ı: İşlemdeki birim fiyatı anında priceSnapshot tablosuna ekle.
+  // Böylece TEFAS WAF engeli veya dış API gecikmesi olsa dahi Genel Bakış ve Performans sayfaları anında fiyat gösterir.
+  if (d.unitPrice > 0) {
+    const snapDay = new Date(Date.UTC(txDate.getFullYear(), txDate.getMonth(), txDate.getDate()));
+    const today = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+
+    await prisma.priceSnapshot.upsert({
+      where: { symbol_date: { symbol, date: snapDay } },
+      create: {
+        symbol,
+        date: snapDay,
+        close: d.unitPrice,
+        native: d.unitPrice,
+        nativeCurrency: d.currency || "TRY",
+        currency: "TRY",
+        source: "tx_init",
+      },
+      update: {
+        close: d.unitPrice,
+        native: d.unitPrice,
+      },
+    }).catch(() => null);
+
+    // Eğer işlem tarihi bugünden farklıysa, bugünün tarihi için de varsayılan olarak bu fiyatı taşı
+    await prisma.priceSnapshot.upsert({
+      where: { symbol_date: { symbol, date: today } },
+      create: {
+        symbol,
+        date: today,
+        close: d.unitPrice,
+        native: d.unitPrice,
+        nativeCurrency: d.currency || "TRY",
+        currency: "TRY",
+        source: "tx_init",
+      },
+      update: {},
+    }).catch(() => null);
+  }
+
   revalidateAll();
   return { ok: true };
 }
@@ -102,12 +141,15 @@ export async function updateTransaction(
       ? d.total
       : d.unitPrice * d.quantity;
 
+  const symbol = d.symbol.trim().toUpperCase();
+  const txDate = new Date(d.date);
+
   await prisma.transaction.updateMany({
     where: { id, userId },
     data: {
-      date: new Date(d.date),
+      date: txDate,
       assetType: d.assetType,
-      symbol: d.symbol.trim().toUpperCase(),
+      symbol,
       side: d.side,
       unitPrice: d.unitPrice,
       quantity: d.quantity,
@@ -116,6 +158,24 @@ export async function updateTransaction(
       note: d.note || null,
     },
   });
+
+  if (d.unitPrice > 0) {
+    const snapDay = new Date(Date.UTC(txDate.getFullYear(), txDate.getMonth(), txDate.getDate()));
+    await prisma.priceSnapshot.upsert({
+      where: { symbol_date: { symbol, date: snapDay } },
+      create: {
+        symbol,
+        date: snapDay,
+        close: d.unitPrice,
+        native: d.unitPrice,
+        nativeCurrency: d.currency || "TRY",
+        currency: "TRY",
+        source: "tx_init",
+      },
+      update: { close: d.unitPrice, native: d.unitPrice },
+    }).catch(() => null);
+  }
+
   revalidateAll();
   return { ok: true };
 }
