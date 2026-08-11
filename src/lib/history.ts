@@ -242,8 +242,7 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
 
   const fifteenMonthsAgo = new Date();
   fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15);
-  const txDate = new Date(earliestTx.date);
-  const firstDate = txDate < fifteenMonthsAgo ? fifteenMonthsAgo : txDate;
+  const firstDate = fifteenMonthsAgo;
   const ends = monthEnds(firstDate, new Date());
   if (ends.length === 0) return { processedSymbols: 0, snapshotsAdded: 0 };
 
