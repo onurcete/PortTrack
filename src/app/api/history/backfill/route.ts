@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { smartBackfillUserSymbols, backfillYahoo, backfillTefas } from "@/lib/history";
-import { backfillFxHistory } from "@/lib/refresh";
+import { backfillFxHistory, refreshPrices } from "@/lib/refresh";
 import { requireUser } from "@/lib/auth";
 
 import { setBackfillActive, setBackfillDone } from "@/lib/backfillState";
@@ -21,8 +21,12 @@ export async function POST(req: NextRequest) {
 
   try {
     if (mode === "smart") {
-      // Ultra-hızlı akıllı geçmiş doldurma (sadece eksik semboller için, ~1.5 sn)
-      const res = await smartBackfillUserSymbols(userId);
+      // Anlık fiyatları ve geçmiş verileri arka planda eşzamanlı yenile
+      const [res] = await Promise.all([
+        smartBackfillUserSymbols(userId),
+        refreshPrices().catch((err) => console.error("Auto refreshPrices in backfill error:", err)),
+      ]);
+
       return NextResponse.json({
         ok: true,
         mode: "smart",

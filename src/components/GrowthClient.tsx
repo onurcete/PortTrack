@@ -18,6 +18,7 @@ import {
   LabelList,
 } from "recharts";
 import { History, TrendingUp, BarChart2, Activity, Calendar, PieChart, DollarSign } from "lucide-react";
+import { BackfillStatusBanner } from "@/components/BackfillStatusBanner";
 import { updateBesBalance } from "@/app/growth/actions";
 import {
   BACKLOG_FULL_UNTIL_YEAR,
@@ -748,6 +749,8 @@ export function GrowthClient({
           </button>
         </div>
       </div>
+
+      <BackfillStatusBanner />
 
       {!hasData ? (
         <Card className="flex flex-col items-center justify-center gap-3 py-20 text-center">

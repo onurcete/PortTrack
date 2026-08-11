@@ -82,11 +82,8 @@ export async function createTransaction(
     },
   });
 
-  // 1. Önce güncel fiyatları yenile (Modal kapanmadan önce eşzamanlı çalışır)
-  await refreshPrices().catch((err) =>
-    console.error("Auto refreshPrices error on transaction create:", err)
-  );
-
+  // İşlem veritabanına kaydedildi, sayfa verileri yenileniyor.
+  // Fiyat ve geçmiş veri güncellemeleri istemci tarafından asenkron arka planda tetiklenecek.
   revalidateAll();
   return { ok: true };
 }

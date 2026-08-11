@@ -75,19 +75,19 @@ export function BackfillStatusBanner({ className }: { className?: string }) {
       if (timerRef.current) clearTimeout(timerRef.current);
       window.removeEventListener("backfill-started", handleBackfillStarted);
     };
-  }, [router]);
-
   if (!active) return null;
 
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold shadow-xs my-3",
+        "flex items-center gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold shadow-xs my-3 animate-pulse",
         className
       )}
     >
       <Clock size={16} className="animate-spin text-amber-500 shrink-0" />
-      <span>Yeni eklenen işlemlerinizin geçmiş fiyatları ve performans verileri güncelleniyor...</span>
+      <span>
+        <strong>⚡ İşlem kaydedildi!</strong> Güncel fiyatlar ve geçmiş veriler arka planda güncelleniyor... Bu sırada yeni işlem eklemeye kesintisiz devam edebilirsiniz.
+      </span>
     </div>
   );
 }
