@@ -186,7 +186,7 @@ interface TefasRow {
 }
 
 // --- TEFAS hiz sinirlayici ---
-const TEFAS_MIN_GAP_MS = 300;
+const TEFAS_MIN_GAP_MS = 1200;
 let tefasQueue: Promise<unknown> = Promise.resolve();
 let tefasLastAt = 0;
 
@@ -196,7 +196,7 @@ function sleep(ms: number) {
 
 /** TEFAS isteklerini sirayla ve aralikli calistirir. */
 function tefasEnqueue<T>(fn: () => Promise<T>): Promise<T> {
-  const run = tefasQueue.then(async () => {
+  const run = tefasQueue.catch(() => {}).then(async () => {
     const wait = TEFAS_MIN_GAP_MS - (Date.now() - tefasLastAt);
     if (wait > 0) await sleep(wait);
     try {
@@ -205,7 +205,7 @@ function tefasEnqueue<T>(fn: () => Promise<T>): Promise<T> {
       tefasLastAt = Date.now();
     }
   });
-  tefasQueue = run.catch(() => {});
+  tefasQueue = run;
   return run as Promise<T>;
 }
 
@@ -216,6 +216,31 @@ async function tefasPost(
   to: Date,
 ): Promise<TefasRow[]> {
   return tefasEnqueue(() => tefasPostRaw(kind, fonKodu, from, to));
+}
+
+let tefasCookieCache = "";
+let tefasCookieFetchedAt = 0;
+
+async function getTefasSessionCookie(): Promise<string> {
+  if (tefasCookieCache && Date.now() - tefasCookieFetchedAt < 5 * 60 * 1000) {
+    return tefasCookieCache;
+  }
+  try {
+    const res = await fetch("https://www.tefas.gov.tr/TarihselVeriler.aspx", {
+      headers: {
+        "User-Agent": UA,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+      },
+      cache: "no-store",
+    });
+    const setCookies = res.headers.getSetCookie ? res.headers.getSetCookie() : [res.headers.get("set-cookie") || ""];
+    tefasCookieCache = setCookies.map((c) => c.split(";")[0]).filter(Boolean).join("; ");
+    tefasCookieFetchedAt = Date.now();
+    return tefasCookieCache;
+  } catch {
+    return "";
+  }
 }
 
 async function tefasPostRaw(
@@ -233,30 +258,36 @@ async function tefasPostRaw(
     bitSira: 100000,
     dil: "TR",
   };
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
+      const cookieStr = await getTefasSessionCookie().catch(() => "");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json; charset=UTF-8",
+        Accept: "application/json, text/plain, */*",
+        "X-Requested-With": "XMLHttpRequest",
+        Origin: "https://www.tefas.gov.tr",
+        Referer: "https://www.tefas.gov.tr/TarihselVeriler.aspx",
+        "User-Agent": UA,
+        "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+      };
+      if (cookieStr) headers["Cookie"] = cookieStr;
+
       const res = await fetch(TEFAS_INFO_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "*/*",
-          Origin: "https://www.tefas.gov.tr",
-          Referer: "https://www.tefas.gov.tr/tr/fon-verileri",
-          "User-Agent": UA,
-        },
+        headers,
         body: JSON.stringify(body),
         cache: "no-store",
       });
       if (res.status === 429) {
-        // hiz siniri: bekle ve tekrar dene
-        await sleep(15000 + attempt * 10000);
+        tefasCookieFetchedAt = 0; // Cookie yenile
+        await sleep(2000 + attempt * 1000);
         continue;
       }
       if (!res.ok) return [];
       const json = (await res.json()) as { resultList?: TefasRow[] };
       return json?.resultList ?? [];
     } catch {
-      await sleep(3000);
+      await sleep(1000);
     }
   }
   return [];
@@ -292,29 +323,31 @@ export async function fetchTefasHistory(
     }
   }
 
-  const activeKinds = targetKind ? [targetKind] : TEFAS_KINDS;
-  const CHUNK_DAYS = 60;
+  const primaryKinds = targetKind ? [targetKind, ...TEFAS_KINDS.filter((k) => k !== targetKind)] : TEFAS_KINDS;
+  const CHUNK_DAYS = 90;
 
-  for (const kind of activeKinds) {
-    let cur = new Date(from);
-    while (cur <= to) {
-      const chunkEnd = new Date(cur);
-      chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS - 1);
-      const end = chunkEnd > to ? to : chunkEnd;
+  let cur = new Date(from);
+  while (cur <= to) {
+    const chunkEnd = new Date(cur);
+    chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS - 1);
+    const end = chunkEnd > to ? to : chunkEnd;
 
+    for (const kind of primaryKinds) {
       const rows = await tefasPost(kind, upper, cur, end);
-      for (const r of rows) {
-        if (r.fiyat != null && r.tarih) {
-          points.set(r.tarih, {
-            close: Number(r.fiyat),
-            investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
-          });
+      if (rows.length > 0) {
+        for (const r of rows) {
+          if (r.fiyat != null && r.tarih) {
+            points.set(r.tarih, {
+              close: Number(r.fiyat),
+              investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
+            });
+          }
         }
+        break;
       }
-      cur = new Date(end);
-      cur.setDate(cur.getDate() + 1);
     }
-    if (points.size > 0) break;
+    cur = new Date(end);
+    cur.setDate(cur.getDate() + 1);
   }
 
   return [...points.entries()]
