@@ -240,100 +240,73 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
 
   if (!earliestTx) return { processedSymbols: 0, snapshotsAdded: 0 };
 
-    const fifteenMonthsAgo = new Date();
-    fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15);
-    // Her zaman en az son 15 ayın tüm ay sonlarını kapsasın ki Performans/Büyüme sayfaları eksiksiz yüklensin
-    const firstDate = fifteenMonthsAgo;
-    const ends = monthEnds(firstDate, new Date());
-    if (ends.length === 0) return { processedSymbols: 0, snapshotsAdded: 0 };
+  const fifteenMonthsAgo = new Date();
+  fifteenMonthsAgo.setMonth(fifteenMonthsAgo.getMonth() - 15);
+  const txDate = new Date(earliestTx.date);
+  const firstDate = txDate < fifteenMonthsAgo ? fifteenMonthsAgo : txDate;
+  const ends = monthEnds(firstDate, new Date());
+  if (ends.length === 0) return { processedSymbols: 0, snapshotsAdded: 0 };
 
-    const txRows = await prisma.transaction.findMany({
-      where: txWhere,
-      select: { symbol: true, assetType: true },
+  const txRows = await prisma.transaction.findMany({
+    where: txWhere,
+    select: { symbol: true, assetType: true },
+  });
+
+  const symbolMap = new Map<string, AssetType>();
+  for (const r of txRows) {
+    if (!symbolMap.has(r.symbol)) {
+      symbolMap.set(r.symbol, r.assetType as AssetType);
+    }
+  }
+
+  const { fx } = await getFxLookupAndCurrent();
+  let processedSymbols = 0;
+  let snapshotsAdded = 0;
+
+  const entries = [...symbolMap.entries()];
+  await mapLimit(entries, 4, async ([symbol, assetType]) => {
+    const existingSnaps = await prisma.priceSnapshot.findMany({
+      where: {
+        symbol,
+        date: { in: ends },
+      },
+      select: { date: true },
     });
 
-    const symbolMap = new Map<string, AssetType>();
-    for (const r of txRows) {
-      if (!symbolMap.has(r.symbol)) {
-        symbolMap.set(r.symbol, r.assetType as AssetType);
+    const existingDates = new Set(existingSnaps.map((s) => s.date.toISOString().slice(0, 7)));
+    const missingEnds = ends.filter((e) => !existingDates.has(e.toISOString().slice(0, 7)));
+
+    // Eğer bu sembol için tüm aylar zaten mevcutsa HIÇBIR ŞEY YAPMA (0ms)!
+    if (missingEnds.length === 0) return;
+
+    processedSymbols++;
+    const mapping = resolvePriceMapping(assetType, symbol);
+
+    if (mapping.source === "tefas") {
+      // TEFAS fonu için tüm geçmişi hızlıca çek
+      const tefasHistory = await fetchTefasHistory(symbol, firstDate, new Date());
+      if (tefasHistory.length === 0) return;
+
+      for (const end of missingEnds) {
+        const p = lookupOnOrBefore(tefasHistory, end);
+        if (p == null || p <= 0) continue;
+
+        await prisma.priceSnapshot.upsert({
+          where: { symbol_date: { symbol, date: end } },
+          create: {
+            symbol,
+            date: end,
+            close: p,
+            native: p,
+            nativeCurrency: "TRY",
+            currency: "TRY",
+            source: "hist",
+          },
+          update: { close: p, native: p, nativeCurrency: "TRY" },
+        });
+        snapshotsAdded++;
       }
-    }
-
-    const { fx } = await getFxLookupAndCurrent();
-    let processedSymbols = 0;
-    let snapshotsAdded = 0;
-
-    const entries = [...symbolMap.entries()];
-    await mapLimit(entries, 4, async ([symbol, assetType]) => {
-      const existingSnaps = await prisma.priceSnapshot.findMany({
-        where: {
-          symbol,
-          date: { in: ends },
-        },
-        select: { date: true },
-      });
-
-      const existingDates = new Set(existingSnaps.map((s) => s.date.toISOString().slice(0, 7)));
-      const missingEnds = ends.filter((e) => !existingDates.has(e.toISOString().slice(0, 7)));
-
-      if (missingEnds.length === 0) return;
-
-      processedSymbols++;
-      const mapping = resolvePriceMapping(assetType, symbol);
-
-      if (mapping.source === "tefas") {
-        // TEFAS fonu için tüm geçmişi hızlıca çek
-        const tefasHistory = await fetchTefasHistory(symbol, firstDate, new Date()).catch(() => []);
-
-        if (tefasHistory.length === 0) {
-          // TEFAS WAF engeli veya ağ hatası durumunda fallback: Kullanıcının eklediği işlem fiyatını ay sonlarına taşı
-          const lastTx = await prisma.transaction.findFirst({
-            where: { symbol },
-            orderBy: { date: "desc" },
-            select: { unitPrice: true },
-          });
-
-          if (lastTx && lastTx.unitPrice > 0) {
-            for (const end of missingEnds) {
-              await prisma.priceSnapshot.upsert({
-                where: { symbol_date: { symbol, date: end } },
-                create: {
-                  symbol,
-                  date: end,
-                  close: lastTx.unitPrice,
-                  native: lastTx.unitPrice,
-                  nativeCurrency: "TRY",
-                  currency: "TRY",
-                  source: "fallback",
-                },
-                update: {},
-              });
-              snapshotsAdded++;
-            }
-          }
-          return;
-        }
-
-        for (const end of missingEnds) {
-          const p = lookupOnOrBefore(tefasHistory, end);
-          if (p == null || p <= 0) continue;
-
-          await prisma.priceSnapshot.upsert({
-            where: { symbol_date: { symbol, date: end } },
-            create: {
-              symbol,
-              date: end,
-              close: p,
-              native: p,
-              nativeCurrency: "TRY",
-              currency: "TRY",
-              source: "hist",
-            },
-            update: { close: p, native: p, nativeCurrency: "TRY" },
-          });
-          snapshotsAdded++;
-        }
-      } else if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
+    } else if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
       if (!mapping.yahooSymbol) return;
       const yahooHistory = await fetchYahooHistory(mapping.yahooSymbol, firstDate);
       if (yahooHistory.length === 0) return;

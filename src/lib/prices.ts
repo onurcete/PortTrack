@@ -186,7 +186,7 @@ interface TefasRow {
 }
 
 // --- TEFAS hiz sinirlayici ---
-const TEFAS_MIN_GAP_MS = 600;
+const TEFAS_MIN_GAP_MS = 300;
 let tefasQueue: Promise<unknown> = Promise.resolve();
 let tefasLastAt = 0;
 
@@ -233,32 +233,30 @@ async function tefasPostRaw(
     bitSira: 100000,
     dil: "TR",
   };
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     try {
       const res = await fetch(TEFAS_INFO_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json; charset=UTF-8",
-          Accept: "application/json, text/plain, */*",
-          "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/json",
+          Accept: "*/*",
           Origin: "https://www.tefas.gov.tr",
           Referer: "https://www.tefas.gov.tr/tr/fon-verileri",
           "User-Agent": UA,
-          "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
         },
         body: JSON.stringify(body),
         cache: "no-store",
       });
       if (res.status === 429) {
-        // Hız sınırı: bekle ve tekrar dene
-        await sleep(3000 + attempt * 2000);
+        // hiz siniri: bekle ve tekrar dene
+        await sleep(15000 + attempt * 10000);
         continue;
       }
       if (!res.ok) return [];
       const json = (await res.json()) as { resultList?: TefasRow[] };
       return json?.resultList ?? [];
     } catch {
-      await sleep(1500);
+      await sleep(3000);
     }
   }
   return [];
