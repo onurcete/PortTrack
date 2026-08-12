@@ -5,8 +5,10 @@ import {
   getUsdTryHistory,
   resolveCurrentPriceTRY,
   fetchTefasLatestMap,
+  fetchYahooQuoteMap,
+  type YahooQuoteData,
 } from "./prices";
-import type { AssetType } from "./assets";
+import { resolvePriceMapping, type AssetType } from "./assets";
 import { startOfDay } from "./utils";
 
 /** Sinirli es zamanlilik ile calistir. */
@@ -158,12 +160,17 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
   }
 
 
-  async function updateViaResolver(symbol: string, assetType: AssetType) {
+  async function updateViaResolver(
+    symbol: string,
+    assetType: AssetType,
+    preFetchedMap?: Map<string, YahooQuoteData>,
+  ) {
     const cp = await resolveCurrentPriceTRY(
       assetType,
       symbol,
       Number.isFinite(usdTry) ? usdTry : 1,
       manualMap.get(symbol),
+      preFetchedMap,
     );
     if (!cp || !Number.isFinite(cp.priceTRY)) {
       failed.push(symbol);
@@ -183,10 +190,18 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
     updated++;
   }
 
+  // Yahoo tabanlı tüm sembollerin fiyatlarını tek seferde toplu (batch) çek
+  const yahooSymbolsToFetch: string[] = [];
+  for (const { symbol, assetType } of otherSymbols) {
+    const m = resolvePriceMapping(assetType, symbol);
+    if (m.yahooSymbol) yahooSymbolsToFetch.push(m.yahooSymbol);
+  }
+  const preFetchedYahooMap = await fetchYahooQuoteMap(yahooSymbolsToFetch);
+
   // Yahoo tabanli semboller — TEFAS'i beklemeden hemen guncelle
-  await mapLimit(otherSymbols, 6, async ({ symbol, assetType }) => {
+  await mapLimit(otherSymbols, 10, async ({ symbol, assetType }) => {
     try {
-      await updateViaResolver(symbol, assetType);
+      await updateViaResolver(symbol, assetType, preFetchedYahooMap);
     } catch {
       failed.push(symbol);
     }

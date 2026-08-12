@@ -121,6 +121,70 @@ async function getCurrencyTryRate(
   return val;
 }
 
+export interface YahooQuoteData {
+  price: number;
+  currency: string;
+  prevPrice?: number | null;
+  prevDate?: Date | null;
+}
+
+const YAHOO_QUOTE = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=";
+
+/**
+ * Yahoo Finance toplu (batch) quote cekimi.
+ * Tek bir HTTP isteginde cok sayida sembolun guncel fiyatini ve onceki kapanisini ceker.
+ */
+export async function fetchYahooQuoteMap(
+  symbols: string[],
+): Promise<Map<string, YahooQuoteData>> {
+  const result = new Map<string, YahooQuoteData>();
+  if (!symbols || symbols.length === 0) return result;
+
+  const uniqueSymbols = Array.from(new Set(symbols.map((s) => s.trim()).filter(Boolean)));
+  const CHUNK_SIZE = 45;
+  const chunks: string[][] = [];
+  for (let i = 0; i < uniqueSymbols.length; i += CHUNK_SIZE) {
+    chunks.push(uniqueSymbols.slice(i, i + CHUNK_SIZE));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        const url = `${YAHOO_QUOTE}${encodeURIComponent(chunk.join(","))}`;
+        const res = await fetch(url, {
+          headers: { "User-Agent": UA, Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          quoteResponse?: {
+            result?: Array<{
+              symbol?: string;
+              regularMarketPrice?: number;
+              regularMarketPreviousClose?: number;
+              currency?: string;
+            }>;
+          };
+        };
+        const list = json?.quoteResponse?.result || [];
+        for (const item of list) {
+          if (item.symbol && typeof item.regularMarketPrice === "number" && item.regularMarketPrice > 0) {
+            result.set(item.symbol, {
+              price: item.regularMarketPrice,
+              currency: item.currency || "USD",
+              prevPrice: typeof item.regularMarketPreviousClose === "number" ? item.regularMarketPreviousClose : null,
+            });
+          }
+        }
+      } catch {
+        /* fallback upstream */
+      }
+    }),
+  );
+
+  return result;
+}
+
 /** Yahoo guncel fiyat (kendi para biriminde). */
 export async function fetchYahooQuote(
   symbol: string,
@@ -466,6 +530,7 @@ export async function resolveCurrentPriceTRY(
   symbol: string,
   usdTry: number,
   manualPrice?: number | null,
+  preFetchedMap?: Map<string, YahooQuoteData>,
 ): Promise<CurrentPrice | null> {
   const map = resolvePriceMapping(assetType, symbol);
 
@@ -484,7 +549,7 @@ export async function resolveCurrentPriceTRY(
   }
 
   if (!map.yahooSymbol) return null;
-  const q = await fetchYahooQuote(map.yahooSymbol);
+  const q = preFetchedMap?.get(map.yahooSymbol) ?? (await fetchYahooQuote(map.yahooSymbol));
   if (!q) return null;
 
   let price = q.price;
