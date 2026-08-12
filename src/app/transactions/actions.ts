@@ -250,7 +250,7 @@ function transactionFingerprint(row: {
 }
 
 async function upsertImportedInstruments(
-  rows: ParsedCsvTransaction[],
+  rows: Array<{ symbol: string; assetType: AssetType; currency: string }>,
   userId: string,
 ) {
   const seen = new Set<string>();
