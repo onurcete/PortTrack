@@ -14,7 +14,7 @@ export function Modal({
   onClose: () => void;
   title: string;
   children: ReactNode;
-  size?: "md" | "lg" | "xl" | "2xl";
+  size?: "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -31,6 +31,8 @@ export function Modal({
     lg: "sm:max-w-2xl",
     xl: "sm:max-w-4xl",
     "2xl": "sm:max-w-5xl",
+    "3xl": "sm:max-w-[1400px]",
+    full: "sm:max-w-[96vw]",
   };
 
   return (

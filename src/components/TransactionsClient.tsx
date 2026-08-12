@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Modal } from "./Modal";
 import { Badge } from "./ui";
+import { ModernDatePicker } from "./ModernDatePicker";
 import { BackfillStatusBanner, triggerBackfillBanner } from "./BackfillStatusBanner";
 import {
   CsvImportPreview,
@@ -593,7 +594,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? "İşlemi Düzenle" : modalMode === "bulk" ? "Toplu İşlem Girişi (Grid)" : "Yeni İşlem Ekle"}
-        size={modalMode === "bulk" && !editing ? "2xl" : "md"}
+        size={modalMode === "bulk" && !editing ? "3xl" : "md"}
       >
         <TransactionForm
           editing={editing}
@@ -1171,13 +1172,12 @@ function BulkTransactionGrid({
                       />
                     </td>
 
-                    {/* Tarih */}
+                    {/* Tarih (Modern Custom Date Picker) */}
                     <td className="py-2 px-1">
-                      <input
-                        type="date"
+                      <ModernDatePicker
                         value={row.date}
-                        onChange={(e) => updateRow(row.id, "date", e.target.value)}
-                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] cursor-pointer text-[var(--color-foreground)] [color-scheme:dark]"
+                        onChange={(newDate) => updateRow(row.id, "date", newDate)}
+                        compact
                       />
                     </td>
 
@@ -1640,25 +1640,13 @@ function TransactionForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Tarih */}
         <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
-              İşlem Tarihi
-            </label>
-            <button
-              type="button"
-              onClick={() => setDateInput(new Date().toISOString().slice(0, 10))}
-              className="text-[10px] font-bold text-[var(--color-brand-strong)] hover:underline cursor-pointer"
-            >
-              Bugünü Seç
-            </button>
-          </div>
-          <input
-            type="date"
-            name="date"
-            required
+          <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+            İşlem Tarihi
+          </label>
+          <input type="hidden" name="date" value={dateInput} />
+          <ModernDatePicker
             value={dateInput}
-            onChange={(e) => setDateInput(e.target.value)}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]"
+            onChange={(newDate) => setDateInput(newDate)}
           />
         </div>
 
