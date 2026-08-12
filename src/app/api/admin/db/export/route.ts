@@ -17,32 +17,52 @@ export async function GET(req: NextRequest) {
     };
 
     if (!table) {
-      // TÜM VERİTABANINI DIŞA AKTAR
-      // Bütün tabloları sorgula
+      // TÜM VERİTABANINI DIŞA AKTAR (Tam Yedekleme Paketi)
       const tablesList = await prisma.$queryRaw<Array<{ table_name: string }>>`
         SELECT table_name 
         FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name != '_prisma_migrations';
       `;
 
       const fullDb: Record<string, any[]> = {};
+      const tableCounts: Record<string, number> = {};
+      let totalRecords = 0;
+
       for (const t of tablesList) {
         const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM "${t.table_name}"`);
         fullDb[t.table_name] = rows;
+        tableCounts[t.table_name] = rows.length;
+        totalRecords += rows.length;
       }
 
-      const jsonString = JSON.stringify(fullDb, jsonReplacer, 2);
-      
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10);
+      const timeStr = now.toTimeString().slice(0, 5).replace(":", "");
+      const filename = `porttrack_full_backup_${dateStr}_${timeStr}.json`;
+
+      const backupPackage = {
+        metadata: {
+          app: "PortTrack",
+          version: "1.0",
+          exportedAt: now.toISOString(),
+          tablesCount: tablesList.length,
+          totalRecords,
+          tables: tableCounts,
+        },
+        data: fullDb,
+      };
+
+      const jsonString = JSON.stringify(backupPackage, jsonReplacer, 2);
+
       return new NextResponse(jsonString, {
         headers: {
-          "Content-Type": "application/json",
-          "Content-Disposition": "attachment; filename=porttrack_full_database.json",
+          "Content-Type": "application/json; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${filename}"`,
         },
       });
     }
 
     // TEKİL TABLO DIŞA AKTAR
-    // Güvenlik: Sadece public şemasındaki var olan bir tablo ismini çalıştır
     const checkTable = await prisma.$queryRawUnsafe<any[]>(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
       table
@@ -56,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     return new NextResponse(jsonString, {
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=utf-8",
         "Content-Disposition": `attachment; filename=porttrack_table_${table}.json`,
       },
     });

@@ -37,6 +37,8 @@ import {
   Lightbulb,
   Bug,
   HelpCircle,
+  Upload,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -176,6 +178,53 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
   const [feedbackTypeFilter, setFeedbackTypeFilter] = useState<string>("ALL");
   const [updatingFeedbackId, setUpdatingFeedbackId] = useState<string | null>(null);
+
+  // DB Restore Modal State
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoreMode, setRestoreMode] = useState<"overwrite" | "merge">("overwrite");
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  async function handleRestoreSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!restoreFile) return;
+    setIsRestoring(true);
+    setRestoreMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", restoreFile);
+
+      const res = await fetch(`/api/admin/db/restore?mode=${restoreMode}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setRestoreMessage({
+          type: "success",
+          text: data.message || "Veritabanı yedeği başarıyla yüklendi ve sistem güncellendi.",
+        });
+        setTimeout(() => {
+          router.refresh();
+        }, 1800);
+      } else {
+        setRestoreMessage({
+          type: "error",
+          text: data.error || "Geri yükleme işlemi sırasında hata oluştu.",
+        });
+      }
+    } catch (err: any) {
+      setRestoreMessage({
+        type: "error",
+        text: err?.message || "Sunucuyla bağlantı kurulurken hata oluştu.",
+      });
+    } finally {
+      setIsRestoring(false);
+    }
+  }
 
   async function fetchFeedbacks() {
     setLoadingFeedbacks(true);
@@ -845,15 +894,45 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
           {/* TAB 2: Veritabanı Detayları (Tablo İstatistikleri & Şemaları) */}
           {activeTab === "tables" && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold text-[var(--color-text)]">Veritabanı Tablo Metrikleri & Şema Yapısı</h2>
-                <a
-                  href="/api/admin/db/export"
-                  download="porttrack_full_database.json"
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[var(--color-brand)] hover:bg-[var(--color-brand-strong)] text-white text-xs font-bold transition-colors shadow-sm"
-                >
-                  <Download size={15} /> tüm Veritabanını İndir (JSON)
-                </a>
+              {/* Afet Kurtarma & Veritabanı Yedekleme Kartı */}
+              <div className="rounded-2xl border border-[var(--color-brand)]/30 bg-gradient-to-r from-[var(--color-surface)] via-[var(--color-surface)] to-[var(--color-brand)]/10 p-6 shadow-sm">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Database className="text-[var(--color-brand)]" size={20} />
+                      <h2 className="text-base font-extrabold text-[var(--color-text)]">
+                        Veritabanı Tam Yedekleme & Afet Kurtarma (Disaster Recovery)
+                      </h2>
+                    </div>
+                    <p className="text-xs text-[var(--color-muted)] max-w-3xl leading-relaxed">
+                      Veritabanınızın tüm tablo verilerini (Kullanıcılar, İşlemler, Portföy Bakiyeleri, Fiyat Geçmişleri, Notlar) tek tıkla yapılandırılmış JSON formatında indirin veya olası bir veri kaybında yedeğinizden tam sistem geri yüklemesi yapın.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <a
+                      href="/api/admin/db/export"
+                      download="porttrack_full_database.json"
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--color-brand)] hover:bg-[var(--color-brand-strong)] text-white text-xs font-bold transition-all shadow-md hover:shadow-lg"
+                    >
+                      <Download size={16} /> Tüm Veritabanını İndir (JSON)
+                    </a>
+                    <button
+                      onClick={() => {
+                        setIsRestoreModalOpen(true);
+                        setRestoreFile(null);
+                        setRestoreMessage(null);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition-all"
+                    >
+                      <Upload size={16} /> Yedekten Geri Yükle (Restore)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <h2 className="text-base font-semibold text-[var(--color-text)]">Tablo Metrikleri & Şema Yapısı</h2>
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {dbTables.map((table) => (
@@ -1569,6 +1648,106 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                 Kapat
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* YEDEKTEN GERİ YÜKLEME MODAL'I */}
+      {isRestoreModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+              <div className="flex items-center gap-2.5 text-amber-400">
+                <AlertTriangle size={20} />
+                <h3 className="font-bold text-base text-[var(--color-text)]">Veritabanını Yedekten Geri Yükle</h3>
+              </div>
+              <button
+                onClick={() => setIsRestoreModalOpen(false)}
+                className="p-1 rounded-lg text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-300 leading-relaxed space-y-1">
+              <span className="font-bold block">⚠️ DİKKAT: KURTARMA İŞLEMİ UYARISI</span>
+              <p>
+                Yedek dosyası içe aktarıldığında veritabanı tablolarınız seçtiğiniz moda göre güncellenecektir. Yanlış veri yüklemesini önlemek için mevcut yedeğinizi indirdiğinizden emin olun.
+              </p>
+            </div>
+
+            <form onSubmit={handleRestoreSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-[var(--color-text)]">
+                  JSON Yedek Dosyası Seçin (.json)
+                </label>
+                <input
+                  type="file"
+                  accept=".json"
+                  required
+                  onChange={(e) => setRestoreFile(e.target.files?.[0] || null)}
+                  className="w-full text-xs text-[var(--color-text)] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[var(--color-brand)] file:text-white hover:file:bg-[var(--color-brand-strong)] cursor-pointer"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-[var(--color-text)]">
+                  Geri Yükleme Modu
+                </label>
+                <select
+                  value={restoreMode}
+                  onChange={(e) => setRestoreMode(e.target.value as "overwrite" | "merge")}
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3.5 py-2.5 text-xs text-[var(--color-text)] font-medium outline-none focus:border-[var(--color-brand)]"
+                >
+                  <option value="overwrite">
+                    Tam Üzerine Yaz (Mevcut verileri temizle & Yedeği yükle - Felaket Kurtarma)
+                  </option>
+                  <option value="merge">
+                    Çakışmayanları Ekle (Mevcut verileri koru, sadece eksik kayıtları ekle)
+                  </option>
+                </select>
+              </div>
+
+              {restoreMessage && (
+                <div
+                  className={cn(
+                    "p-3 rounded-xl text-xs font-semibold flex items-center gap-2",
+                    restoreMessage.type === "success"
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                      : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                  )}
+                >
+                  {restoreMessage.type === "success" ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                  <span>{restoreMessage.text}</span>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsRestoreModalOpen(false)}
+                  disabled={isRestoring}
+                  className="px-4 py-2 rounded-xl bg-[var(--color-bg)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)] font-bold text-xs transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!restoreFile || isRestoring}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-extrabold text-xs transition-colors shadow-md"
+                >
+                  {isRestoring ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" /> Yükleniyor & Geri Yükleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={15} /> Yedeği Geri Yükle
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
