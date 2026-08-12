@@ -19,6 +19,9 @@ import {
   FileText,
   ScanSearch,
   GitCompareArrows,
+  Copy,
+  Zap,
+  Table,
 } from "lucide-react";
 import { Modal } from "./Modal";
 import { Badge } from "./ui";
@@ -38,12 +41,14 @@ import { formatDate, formatNumber, formatMoney, cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import {
   createTransaction,
+  createBulkTransactions,
   updateTransaction,
   deleteTransaction,
   confirmCsvImport,
   previewCsvImport,
   searchSymbols,
   getSymbolPrice,
+  type BulkTxItemInput,
 } from "@/app/transactions/actions";
 
 export interface TxDTO {
@@ -583,7 +588,8 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? "İşlemi Düzenle" : "Yeni İşlem"}
+        title={editing ? "İşlemi Düzenle" : "Yeni İşlem Ekle"}
+        size="2xl"
       >
         <TransactionForm
           editing={editing}
@@ -884,6 +890,424 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   );
 }
 
+interface BulkRow {
+  id: string;
+  assetType: AssetType;
+  side: "BUY" | "SELL";
+  symbol: string;
+  date: string;
+  currency: "TRY" | "USD";
+  quantity: string;
+  unitPrice: string;
+  note: string;
+  fetchingPrice?: boolean;
+}
+
+function createDefaultBulkRow(): BulkRow {
+  return {
+    id: Math.random().toString(36).substring(2, 9),
+    assetType: "BIST",
+    side: "BUY",
+    symbol: "",
+    date: new Date().toISOString().slice(0, 10),
+    currency: "TRY",
+    quantity: "",
+    unitPrice: "",
+    note: "",
+  };
+}
+
+function BulkTransactionGrid({
+  transactions,
+  onDone,
+}: {
+  transactions: TxDTO[];
+  onDone: () => void;
+}) {
+  const [rows, setRows] = useState<BulkRow[]>([
+    createDefaultBulkRow(),
+    createDefaultBulkRow(),
+    createDefaultBulkRow(),
+  ]);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function updateRow(id: string, field: keyof BulkRow, val: any) {
+    setRows((prev) =>
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        const updated = { ...row, [field]: val };
+        if (field === "assetType") {
+          updated.currency = val === "FOREIGN" ? "USD" : "TRY";
+        }
+        if (field === "symbol") {
+          updated.symbol = String(val).toUpperCase().replace(/\.IS$/, "").replace(/-USD$/, "");
+        }
+        return updated;
+      })
+    );
+  }
+
+  async function fetchPriceForRow(id: string) {
+    const row = rows.find((r) => r.id === id);
+    if (!row || !row.symbol) return;
+
+    updateRow(id, "fetchingPrice", true);
+    try {
+      const res = await getSymbolPrice(row.symbol, row.assetType);
+      if (res && res.price) {
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === id
+              ? {
+                  ...r,
+                  unitPrice: String(res.price),
+                  currency: res.currency,
+                  fetchingPrice: false,
+                }
+              : r
+          )
+        );
+      } else {
+        updateRow(id, "fetchingPrice", false);
+      }
+    } catch {
+      updateRow(id, "fetchingPrice", false);
+    }
+  }
+
+  function addRow() {
+    setRows((prev) => [...prev, createDefaultBulkRow()]);
+  }
+
+  function duplicateRow(id: string) {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    const cloned = { ...row, id: Math.random().toString(36).substring(2, 9) };
+    const idx = rows.findIndex((r) => r.id === id);
+    const newRows = [...rows];
+    newRows.splice(idx + 1, 0, cloned);
+    setRows(newRows);
+  }
+
+  function removeRow(id: string) {
+    if (rows.length <= 1) return;
+    setRows((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  function handleSubmit() {
+    setError(null);
+    const validRows = rows.filter(
+      (r) => r.symbol.trim() !== "" && parseFloat(r.quantity) > 0 && parseFloat(r.unitPrice) > 0
+    );
+
+    if (validRows.length === 0) {
+      setError("Lütfen en az 1 satır için geçerli Sembol, Adet ve Birim Fiyat girin.");
+      return;
+    }
+
+    startTransition(async () => {
+      const payload: BulkTxItemInput[] = validRows.map((r) => ({
+        date: r.date,
+        assetType: r.assetType,
+        symbol: r.symbol.trim().toUpperCase(),
+        side: r.side,
+        unitPrice: parseFloat(r.unitPrice),
+        quantity: parseFloat(r.quantity),
+        total: parseFloat(r.quantity) * parseFloat(r.unitPrice),
+        currency: r.currency,
+        note: r.note.trim() || undefined,
+      }));
+
+      const res = await createBulkTransactions(payload);
+      if (res.ok) {
+        onDone();
+        triggerBackfillBanner();
+        fetch("/api/history/backfill?mode=smart", { method: "POST" }).catch(() => null);
+      } else {
+        setError(res.message || "Toplu kaydetme sırasında hata oluştu.");
+      }
+    });
+  }
+
+  const validCount = rows.filter(
+    (r) => r.symbol.trim() !== "" && parseFloat(r.quantity) > 0 && parseFloat(r.unitPrice) > 0
+  ).length;
+
+  const totalEstimateTRY = rows.reduce((sum, r) => {
+    const q = parseFloat(r.quantity) || 0;
+    const p = parseFloat(r.unitPrice) || 0;
+    return sum + (r.currency === "TRY" ? q * p : 0);
+  }, 0);
+
+  const totalEstimateUSD = rows.reduce((sum, r) => {
+    const q = parseFloat(r.quantity) || 0;
+    const p = parseFloat(r.unitPrice) || 0;
+    return sum + (r.currency === "USD" ? q * p : 0);
+  }, 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Grid Table Container */}
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
+        <div className="max-h-[460px] overflow-y-auto overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] font-extrabold uppercase tracking-wider text-[10px] sticky top-0 z-10 backdrop-blur-md">
+                <th className="py-2.5 px-2 text-center w-8">#</th>
+                <th className="py-2.5 px-3 min-w-[110px]">Varlık Türü</th>
+                <th className="py-2.5 px-3 w-[100px]">Yön</th>
+                <th className="py-2.5 px-3 min-w-[110px]">Sembol</th>
+                <th className="py-2.5 px-3 min-w-[125px]">Tarih</th>
+                <th className="py-2.5 px-2 w-[75px]">Birimi</th>
+                <th className="py-2.5 px-3 min-w-[90px] text-right">Adet</th>
+                <th className="py-2.5 px-3 min-w-[110px] text-right">Birim Fiyat</th>
+                <th className="py-2.5 px-3 min-w-[100px] text-right">Toplam</th>
+                <th className="py-2.5 px-3 min-w-[110px]">Not</th>
+                <th className="py-2.5 px-2 text-center w-16">İşlem</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border)]/60 font-medium">
+              {rows.map((row, idx) => {
+                const q = parseFloat(row.quantity) || 0;
+                const p = parseFloat(row.unitPrice) || 0;
+                const total = q * p;
+                const isRowValid = row.symbol.trim() !== "" && q > 0 && p > 0;
+
+                return (
+                  <tr
+                    key={row.id}
+                    className={cn(
+                      "transition-colors hover:bg-[var(--color-surface-muted)]/40",
+                      isRowValid ? "bg-emerald-500/[0.02]" : ""
+                    )}
+                  >
+                    {/* Index */}
+                    <td className="py-2 px-2 text-center font-bold text-[var(--color-muted)]">
+                      {idx + 1}
+                    </td>
+
+                    {/* Varlık Türü */}
+                    <td className="py-2 px-2">
+                      <select
+                        value={row.assetType}
+                        onChange={(e) => updateRow(row.id, "assetType", e.target.value as AssetType)}
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] cursor-pointer"
+                      >
+                        {ASSET_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {ASSET_META[t].label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Yön (BUY / SELL) */}
+                    <td className="py-2 px-2">
+                      <div className="grid grid-cols-2 gap-0.5 bg-[var(--color-surface-muted)] p-0.5 rounded-lg border border-[var(--color-border)]/60">
+                        <button
+                          type="button"
+                          onClick={() => updateRow(row.id, "side", "BUY")}
+                          className={cn(
+                            "py-1 text-[10px] font-black rounded transition-all cursor-pointer text-center",
+                            row.side === "BUY"
+                              ? "bg-[var(--color-profit)] text-white shadow-2xs"
+                              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                          )}
+                        >
+                          ALIŞ
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateRow(row.id, "side", "SELL")}
+                          className={cn(
+                            "py-1 text-[10px] font-black rounded transition-all cursor-pointer text-center",
+                            row.side === "SELL"
+                              ? "bg-[var(--color-loss)] text-white shadow-2xs"
+                              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                          )}
+                        >
+                          SATIŞ
+                        </button>
+                      </div>
+                    </td>
+
+                    {/* Sembol */}
+                    <td className="py-2 px-2">
+                      <input
+                        type="text"
+                        value={row.symbol}
+                        onChange={(e) => updateRow(row.id, "symbol", e.target.value)}
+                        placeholder="THYAO, MAC..."
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2.5 py-1.5 text-xs font-extrabold uppercase outline-none focus:border-[var(--color-brand)]"
+                      />
+                    </td>
+
+                    {/* Tarih */}
+                    <td className="py-2 px-2">
+                      <input
+                        type="date"
+                        value={row.date}
+                        onChange={(e) => updateRow(row.id, "date", e.target.value)}
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)]"
+                      />
+                    </td>
+
+                    {/* Para Birimi */}
+                    <td className="py-2 px-1">
+                      <select
+                        value={row.currency}
+                        onChange={(e) => updateRow(row.id, "currency", e.target.value as "TRY" | "USD")}
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-1.5 py-1.5 text-xs font-extrabold outline-none focus:border-[var(--color-brand)] cursor-pointer"
+                      >
+                        <option value="TRY">₺ TRY</option>
+                        <option value="USD">$ USD</option>
+                      </select>
+                    </td>
+
+                    {/* Adet */}
+                    <td className="py-2 px-2">
+                      <input
+                        type="number"
+                        step="any"
+                        value={row.quantity}
+                        onChange={(e) => updateRow(row.id, "quantity", e.target.value)}
+                        placeholder="0.00"
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2.5 py-1.5 text-xs font-bold tabular-nums text-right outline-none focus:border-[var(--color-brand)]"
+                      />
+                    </td>
+
+                    {/* Birim Fiyat */}
+                    <td className="py-2 px-2">
+                      <div className="relative flex items-center">
+                        <input
+                          type="number"
+                          step="any"
+                          value={row.unitPrice}
+                          onChange={(e) => updateRow(row.id, "unitPrice", e.target.value)}
+                          placeholder="0.00"
+                          className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] pl-2.5 pr-7 py-1.5 text-xs font-bold tabular-nums text-right outline-none focus:border-[var(--color-brand)]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => fetchPriceForRow(row.id)}
+                          disabled={!row.symbol || row.fetchingPrice}
+                          title="Canlı Fiyat Getir"
+                          className="absolute right-1 text-[var(--color-brand-strong)] hover:text-[var(--color-brand)] disabled:opacity-30 p-1 cursor-pointer"
+                        >
+                          <Zap size={13} className={cn(row.fetchingPrice && "animate-spin")} />
+                        </button>
+                      </div>
+                    </td>
+
+                    {/* Tahmini Toplam */}
+                    <td className="py-2 px-3 text-right font-extrabold tabular-nums text-[var(--color-foreground)]">
+                      {total > 0 ? `${formatNumber(total, 2)} ${curSym(row.currency)}` : "-"}
+                    </td>
+
+                    {/* Not */}
+                    <td className="py-2 px-2">
+                      <input
+                        type="text"
+                        value={row.note}
+                        onChange={(e) => updateRow(row.id, "note", e.target.value)}
+                        placeholder="Açıklama..."
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-medium outline-none focus:border-[var(--color-brand)]"
+                      />
+                    </td>
+
+                    {/* Aksiyonlar */}
+                    <td className="py-2 px-1 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => duplicateRow(row.id)}
+                          title="Satırı Kopyala"
+                          className="p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer"
+                        >
+                          <Copy size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeRow(row.id)}
+                          disabled={rows.length <= 1}
+                          title="Satırı Sil"
+                          className="p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-loss)] hover:bg-[var(--color-loss-soft)] disabled:opacity-30 transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Add Row Bar */}
+        <div className="p-2.5 border-t border-[var(--color-border)]/70 bg-[var(--color-surface-muted)]/30 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={addRow}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--color-brand-soft)] hover:bg-[var(--color-brand)]/20 text-[var(--color-brand-strong)] text-xs font-extrabold transition-all cursor-pointer border border-[var(--color-brand)]/30"
+          >
+            <Plus size={14} /> Yeni Satır Ekle
+          </button>
+
+          <span className="text-[11px] font-bold text-[var(--color-muted)]">
+            Toplam {rows.length} satırdan {validCount} adedi dolduruldu
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-xs font-bold text-[var(--color-loss)] bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">
+          {error}
+        </p>
+      )}
+
+      {/* Summary Footer & Action Button */}
+      <div className="p-4 bg-gradient-to-br from-[var(--color-brand-soft)]/20 to-[var(--color-surface-muted)]/30 border border-[var(--color-brand)]/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+            Toplu İşlem Özeti
+          </span>
+          <div className="text-sm font-black text-[var(--color-foreground)] mt-0.5 flex items-center gap-3">
+            <span>{validCount} Geçerli Satır</span>
+            {totalEstimateTRY > 0 && (
+              <span className="text-[var(--color-brand-strong)]">
+                ₺{formatNumber(totalEstimateTRY, 2)}
+              </span>
+            )}
+            {totalEstimateUSD > 0 && (
+              <span className="text-emerald-500">
+                ${formatNumber(totalEstimateUSD, 2)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={pending || validCount === 0}
+          className="w-full sm:w-auto btn btn-primary text-xs py-2.5 px-6 font-extrabold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50"
+        >
+          {pending ? (
+            <span className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              {validCount} İşlem Kaydediliyor...
+            </span>
+          ) : (
+            `${validCount} Adet İşlemi Kaydet`
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TransactionForm({
   editing,
   transactions,
@@ -893,6 +1317,7 @@ function TransactionForm({
   transactions: TxDTO[];
   onDone: () => void;
 }) {
+  const [formMode, setFormMode] = useState<"single" | "bulk">("single");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [assetType, setAssetType] = useState<AssetType>(
@@ -1041,7 +1466,40 @@ function TransactionForm({
   const computedTotal = parsedQty * parsedPrice;
 
   return (
-    <form action={submit} className="space-y-5">
+    <div className="space-y-5">
+      {!editing && (
+        <div className="grid grid-cols-2 gap-2 bg-[var(--color-surface-muted)]/60 p-1.5 rounded-2xl border border-[var(--color-border)]/60">
+          <button
+            type="button"
+            onClick={() => setFormMode("single")}
+            className={cn(
+              "py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
+              formMode === "single"
+                ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-xs border border-[var(--color-border)]/70"
+                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+            )}
+          >
+            <Plus size={14} /> Tekil İşlem Ekle
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormMode("bulk")}
+            className={cn(
+              "py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
+              formMode === "bulk"
+                ? "bg-[var(--color-brand)] text-white shadow-xs"
+                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+            )}
+          >
+            <Table size={14} /> Toplu İşlem Gir (Grid)
+          </button>
+        </div>
+      )}
+
+      {formMode === "bulk" && !editing ? (
+        <BulkTransactionGrid transactions={transactions} onDone={onDone} />
+      ) : (
+        <form action={submit} className="space-y-5">
       {/* 1. İşlem Yönü Segmented Switcher (Alış / Satış) */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
@@ -1299,6 +1757,8 @@ function TransactionForm({
         </button>
       </div>
     </form>
+      )}
+    </div>
   );
 }
 

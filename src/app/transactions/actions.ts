@@ -89,6 +89,99 @@ export async function createTransaction(
   return { ok: true };
 }
 
+export interface BulkTxItemInput {
+  date: string;
+  assetType: AssetType;
+  symbol: string;
+  side: "BUY" | "SELL";
+  unitPrice: number;
+  quantity: number;
+  total?: number;
+  currency: "TRY" | "USD";
+  note?: string;
+}
+
+export interface BulkActionResult extends ActionResult {
+  count?: number;
+}
+
+export async function createBulkTransactions(
+  items: BulkTxItemInput[],
+): Promise<BulkActionResult> {
+  const userId = await requireUser();
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return { ok: false, message: "Kaydedilecek en az 1 geçerli işlem girilmelidir." };
+  }
+
+  const validTransactions: Array<{
+    userId: string;
+    date: Date;
+    assetType: AssetType;
+    symbol: string;
+    side: "BUY" | "SELL";
+    unitPrice: number;
+    quantity: number;
+    total: number;
+    currency: string;
+    note: string | null;
+  }> = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const raw = items[i];
+    const parsed = txSchema.safeParse(raw);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message: `${i + 1}. satırdaki veriler geçersiz (Lütfen sembol, adet ve birim fiyatı kontrol edin).`,
+      };
+    }
+    const d = parsed.data;
+    const total =
+      d.total && Number.isFinite(d.total) && d.total > 0
+        ? d.total
+        : d.unitPrice * d.quantity;
+    const symbol = d.symbol.trim().toUpperCase();
+
+    validTransactions.push({
+      userId,
+      date: new Date(d.date),
+      assetType: d.assetType,
+      symbol,
+      side: d.side,
+      unitPrice: d.unitPrice,
+      quantity: d.quantity,
+      total,
+      currency: d.currency,
+      note: d.note || null,
+    });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.transaction.createMany({
+      data: validTransactions,
+    });
+  });
+
+  await upsertImportedInstruments(
+    validTransactions.map((t) => ({
+      date: t.date,
+      assetType: t.assetType,
+      symbol: t.symbol,
+      side: t.side,
+      unitPrice: t.unitPrice,
+      quantity: t.quantity,
+      total: t.total,
+      currency: t.currency,
+      note: t.note || undefined,
+    })),
+    userId,
+  ).catch((err) => console.error("Error upserting bulk instruments:", err));
+
+  revalidateAll();
+  return { ok: true, count: validTransactions.length };
+}
+
 export async function updateTransaction(
   id: string,
   formData: FormData,
