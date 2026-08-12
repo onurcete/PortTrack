@@ -203,12 +203,16 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
     XLSX.writeFile(workbook, `porttrack_transactions_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  const [modalMode, setModalMode] = useState<"single" | "bulk">("single");
+
   function openNew() {
     setEditing(null);
+    setModalMode("single");
     setModalOpen(true);
   }
   function openEdit(tx: TxDTO) {
     setEditing(tx);
+    setModalMode("single");
     setModalOpen(true);
   }
 
@@ -588,12 +592,14 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? "İşlemi Düzenle" : "Yeni İşlem Ekle"}
-        size="2xl"
+        title={editing ? "İşlemi Düzenle" : modalMode === "bulk" ? "Toplu İşlem Girişi (Grid)" : "Yeni İşlem Ekle"}
+        size={modalMode === "bulk" && !editing ? "2xl" : "md"}
       >
         <TransactionForm
           editing={editing}
           transactions={transactions}
+          formMode={modalMode}
+          onFormModeChange={setModalMode}
           onDone={() => {
             setModalOpen(false);
             triggerBackfillBanner();
@@ -940,34 +946,54 @@ function BulkTransactionGrid({
         if (field === "assetType") {
           updated.currency = val === "FOREIGN" ? "USD" : "TRY";
         }
-        if (field === "symbol") {
-          updated.symbol = String(val).toUpperCase().replace(/\.IS$/, "").replace(/-USD$/, "");
-        }
         return updated;
       })
     );
   }
 
-  async function fetchPriceForRow(id: string) {
-    const row = rows.find((r) => r.id === id);
-    if (!row || !row.symbol) return;
+  function updateRowMultiple(id: string, updates: Partial<BulkRow>) {
+    setRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...updates } : row))
+    );
+  }
 
-    updateRow(id, "fetchingPrice", true);
+  async function handleRowSymbolSelect(id: string, selectedSym: string) {
+    if (!selectedSym) return;
+    const cleanSym = selectedSym.trim().toUpperCase().replace(/\.IS$/, "").replace(/-USD$/, "");
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+
+    let targetType = row.assetType;
+    let targetCurrency = row.currency;
+
+    const historyMatch = transactions.find(
+      (t) => t.symbol.toUpperCase().replace(/\.IS$/, "") === cleanSym
+    );
+    if (historyMatch) {
+      targetType = historyMatch.assetType;
+      targetCurrency = historyMatch.currency as "TRY" | "USD";
+    } else if (selectedSym.toUpperCase().endsWith(".IS")) {
+      targetType = "BIST";
+      targetCurrency = "TRY";
+    } else if (targetType === "FOREIGN") {
+      targetCurrency = "USD";
+    }
+
+    updateRowMultiple(id, {
+      symbol: cleanSym,
+      assetType: targetType,
+      currency: targetCurrency,
+      fetchingPrice: true,
+    });
+
     try {
-      const res = await getSymbolPrice(row.symbol, row.assetType);
+      const res = await getSymbolPrice(cleanSym, targetType);
       if (res && res.price) {
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === id
-              ? {
-                  ...r,
-                  unitPrice: String(res.price),
-                  currency: res.currency,
-                  fetchingPrice: false,
-                }
-              : r
-          )
-        );
+        updateRowMultiple(id, {
+          unitPrice: String(res.price),
+          currency: res.currency,
+          fetchingPrice: false,
+        });
       } else {
         updateRow(id, "fetchingPrice", false);
       }
@@ -1054,17 +1080,17 @@ function BulkTransactionGrid({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] font-extrabold uppercase tracking-wider text-[10px] sticky top-0 z-10 backdrop-blur-md">
-                <th className="py-2.5 px-2 text-center w-8">#</th>
-                <th className="py-2.5 px-3 min-w-[110px]">Varlık Türü</th>
-                <th className="py-2.5 px-3 w-[100px]">Yön</th>
-                <th className="py-2.5 px-3 min-w-[110px]">Sembol</th>
-                <th className="py-2.5 px-3 min-w-[125px]">Tarih</th>
-                <th className="py-2.5 px-2 w-[75px]">Birimi</th>
-                <th className="py-2.5 px-3 min-w-[90px] text-right">Adet</th>
-                <th className="py-2.5 px-3 min-w-[110px] text-right">Birim Fiyat</th>
-                <th className="py-2.5 px-3 min-w-[100px] text-right">Toplam</th>
-                <th className="py-2.5 px-3 min-w-[110px]">Not</th>
-                <th className="py-2.5 px-2 text-center w-16">İşlem</th>
+                <th className="py-2.5 px-2 text-center w-7">#</th>
+                <th className="py-2.5 px-2 min-w-[105px]">Varlık Türü</th>
+                <th className="py-2.5 px-2 w-[70px] text-center">Yön</th>
+                <th className="py-2.5 px-2 min-w-[130px]">Sembol</th>
+                <th className="py-2.5 px-2 min-w-[120px]">Tarih</th>
+                <th className="py-2.5 px-2 w-[65px] text-center">Birim</th>
+                <th className="py-2.5 px-2 min-w-[85px] text-right">Adet</th>
+                <th className="py-2.5 px-2 min-w-[105px] text-right">Birim Fiyat</th>
+                <th className="py-2.5 px-2 min-w-[95px] text-right">Toplam</th>
+                <th className="py-2.5 px-2 min-w-[100px]">Not</th>
+                <th className="py-2.5 px-1 text-center w-14">İşlem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]/60 font-medium">
@@ -1088,11 +1114,11 @@ function BulkTransactionGrid({
                     </td>
 
                     {/* Varlık Türü */}
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-1">
                       <select
                         value={row.assetType}
                         onChange={(e) => updateRow(row.id, "assetType", e.target.value as AssetType)}
-                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] cursor-pointer"
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-1.5 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] cursor-pointer"
                       >
                         {ASSET_TYPES.map((t) => (
                           <option key={t} value={t}>
@@ -1102,8 +1128,8 @@ function BulkTransactionGrid({
                       </select>
                     </td>
 
-                    {/* Yön (BUY / SELL) */}
-                    <td className="py-2 px-2">
+                    {/* Yön (AL / SAT) */}
+                    <td className="py-2 px-1">
                       <div className="grid grid-cols-2 gap-0.5 bg-[var(--color-surface-muted)] p-0.5 rounded-lg border border-[var(--color-border)]/60">
                         <button
                           type="button"
@@ -1115,7 +1141,7 @@ function BulkTransactionGrid({
                               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                           )}
                         >
-                          ALIŞ
+                          AL
                         </button>
                         <button
                           type="button"
@@ -1127,58 +1153,78 @@ function BulkTransactionGrid({
                               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                           )}
                         >
-                          SATIŞ
+                          SAT
                         </button>
                       </div>
                     </td>
 
-                    {/* Sembol */}
-                    <td className="py-2 px-2">
-                      <input
-                        type="text"
+                    {/* Sembol (Combobox Autocomplete) */}
+                    <td className="py-2 px-1">
+                      <SymbolCombobox
                         value={row.symbol}
-                        onChange={(e) => updateRow(row.id, "symbol", e.target.value)}
-                        placeholder="THYAO, MAC..."
-                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2.5 py-1.5 text-xs font-extrabold uppercase outline-none focus:border-[var(--color-brand)]"
+                        onChange={(val) => updateRow(row.id, "symbol", val)}
+                        onSelect={(selectedSym) => handleRowSymbolSelect(row.id, selectedSym)}
+                        assetType={row.assetType}
+                        transactions={transactions}
+                        placeholder="Sembol..."
+                        inputClassName="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-extrabold uppercase outline-none focus:border-[var(--color-brand)]"
                       />
                     </td>
 
                     {/* Tarih */}
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-1">
                       <input
                         type="date"
                         value={row.date}
                         onChange={(e) => updateRow(row.id, "date", e.target.value)}
-                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)]"
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] cursor-pointer text-[var(--color-foreground)] [color-scheme:dark]"
                       />
                     </td>
 
-                    {/* Para Birimi */}
+                    {/* Para Birimi (Segmented Toggle ₺ / $) */}
                     <td className="py-2 px-1">
-                      <select
-                        value={row.currency}
-                        onChange={(e) => updateRow(row.id, "currency", e.target.value as "TRY" | "USD")}
-                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-1.5 py-1.5 text-xs font-extrabold outline-none focus:border-[var(--color-brand)] cursor-pointer"
-                      >
-                        <option value="TRY">₺ TRY</option>
-                        <option value="USD">$ USD</option>
-                      </select>
+                      <div className="grid grid-cols-2 gap-0.5 bg-[var(--color-surface-muted)] p-0.5 rounded-lg border border-[var(--color-border)]/60">
+                        <button
+                          type="button"
+                          onClick={() => updateRow(row.id, "currency", "TRY")}
+                          className={cn(
+                            "py-1 text-[10px] font-black rounded transition-all cursor-pointer text-center",
+                            row.currency === "TRY"
+                              ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
+                              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                          )}
+                        >
+                          ₺
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateRow(row.id, "currency", "USD")}
+                          className={cn(
+                            "py-1 text-[10px] font-black rounded transition-all cursor-pointer text-center",
+                            row.currency === "USD"
+                              ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
+                              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                          )}
+                        >
+                          $
+                        </button>
+                      </div>
                     </td>
 
                     {/* Adet */}
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-1">
                       <input
                         type="number"
                         step="any"
                         value={row.quantity}
                         onChange={(e) => updateRow(row.id, "quantity", e.target.value)}
                         placeholder="0.00"
-                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2.5 py-1.5 text-xs font-bold tabular-nums text-right outline-none focus:border-[var(--color-brand)]"
+                        className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-bold tabular-nums text-right outline-none focus:border-[var(--color-brand)]"
                       />
                     </td>
 
                     {/* Birim Fiyat */}
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-1">
                       <div className="relative flex items-center">
                         <input
                           type="number"
@@ -1186,32 +1232,28 @@ function BulkTransactionGrid({
                           value={row.unitPrice}
                           onChange={(e) => updateRow(row.id, "unitPrice", e.target.value)}
                           placeholder="0.00"
-                          className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] pl-2.5 pr-7 py-1.5 text-xs font-bold tabular-nums text-right outline-none focus:border-[var(--color-brand)]"
+                          className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] pl-2 pr-6 py-1.5 text-xs font-bold tabular-nums text-right outline-none focus:border-[var(--color-brand)]"
                         />
-                        <button
-                          type="button"
-                          onClick={() => fetchPriceForRow(row.id)}
-                          disabled={!row.symbol || row.fetchingPrice}
-                          title="Canlı Fiyat Getir"
-                          className="absolute right-1 text-[var(--color-brand-strong)] hover:text-[var(--color-brand)] disabled:opacity-30 p-1 cursor-pointer"
-                        >
-                          <Zap size={13} className={cn(row.fetchingPrice && "animate-spin")} />
-                        </button>
+                        {row.fetchingPrice && (
+                          <span className="absolute right-1.5 text-[var(--color-brand-strong)] flex items-center">
+                            <span className="w-3 h-3 border-2 border-[var(--color-brand)] border-t-transparent rounded-full animate-spin"></span>
+                          </span>
+                        )}
                       </div>
                     </td>
 
                     {/* Tahmini Toplam */}
-                    <td className="py-2 px-3 text-right font-extrabold tabular-nums text-[var(--color-foreground)]">
+                    <td className="py-2 px-2 text-right font-extrabold tabular-nums text-[var(--color-foreground)]">
                       {total > 0 ? `${formatNumber(total, 2)} ${curSym(row.currency)}` : "-"}
                     </td>
 
                     {/* Not */}
-                    <td className="py-2 px-2">
+                    <td className="py-2 px-1">
                       <input
                         type="text"
                         value={row.note}
                         onChange={(e) => updateRow(row.id, "note", e.target.value)}
-                        placeholder="Açıklama..."
+                        placeholder="Not..."
                         className="w-full rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg)] px-2 py-1.5 text-xs font-medium outline-none focus:border-[var(--color-brand)]"
                       />
                     </td>
@@ -1225,7 +1267,7 @@ function BulkTransactionGrid({
                           title="Satırı Kopyala"
                           className="p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer"
                         >
-                          <Copy size={13} />
+                          <Copy size={12} />
                         </button>
                         <button
                           type="button"
@@ -1234,7 +1276,7 @@ function BulkTransactionGrid({
                           title="Satırı Sil"
                           className="p-1 rounded text-[var(--color-muted)] hover:text-[var(--color-loss)] hover:bg-[var(--color-loss-soft)] disabled:opacity-30 transition-colors cursor-pointer"
                         >
-                          <Trash2 size={13} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -1311,13 +1353,16 @@ function BulkTransactionGrid({
 function TransactionForm({
   editing,
   transactions,
+  formMode,
+  onFormModeChange,
   onDone,
 }: {
   editing: TxDTO | null;
   transactions: TxDTO[];
+  formMode: "single" | "bulk";
+  onFormModeChange: (mode: "single" | "bulk") => void;
   onDone: () => void;
 }) {
-  const [formMode, setFormMode] = useState<"single" | "bulk">("single");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [assetType, setAssetType] = useState<AssetType>(
@@ -1471,7 +1516,7 @@ function TransactionForm({
         <div className="grid grid-cols-2 gap-2 bg-[var(--color-surface-muted)]/60 p-1.5 rounded-2xl border border-[var(--color-border)]/60">
           <button
             type="button"
-            onClick={() => setFormMode("single")}
+            onClick={() => onFormModeChange("single")}
             className={cn(
               "py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
               formMode === "single"
@@ -1483,7 +1528,7 @@ function TransactionForm({
           </button>
           <button
             type="button"
-            onClick={() => setFormMode("bulk")}
+            onClick={() => onFormModeChange("bulk")}
             className={cn(
               "py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
               formMode === "bulk"
@@ -1776,6 +1821,7 @@ function SymbolCombobox({
   assetType,
   transactions,
   placeholder,
+  inputClassName,
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -1783,6 +1829,7 @@ function SymbolCombobox({
   assetType: AssetType;
   transactions: TxDTO[];
   placeholder?: string;
+  inputClassName?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -2001,7 +2048,7 @@ function SymbolCombobox({
         placeholder={placeholder}
         required
         autoComplete="off"
-        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)]"
+        className={inputClassName || "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)]"}
       />
 
       {isOpen && (allOptions.length > 0 || loading) && (
