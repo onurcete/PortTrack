@@ -1077,7 +1077,7 @@ function BulkTransactionGrid({
     <div className="space-y-4">
       {/* Grid Table Container */}
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
-        <div className="max-h-[460px] overflow-y-auto overflow-x-auto">
+        <div className="max-h-[480px] overflow-x-auto overflow-y-auto pb-44">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]/50 text-[var(--color-muted)] font-extrabold uppercase tracking-wider text-[10px] sticky top-0 z-10 backdrop-blur-md">
@@ -1104,6 +1104,7 @@ function BulkTransactionGrid({
                 return (
                   <tr
                     key={row.id}
+                    style={{ position: "relative", zIndex: 100 - idx }}
                     className={cn(
                       "transition-colors hover:bg-[var(--color-surface-muted)]/40",
                       isRowValid ? "bg-emerald-500/[0.02]" : ""
@@ -1188,7 +1189,7 @@ function BulkTransactionGrid({
                           type="button"
                           onClick={() => updateRow(row.id, "currency", "TRY")}
                           className={cn(
-                            "py-1 text-[10px] font-black rounded transition-all cursor-pointer text-center",
+                            "py-1 px-1 text-xs sm:text-sm font-black rounded transition-all cursor-pointer text-center",
                             row.currency === "TRY"
                               ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
                               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
@@ -1200,7 +1201,7 @@ function BulkTransactionGrid({
                           type="button"
                           onClick={() => updateRow(row.id, "currency", "USD")}
                           className={cn(
-                            "py-1 text-[10px] font-black rounded transition-all cursor-pointer text-center",
+                            "py-1 px-1 text-xs sm:text-sm font-black rounded transition-all cursor-pointer text-center",
                             row.currency === "USD"
                               ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
                               : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
@@ -2040,7 +2041,7 @@ function SymbolCombobox({
       />
 
       {isOpen && (allOptions.length > 0 || loading) && (
-        <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto border border-[var(--color-border)] bg-[var(--color-surface)] rounded-xl shadow-lg z-50 py-1 divide-y divide-[var(--color-border)]">
+        <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto border border-[var(--color-border)] bg-[var(--color-surface)] rounded-xl shadow-2xl z-[999] py-1 divide-y divide-[var(--color-border)]">
           {allOptions.some(o => o.isPortfolio) && (
             <div className="py-1">
               <div className="px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] bg-[var(--color-surface-muted)]/30">

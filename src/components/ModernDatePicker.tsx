@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Calendar, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MONTH_NAMES = [
@@ -10,6 +10,9 @@ const MONTH_NAMES = [
 ];
 
 const DAY_NAMES = ["Pz", "Pt", "Sa", "Ça", "Pe", "Cu", "Ct"];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - 15 + i);
 
 export function ModernDatePicker({
   value,
@@ -80,7 +83,6 @@ export function ModernDatePicker({
     // Current month days
     for (let d = 1; d <= totalDays; d++) {
       const cDate = new Date(year, month, d);
-      // Format YYYY-MM-DD manually to prevent timezone shifts
       const yyyy = cDate.getFullYear();
       const mm = String(cDate.getMonth() + 1).padStart(2, "0");
       const dd = String(d).padStart(2, "0");
@@ -147,7 +149,7 @@ export function ModernDatePicker({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "w-full flex items-center justify-between gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-bold text-[var(--color-foreground)] outline-none focus:border-[var(--color-brand)] cursor-pointer transition-all hover:bg-[var(--color-surface-hover)]",
+          "w-full flex items-center justify-between gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-bold text-[var(--color-foreground)] outline-none focus:border-[var(--color-brand)] cursor-pointer transition-all hover:bg-[var(--color-surface-hover)]",
           compact && "px-2 py-1.5 rounded-lg text-xs font-semibold",
           className
         )}
@@ -158,22 +160,49 @@ export function ModernDatePicker({
 
       {/* Popover Calendar */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-64 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-border)]/50">
+        <div className="absolute left-0 top-full mt-1 z-[999] w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+          {/* Calendar Header with Easy Month and Year Dropdowns */}
+          <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[var(--color-border)]/60">
             <button
               type="button"
               onClick={handlePrevMonth}
+              title="Önceki Ay"
               className="p-1 rounded-lg text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-xs font-extrabold text-[var(--color-foreground)]">
-              {MONTH_NAMES[month]} {year}
-            </span>
+
+            {/* Quick Month & Year Selectors */}
+            <div className="flex items-center gap-1.5">
+              <select
+                value={month}
+                onChange={(e) => setViewDate(new Date(year, Number(e.target.value), 1))}
+                className="bg-[var(--color-surface-muted)] text-[var(--color-foreground)] font-extrabold text-xs rounded-lg px-2 py-1 border border-[var(--color-border)]/80 cursor-pointer outline-none focus:border-[var(--color-brand)]"
+              >
+                {MONTH_NAMES.map((name, idx) => (
+                  <option key={name} value={idx}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={year}
+                onChange={(e) => setViewDate(new Date(Number(e.target.value), month, 1))}
+                className="bg-[var(--color-surface-muted)] text-[var(--color-foreground)] font-extrabold text-xs rounded-lg px-2 py-1 border border-[var(--color-border)]/80 cursor-pointer outline-none focus:border-[var(--color-brand)]"
+              >
+                {YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               type="button"
               onClick={handleNextMonth}
+              title="Sonraki Ay"
               className="p-1 rounded-lg text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer"
             >
               <ChevronRight size={16} />
@@ -181,7 +210,7 @@ export function ModernDatePicker({
           </div>
 
           {/* Days of Week Header */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-1">
+          <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
             {DAY_NAMES.map((day) => (
               <span key={day} className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase">
                 {day}
@@ -218,18 +247,18 @@ export function ModernDatePicker({
           </div>
 
           {/* Presets Footer */}
-          <div className="mt-3 pt-2 border-t border-[var(--color-border)]/50 flex items-center justify-between text-[11px]">
+          <div className="mt-3 pt-2.5 border-t border-[var(--color-border)]/60 flex items-center justify-between text-[11px]">
             <button
               type="button"
               onClick={handleToday}
-              className="font-bold text-[var(--color-brand-strong)] hover:underline cursor-pointer"
+              className="font-extrabold text-[var(--color-brand-strong)] hover:underline cursor-pointer"
             >
               Bugün
             </button>
             <button
               type="button"
               onClick={handleYesterday}
-              className="font-semibold text-[var(--color-muted)] hover:text-[var(--color-foreground)] cursor-pointer"
+              className="font-bold text-[var(--color-muted)] hover:text-[var(--color-foreground)] cursor-pointer"
             >
               Dün
             </button>
