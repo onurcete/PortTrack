@@ -72,28 +72,38 @@ export function ModernDatePicker({
 
     const grid: Array<{ dateStr: string; dayNum: number; isCurrentMonth: boolean }> = [];
 
+    const formatLocal = (y: number, m: number, d: number) => {
+      const mm = String(m + 1).padStart(2, "0");
+      const dd = String(d).padStart(2, "0");
+      return `${y}-${mm}-${dd}`;
+    };
+
     // Previous month padding
+    const prevMonthDate = new Date(year, month - 1, 1);
+    const prevY = prevMonthDate.getFullYear();
+    const prevM = prevMonthDate.getMonth();
     const prevMonthLastDay = new Date(year, month, 0).getDate();
+
     for (let i = startDay - 1; i >= 0; i--) {
-      const pDate = new Date(year, month - 1, prevMonthLastDay - i);
-      const str = pDate.toISOString().slice(0, 10);
-      grid.push({ dateStr: str, dayNum: prevMonthLastDay - i, isCurrentMonth: false });
+      const dayNum = prevMonthLastDay - i;
+      const str = formatLocal(prevY, prevM, dayNum);
+      grid.push({ dateStr: str, dayNum, isCurrentMonth: false });
     }
 
     // Current month days
     for (let d = 1; d <= totalDays; d++) {
-      const cDate = new Date(year, month, d);
-      const yyyy = cDate.getFullYear();
-      const mm = String(cDate.getMonth() + 1).padStart(2, "0");
-      const dd = String(d).padStart(2, "0");
-      grid.push({ dateStr: `${yyyy}-${mm}-${dd}`, dayNum: d, isCurrentMonth: true });
+      const str = formatLocal(year, month, d);
+      grid.push({ dateStr: str, dayNum: d, isCurrentMonth: true });
     }
 
     // Next month padding to fill 35 or 42 cells
-    const remaining = 35 - grid.length > 0 ? 35 - grid.length : (42 - grid.length % 42) % 7;
+    const nextMonthDate = new Date(year, month + 1, 1);
+    const nextY = nextMonthDate.getFullYear();
+    const nextM = nextMonthDate.getMonth();
+    const remaining = grid.length <= 35 ? 35 - grid.length : 42 - grid.length;
+
     for (let n = 1; n <= remaining; n++) {
-      const nDate = new Date(year, month + 1, n);
-      const str = nDate.toISOString().slice(0, 10);
+      const str = formatLocal(nextY, nextM, n);
       grid.push({ dateStr: str, dayNum: n, isCurrentMonth: false });
     }
 
@@ -220,13 +230,13 @@ export function ModernDatePicker({
 
           {/* Days Grid */}
           <div className="grid grid-cols-7 gap-1">
-            {daysGrid.map((item) => {
+            {daysGrid.map((item, idx) => {
               const isSelected = item.dateStr === value;
               const isToday = item.dateStr === todayStr;
 
               return (
                 <button
-                  key={item.dateStr}
+                  key={`${item.dateStr}-${idx}`}
                   type="button"
                   onClick={() => selectDate(item.dateStr)}
                   className={cn(
