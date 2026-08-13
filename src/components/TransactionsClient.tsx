@@ -1024,8 +1024,24 @@ function BulkTransactionGrid({
 
   function handleSubmit() {
     setError(null);
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const hasFutureDate = rows.some((r) => r.symbol.trim() !== "" && r.date > todayStr);
+    if (hasFutureDate) {
+      setError("Gelecek bir tarih seçilemez. Lütfen satırlardaki tarihleri kontrol edin.");
+      return;
+    }
+
+    const hasInvalidNumber = rows.some(
+      (r) => r.symbol.trim() !== "" && ((r.quantity !== "" && parseFloat(r.quantity) <= 0) || (r.unitPrice !== "" && parseFloat(r.unitPrice) <= 0))
+    );
+    if (hasInvalidNumber) {
+      setError("Adet ve Birim Fiyat 0'dan büyük olmalıdır (Negatif veya 0 girilemez).");
+      return;
+    }
+
     const validRows = rows.filter(
-      (r) => r.symbol.trim() !== "" && parseFloat(r.quantity) > 0 && parseFloat(r.unitPrice) > 0
+      (r) => r.symbol.trim() !== "" && parseFloat(r.quantity) > 0 && parseFloat(r.unitPrice) > 0 && r.date <= todayStr
     );
 
     if (validRows.length === 0) {
@@ -1491,6 +1507,23 @@ function TransactionForm({
 
   function submit(formData: FormData) {
     setError(null);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const parsedQty = parseFloat(qtyInput) || 0;
+    const parsedPrice = parseFloat(priceInput) || 0;
+
+    if (parsedQty <= 0) {
+      setError("Adet 0'dan büyük olmalıdır.");
+      return;
+    }
+    if (parsedPrice <= 0) {
+      setError("Birim fiyat 0'dan büyük olmalıdır.");
+      return;
+    }
+    if (dateInput > todayStr) {
+      setError("Gelecek bir tarih seçilemez.");
+      return;
+    }
+
     startTransition(async () => {
       const res = editing
         ? await updateTransaction(editing.id, formData)

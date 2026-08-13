@@ -19,14 +19,26 @@ export function ModernDatePicker({
   onChange,
   className,
   compact = false,
+  maxDate,
 }: {
   value: string; // YYYY-MM-DD
   onChange: (dateStr: string) => void;
   className?: string;
   compact?: boolean;
+  maxDate?: string | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const localTodayStr = useMemo(() => {
+    const t = new Date();
+    const yyyy = t.getFullYear();
+    const mm = String(t.getMonth() + 1).padStart(2, "0");
+    const dd = String(t.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
+
+  const effectiveMaxDate = maxDate === null ? null : (maxDate || localTodayStr);
 
   // Parse initial date or default to today
   const parsedDate = useMemo(() => {
@@ -119,6 +131,7 @@ export function ModernDatePicker({
   }
 
   function selectDate(dateStr: string) {
+    if (effectiveMaxDate && dateStr > effectiveMaxDate) return;
     onChange(dateStr);
     setIsOpen(false);
   }
@@ -232,15 +245,20 @@ export function ModernDatePicker({
           <div className="grid grid-cols-7 gap-1">
             {daysGrid.map((item, idx) => {
               const isSelected = item.dateStr === value;
-              const isToday = item.dateStr === todayStr;
+              const isToday = item.dateStr === localTodayStr;
+              const isFuture = effectiveMaxDate ? item.dateStr > effectiveMaxDate : false;
 
               return (
                 <button
                   key={`${item.dateStr}-${idx}`}
                   type="button"
+                  disabled={isFuture}
                   onClick={() => selectDate(item.dateStr)}
                   className={cn(
-                    "h-7 w-7 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center mx-auto",
+                    "h-7 w-7 rounded-lg text-xs font-bold transition-all flex items-center justify-center mx-auto",
+                    isFuture
+                      ? "opacity-25 text-[var(--color-muted)] cursor-not-allowed pointer-events-none"
+                      : "cursor-pointer",
                     isSelected
                       ? "bg-[var(--color-brand)] text-white shadow-sm ring-2 ring-[var(--color-brand)]/30 font-black"
                       : isToday

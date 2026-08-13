@@ -17,12 +17,17 @@ import tefasCacheData from "@/lib/tefas_cache.json";
 import bistCacheData from "@/lib/bist_cache.json";
 
 const txSchema = z.object({
-  date: z.string().min(1),
+  date: z.string().min(1).refine((val) => {
+    const selectedStr = val.slice(0, 10);
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return selectedStr <= todayStr;
+  }, { message: "Gelecek bir tarih seçilemez." }),
   assetType: z.enum(ASSET_TYPES as [AssetType, ...AssetType[]]),
-  symbol: z.string().min(1),
+  symbol: z.string().min(1, { message: "Sembol adı zorunludur." }),
   side: z.enum(["BUY", "SELL"]),
-  unitPrice: z.coerce.number(),
-  quantity: z.coerce.number(),
+  unitPrice: z.coerce.number().gt(0, { message: "Birim fiyat 0'dan büyük olmalıdır." }),
+  quantity: z.coerce.number().gt(0, { message: "Adet 0'dan büyük olmalıdır." }),
   total: z.coerce.number().optional(),
   currency: z.enum(["TRY", "USD"]),
   note: z.string().optional(),
@@ -58,7 +63,8 @@ export async function createTransaction(
   const raw = Object.fromEntries(formData) as Record<string, string>;
   const parsed = txSchema.safeParse(raw);
   if (!parsed.success) {
-    return { ok: false, message: "Geçersiz veri." };
+    const msg = parsed.error.issues[0]?.message || "Geçersiz veri.";
+    return { ok: false, message: msg };
   }
   const d = parsed.data;
   const total =
@@ -189,7 +195,10 @@ export async function updateTransaction(
   const userId = await requireUser();
   const raw = Object.fromEntries(formData) as Record<string, string>;
   const parsed = txSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, message: "Geçersiz veri." };
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message || "Geçersiz veri.";
+    return { ok: false, message: msg };
+  }
   const d = parsed.data;
   const total =
     d.total && Number.isFinite(d.total) && d.total > 0
