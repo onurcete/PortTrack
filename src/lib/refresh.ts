@@ -78,9 +78,14 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
   const tefasSymbols = symbols.filter((s) => s.assetType === "TEFAS");
   const otherSymbols = symbols.filter((s) => s.assetType !== "TEFAS");
 
-  // TEFAS fonları: force=true ise veya atlama yapılmıyorsa her zaman güncellenir
-  let pendingTefas = tefasSymbols;
-  if (!force && tefasSymbols.length > 0) {
+  // SADECE TEFAS İÇİN AKILLI KONTROL:
+  // 1. Bugünün TEFAS fiyatı veritabanında eksikse (geç giriş / günün ilk yenilemesi) -> ÇEK
+  // 2. Saat 07:00 - 10:00 arasındaysa (aktif açıklanma penceresi) -> ÇEK
+  // 3. Saat 10:00 sonrası ve bugün zaten çekilmişse -> ATLA (0 ms)
+  // (Diğer tüm varlıklar BİST, Yabancı Borsa, Kripto her basışta CANLI çekilir)
+  let shouldFetchTefas = false;
+
+  if (tefasSymbols.length > 0) {
     const todays = await prisma.priceSnapshot.findMany({
       where: {
         date: today,
@@ -88,18 +93,31 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
       },
       select: { symbol: true },
     });
-    const doneToday = new Set(todays.map((t) => t.symbol));
-    // Sadece force değilse atla
-    pendingTefas = tefasSymbols.filter((s) => !doneToday.has(s.symbol));
-    updated += tefasSymbols.length - pendingTefas.length;
+    const doneTodayCount = todays.length;
+    const isMissingToday = doneTodayCount < tefasSymbols.length;
+
+    // Türkiye saati (UTC+3) kontrolü
+    const now = new Date();
+    const trHour = (now.getUTCHours() + 3) % 24;
+    const isTefasWindow = trHour >= 7 && trHour < 10;
+
+    shouldFetchTefas = isMissingToday || isTefasWindow;
+
+    if (!shouldFetchTefas) {
+      console.log(
+        "⚡ [REFRESH] TEFAS fiyatları bugün için zaten veritabanında var ve saat 10:00 sonrası. TEFAS istekleri atlandı."
+      );
+      updated += tefasSymbols.length;
+    }
   }
 
-  // TEFAS toplu çekimini paralel başlat
-  const tefasMapPromise = tefasSymbols.length
-    ? fetchTefasLatestMap(new Set(tefasSymbols.map((s) => s.symbol))).catch(
-        () => new Map<string, { price: number; investors?: number }>(),
-      )
-    : null;
+  // TEFAS toplu çekimini sadece gerekliyse başlat
+  const tefasMapPromise =
+    tefasSymbols.length > 0 && shouldFetchTefas
+      ? fetchTefasLatestMap(new Set(tefasSymbols.map((s) => s.symbol))).catch(
+          () => new Map<string, { price: number; investors?: number }>(),
+        )
+      : null;
 
   function isPriceSameEnough(p1: number | null | undefined, p2: number | null | undefined): boolean {
     if (p1 === p2) return true;
