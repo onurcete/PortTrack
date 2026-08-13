@@ -191,12 +191,15 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
   }
 
   // Yahoo tabanlı tüm sembollerin fiyatlarını tek seferde toplu (batch) çek
+  const tYahooStart = performance.now();
   const yahooSymbolsToFetch: string[] = [];
   for (const { symbol, assetType } of otherSymbols) {
     const m = resolvePriceMapping(assetType, symbol);
     if (m.yahooSymbol) yahooSymbolsToFetch.push(m.yahooSymbol);
   }
   const preFetchedYahooMap = await fetchYahooQuoteMap(yahooSymbolsToFetch);
+  const tYahooMap = performance.now();
+  console.log(`⏱️ [REFRESH] Yahoo toplu fiyat çekimi: ${(tYahooMap - tYahooStart).toFixed(0)} ms (${yahooSymbolsToFetch.length} sembol)`);
 
   // Yahoo tabanli semboller — TEFAS'i beklemeden hemen guncelle
   await mapLimit(otherSymbols, 10, async ({ symbol, assetType }) => {
@@ -206,10 +209,16 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
       failed.push(symbol);
     }
   });
+  const tYahooDone = performance.now();
+  console.log(`⏱️ [REFRESH] Yahoo sembollerin DB kaydı: ${(tYahooDone - tYahooMap).toFixed(0)} ms (${otherSymbols.length} sembol)`);
 
   // TEFAS fonlari — toplu harita hazir olunca
+  const tTefasStart = performance.now();
   if (tefasMapPromise) {
     const tefasMap = await tefasMapPromise;
+    const tTefasMap = performance.now();
+    console.log(`⏱️ [REFRESH] TEFAS toplu harita çekimi: ${(tTefasMap - tTefasStart).toFixed(0)} ms`);
+
     await mapLimit(tefasSymbols, 6, async ({ symbol, assetType }) => {
       try {
         const tInfo = tefasMap.get(symbol);
@@ -228,6 +237,8 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
         failed.push(symbol);
       }
     });
+    const tTefasDone = performance.now();
+    console.log(`⏱️ [REFRESH] TEFAS sembollerin DB kaydı: ${(tTefasDone - tTefasMap).toFixed(0)} ms (${tefasSymbols.length} sembol)`);
   }
 
   // Guncelleme zaman damgasini kaydet

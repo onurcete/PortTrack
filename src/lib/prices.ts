@@ -492,8 +492,12 @@ export async function fetchTefasLatestMap(
   from.setDate(from.getDate() - 10);
   const latestByCode = new Map<string, { date: string; price: number; investors?: number }>();
 
-  for (const kind of TEFAS_KINDS) {
-    const rows = await tefasPost(kind, null, from, to);
+  // Tüm fon tiplerini (YAT, EMK, BYF) tek seferde PARALEL olarak sorgula
+  const results = await Promise.all(
+    TEFAS_KINDS.map((kind) => tefasPost(kind, null, from, to))
+  );
+
+  for (const rows of results) {
     for (const r of rows) {
       if (r.fiyat == null || !r.tarih) continue;
       const prev = latestByCode.get(r.fonKodu);
@@ -504,13 +508,6 @@ export async function fetchTefasLatestMap(
           investors: r.kisiSayisi ? Number(r.kisiSayisi) : undefined,
         });
       }
-    }
-    if (
-      heldCodes &&
-      heldCodes.size > 0 &&
-      [...heldCodes].every((c) => latestByCode.has(c))
-    ) {
-      break;
     }
   }
 

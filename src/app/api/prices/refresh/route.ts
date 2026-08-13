@@ -21,15 +21,25 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    await backfillFxHistory();
+    const tStart = performance.now();
+    console.log("⏱️ [REFRESH API] Başlatıldı...");
+
+    // Dolar kuru geçmişini arka planda asenkron çalıştır (bekletme yapma)
+    backfillFxHistory().catch(() => null);
+
+    const tPricesStart = performance.now();
     const result = await refreshPrices({ force: true });
+    const tPricesEnd = performance.now();
+    console.log(`⏱️ [REFRESH API] refreshPrices tamamlandı: ${(tPricesEnd - tPricesStart).toFixed(0)} ms`);
+
+    console.log(`⏱️ [REFRESH API] TOPLAM SÜRE: ${(tPricesEnd - tStart).toFixed(0)} ms`);
 
     await logSystemEvent({
       userId,
       userEmail: user?.email || null,
       action: "PRICE_REFRESH_MANUAL",
       status: "SUCCESS",
-      details: `${user?.name || user?.email || "Kullanıcı"} 'Fiyatları Güncelle' butonuna bastı (${result.updated} enstrüman güncellendi).`,
+      details: `${user?.name || user?.email || "Kullanıcı"} 'Fiyatları Güncelle' butonuna bastı (${result.updated} enstrüman güncellendi - ${(tPricesEnd - tStart).toFixed(0)} ms).`,
       req,
     });
 
