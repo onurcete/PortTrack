@@ -58,6 +58,14 @@ export const metadata: Metadata = {
       "Tüm finansal yatırımlarınızı (BİST, TEFAS, Yabancı Borsa, Kripto, Döviz) tek ekranda anlık takip edin. Gelişmiş grafikler ve TL/USD çoklu para birimi analizi.",
     url: "https://www.porttrack.com.tr",
     siteName: "PortTrack",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PortTrack Yatırım ve Portföy Takip Platformu",
+      },
+    ],
     locale: "tr_TR",
     type: "website",
   },
@@ -66,6 +74,7 @@ export const metadata: Metadata = {
     title: "PortTrack – Yatırım ve Portföy Takip Platformu",
     description:
       "BİST, TEFAS, Yabancı Borsa ve Kripto yatırımlarınızı tek yerden anlık izleyin.",
+    images: ["/og-image.png"],
     creator: "@porttrack",
   },
 };
