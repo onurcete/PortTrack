@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { AUTH_COOKIE, createSession } from "@/lib/auth";
+
+export async function GET(req: NextRequest) {
+  const code = req.nextUrl.searchParams.get("code");
+  const error = req.nextUrl.searchParams.get("error");
+  const origin = req.nextUrl.origin;
+
+  if (error || !code) {
+    return NextResponse.redirect(`${origin}/login?error=google_cancelled`);
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return NextResponse.redirect(`${origin}/login?error=google_config_missing`);
+  }
+
+  try {
+    const redirectUri = `${origin}/api/auth/google/callback`;
+
+    // 1. Exchange code for Google Access Token
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    const tokenData = await tokenRes.json();
+
+    if (!tokenRes.ok || !tokenData.access_token) {
+      console.error("Google token exchange failed:", tokenData);
+      return NextResponse.redirect(`${origin}/login?error=google_token_failed`);
+    }
+
+    // 2. Fetch User Info from Google
+    const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    const googleUser = await userRes.json();
+
+    if (!userRes.ok || !googleUser.email) {
+      console.error("Google userinfo failed:", googleUser);
+      return NextResponse.redirect(`${origin}/login?error=google_user_failed`);
+    }
+
+    const email = googleUser.email.trim().toLowerCase();
+    const googleId = googleUser.id;
+    const name = googleUser.name || googleUser.given_name || email.split("@")[0];
+
+    // 3. Find or Create User in Database
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { googleId }],
+      },
+    });
+
+    if (user) {
+      // Update googleId or name if missing
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId, name: user.name || name },
+        });
+      }
+    } else {
+      // Create new user registered via Google
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          googleId,
+          role: "USER",
+        },
+      });
+    }
+
+    // 4. Create Session and Set Cookie
+    const token = await createSession(user.id);
+    const response = NextResponse.redirect(`${origin}/`);
+
+    response.cookies.set(AUTH_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 24 * 60 * 60, // 60 days
+      path: "/",
+    });
+
+    return response;
+  } catch (err) {
+    console.error("Google Auth Callback Error:", err);
+    return NextResponse.redirect(`${origin}/login?error=google_auth_error`);
+  }
+}

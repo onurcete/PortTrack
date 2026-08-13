@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       where: { email: { equals: cleanEmail } },
     });
 
-    if (!user || !(await verifyPassword(password, user.password))) {
+    if (!user || !user.password || !(await verifyPassword(password, user.password))) {
       await logSystemEvent({
         userEmail: cleanEmail,
         action: "LOGIN_FAILED",
