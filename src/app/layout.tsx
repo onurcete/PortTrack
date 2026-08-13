@@ -38,6 +38,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://www.porttrack.com.tr",
   },
+  verification: {
+    google: "cuCicTX1TmlpY0hsVqH5bdtOFv-K5sQOc3wd55TMw4E",
+  },
   robots: {
     index: true,
     follow: true,
