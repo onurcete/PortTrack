@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE, getSessionUser } from "@/lib/auth";
 
 const PUBLIC = [
+  "/sitemap.xml",
+  "/robots.txt",
   "/welcome",
   "/login",
   "/register",
@@ -46,5 +48,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|showcase|.*\\.(?:png|jpg|jpeg|gif|svg|ico)).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sitemap\\.xml|robots\\.txt|showcase|.*\\.(?:png|jpg|jpeg|gif|svg|ico)).*)"],
 };
