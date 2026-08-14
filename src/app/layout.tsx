@@ -111,6 +111,18 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* Google Tag (gtag.js) - Google Ads AW-987323960 */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-987323960" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-987323960');
+            `,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
