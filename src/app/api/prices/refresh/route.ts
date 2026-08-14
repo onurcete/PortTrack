@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     backfillFxHistory().catch(() => null);
 
     const tPricesStart = performance.now();
-    const result = await refreshPrices({ force: true });
+    const result = await refreshPrices({ userId, force: true });
     const tPricesEnd = performance.now();
     console.log(`⏱️ [REFRESH API] refreshPrices tamamlandı: ${(tPricesEnd - tPricesStart).toFixed(0)} ms`);
 

@@ -35,8 +35,9 @@ interface HeldSymbol {
 }
 
 /** Islemlerde gecen benzersiz sembolleri getirir. */
-async function getHeldSymbols(): Promise<HeldSymbol[]> {
+async function getHeldSymbols(userId?: string): Promise<HeldSymbol[]> {
   const rows = await prisma.transaction.findMany({
+    where: userId ? { userId } : undefined,
     select: { symbol: true, assetType: true },
   });
   const map = new Map<string, AssetType>();
@@ -53,8 +54,12 @@ export interface RefreshResult {
 }
 
 /** Tum tutulan sembollerin guncel fiyatini ve USDTRY kurunu yeniler. */
-export async function refreshPrices(options?: { force?: boolean }): Promise<RefreshResult> {
+export async function refreshPrices(options?: {
+  userId?: string;
+  force?: boolean;
+}): Promise<RefreshResult> {
   const force = options?.force ?? false;
+  const userId = options?.userId;
   const today = startOfDay(new Date());
   const usdTry = await getUsdTryRate();
 
@@ -66,8 +71,10 @@ export async function refreshPrices(options?: { force?: boolean }): Promise<Refr
     });
   }
 
-  const symbols = await getHeldSymbols();
-  const instruments = await prisma.instrument.findMany();
+  const symbols = await getHeldSymbols(userId);
+  const instruments = await prisma.instrument.findMany(
+    userId ? { where: { userId } } : undefined
+  );
   const manualMap = new Map(
     instruments.map((i) => [i.symbol, i.manualPrice] as const),
   );
