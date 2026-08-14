@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -34,6 +34,16 @@ import {
 import { formatMoney, formatPercent, cn } from "@/lib/utils";
 
 export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
+  useEffect(() => {
+    if (!isLoggedIn && typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+      (window as any).gtag("event", "conversion", {
+        send_to: "AW-987323960/RjpCCJK2qeEcELi85dYD",
+        value: 1.0,
+        currency: "TRY",
+      });
+    }
+  }, [isLoggedIn]);
+
   // Simulator State
   const [initialBalance, setInitialBalance] = useState<number>(100000);
   const [monthlyAddition, setMonthlyAddition] = useState<number>(10000);
