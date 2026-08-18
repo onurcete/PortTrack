@@ -85,8 +85,7 @@ export function SettingsClient() {
   const [isDemo, setIsDemo] = useState(false);
   const [theme, setTheme] = useState<ThemeId>("dark");
   const [defaultCurrency, setDefaultCurrencyState] = useState<"TRY" | "USD">("TRY");
-  const [dailyDigestEnabled, setDailyDigestEnabled] = useState(true);
-  const [newsletterEnabled, setNewsletterEnabled] = useState(true);
+  const [dailyDigestEnabled, setDailyDigestEnabled] = useState(false);
 
   // Load initial settings
   useEffect(() => {
@@ -123,7 +122,6 @@ export function SettingsClient() {
           }
 
           setDailyDigestEnabled(Boolean(s.dailyDigestEnabled));
-          setNewsletterEnabled(Boolean(s.newsletterEnabled));
         }
       })
       .catch((err) => {
@@ -161,7 +159,6 @@ export function SettingsClient() {
       theme,
       defaultCurrency,
       dailyDigestEnabled,
-      newsletterEnabled,
       ...overrideParams,
     };
 
@@ -468,10 +465,10 @@ export function SettingsClient() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-[var(--color-foreground)]">
-                  E-Posta & Bülten Tercihleri
+                  E-Posta Bildirim Tercihleri
                 </h2>
                 <p className="text-xs text-[var(--color-muted)]">
-                  Almak istediğiniz bildirim e-postalarını ve günlük/haftalık bültenleri seçin.
+                  Almak istediğiniz günlük e-posta özeti bildirimlerini buradan yönetin.
                 </p>
               </div>
             </div>
@@ -500,7 +497,7 @@ export function SettingsClient() {
                       </span>
                     </div>
                     <p className="mt-1 text-xs leading-relaxed text-[var(--color-muted)]">
-                      Borsa ve piyasa kapanışının ardından günlük portföy değerinizi, günlük kar/zarar durumunuzu ve öne çıkan hareketleri e-posta ile alın.
+                      Borsa ve piyasa kapanışının ardından günlük portföy değerinizi, kar/zarar özetinizi e-posta ile alın. Varsayılan olarak pasiftir; sadece aktif eden kullanıcılara gönderilir.
                     </p>
                   </div>
                 </div>
@@ -513,49 +510,6 @@ export function SettingsClient() {
                       const val = e.target.checked;
                       setDailyDigestEnabled(val);
                       saveSettingsToServer({ dailyDigestEnabled: val });
-                    }}
-                    className="peer sr-only"
-                  />
-                  <div className="h-6 w-11 rounded-full bg-gray-300 peer-checked:bg-[var(--color-brand)] transition-colors after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full" />
-                </label>
-              </div>
-
-              {/* Haftalık Analiz ve Bülten Switch */}
-              <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 transition-colors">
-                <div className="flex items-start gap-3.5 pr-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 mt-0.5">
-                    <Sparkles size={18} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-[var(--color-foreground)]">
-                        Haftalık AI Piyasa Bülteni & Analizler
-                      </p>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                          newsletterEnabled
-                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                            : "bg-gray-500/15 text-gray-500"
-                        )}
-                      >
-                        {newsletterEnabled ? "Aktif" : "Pasif"}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-muted)]">
-                      Yapay zeka destekli piyasa yorumları, popüler TEFAS ve BIST fırsat analizleri ve haftalık portföy gelişim raporları.
-                    </p>
-                  </div>
-                </div>
-
-                <label className="relative inline-flex cursor-pointer items-center shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={newsletterEnabled}
-                    onChange={(e) => {
-                      const val = e.target.checked;
-                      setNewsletterEnabled(val);
-                      saveSettingsToServer({ newsletterEnabled: val });
                     }}
                     className="peer sr-only"
                   />

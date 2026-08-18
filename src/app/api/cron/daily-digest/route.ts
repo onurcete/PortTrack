@@ -49,15 +49,15 @@ export async function runDailyDigest(req: NextRequest) {
   const url = new URL(req.url);
   const isTest = url.searchParams.get("test") === "1" || url.searchParams.has("test");
 
-  // Demo kullanıcılar günlük bültenden hariç tutulur (isDemo: true)
+  // Demo kullanıcılar ve günlük bülteni aktif etmemiş kullanıcılar hariç tutulur (dailyDigestEnabled: true)
   let users;
   if (isTest) {
     users = await prisma.user.findMany({
-      where: { email: { in: ADMIN_EMAILS }, isDemo: false },
+      where: { email: { in: ADMIN_EMAILS }, isDemo: false, dailyDigestEnabled: true },
     });
   } else {
     users = await prisma.user.findMany({
-      where: { isDemo: false },
+      where: { isDemo: false, dailyDigestEnabled: true },
     });
   }
 

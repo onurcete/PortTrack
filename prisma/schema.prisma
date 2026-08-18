@@ -21,8 +21,7 @@ model User {
   isDemo    Boolean  @default(false)
   theme               String   @default("dark")
   defaultCurrency     String   @default("TRY")
-  newsletterEnabled   Boolean  @default(true)
-  dailyDigestEnabled  Boolean  @default(true)
+  dailyDigestEnabled  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

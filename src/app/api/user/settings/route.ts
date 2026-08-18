@@ -17,8 +17,7 @@ export async function GET() {
         role: "DEMO",
         theme: "dark",
         defaultCurrency: "TRY",
-        newsletterEnabled: true,
-        dailyDigestEnabled: true,
+        dailyDigestEnabled: false,
         isDemo: true,
       },
     });
@@ -38,8 +37,7 @@ export async function GET() {
       role: isUserAdmin ? "ADMIN" : user.role,
       theme: user.theme ?? "dark",
       defaultCurrency: user.defaultCurrency ?? "TRY",
-      newsletterEnabled: user.newsletterEnabled ?? true,
-      dailyDigestEnabled: user.dailyDigestEnabled ?? true,
+      dailyDigestEnabled: user.dailyDigestEnabled ?? false,
       isDemo: user.isDemo ?? false,
     },
   });
@@ -56,7 +54,6 @@ export async function PATCH(request: Request) {
     name?: string;
     theme?: string;
     defaultCurrency?: string;
-    newsletterEnabled?: boolean;
     dailyDigestEnabled?: boolean;
   } = {};
 
@@ -73,10 +70,6 @@ export async function PATCH(request: Request) {
     VALID_CURRENCIES.includes(body.defaultCurrency)
   ) {
     updateData.defaultCurrency = body.defaultCurrency;
-  }
-
-  if (typeof body.newsletterEnabled === "boolean") {
-    updateData.newsletterEnabled = body.newsletterEnabled;
   }
 
   if (typeof body.dailyDigestEnabled === "boolean") {
@@ -99,8 +92,7 @@ export async function PATCH(request: Request) {
         role: isUserAdmin ? "ADMIN" : updatedUser.role,
         theme: updatedUser.theme ?? "dark",
         defaultCurrency: updatedUser.defaultCurrency ?? "TRY",
-        newsletterEnabled: updatedUser.newsletterEnabled ?? true,
-        dailyDigestEnabled: updatedUser.dailyDigestEnabled ?? true,
+        dailyDigestEnabled: updatedUser.dailyDigestEnabled ?? false,
         isDemo: updatedUser.isDemo ?? false,
       },
     });
@@ -114,8 +106,7 @@ export async function PATCH(request: Request) {
         role: "DEMO",
         theme: updateData.theme || "dark",
         defaultCurrency: updateData.defaultCurrency || "TRY",
-        newsletterEnabled: updateData.newsletterEnabled ?? true,
-        dailyDigestEnabled: updateData.dailyDigestEnabled ?? true,
+        dailyDigestEnabled: updateData.dailyDigestEnabled ?? false,
         isDemo: true,
       },
     });
