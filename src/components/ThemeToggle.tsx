@@ -64,6 +64,16 @@ export function ThemeToggle() {
     applyTheme(initial);
     localStorage.setItem("theme", initial);
     setTheme(initial);
+
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<Theme>;
+      if (customEvent.detail && THEMES.some((t) => t.id === customEvent.detail)) {
+        setTheme(customEvent.detail);
+      }
+    };
+
+    window.addEventListener("porttrack:theme-changed", handleThemeChange);
+    return () => window.removeEventListener("porttrack:theme-changed", handleThemeChange);
   }, []);
 
   useEffect(() => {
@@ -86,6 +96,7 @@ export function ThemeToggle() {
     applyTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     setTheme(nextTheme);
+    window.dispatchEvent(new CustomEvent("porttrack:theme-changed", { detail: nextTheme }));
     setOpen(false);
   };
 

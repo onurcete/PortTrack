@@ -13,6 +13,7 @@ import {
   LineChart,
   Activity,
   Shield,
+  Settings,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/growth", label: "Portföy Gelişimi", shortLabel: "Gelişim", icon: TrendingUp },
   { href: "/performance", label: "Ürün Performansı", shortLabel: "Performans", icon: LineChart },
   { href: "/analysis", label: "Analiz", shortLabel: "Analiz", icon: Activity },
+  { href: "/settings", label: "Ayarlar", shortLabel: "Ayarlar", icon: Settings },
 ];
 
 export function Topbar() {
@@ -144,7 +146,10 @@ export function Topbar() {
 
       {/* Mobil Alt Sabit Navigasyon Barı (Mobil Finans Uygulaması Deneyimi - Sadece Mobilde Görünür) */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl md:hidden px-1 py-1 shadow-lg">
-        <div className={cn("grid w-full gap-0.5", navItems.length === 6 ? "grid-cols-6" : "grid-cols-5")}>
+        <div
+          className="grid w-full gap-0.5"
+          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+        >
           {navItems.map((item) => {
             const active =
               item.href === "/"
