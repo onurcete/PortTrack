@@ -383,12 +383,15 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
   const ytdCloseVal = totalValue - (ytdAmt ?? 0);
 
   const assetDailyChanges = useMemo(() => {
-    const types: Record<string, { label: string; color: string; value: number; changeAmt: number }> = {
-      TEFAS: { label: "TEFAS Fon", color: "#7c3aed", value: 0, changeAmt: 0 },
-      FOREIGN: { label: "Yabancı Borsa", color: "#0891b2", value: 0, changeAmt: 0 },
-      METAL: { label: "Kıymetli Maden", color: "#d97706", value: 0, changeAmt: 0 },
-      CRYPTO: { label: "Kripto", color: "#db2777", value: 0, changeAmt: 0 },
-    };
+    const types: Record<string, { label: string; color: string; value: number; changeAmt: number }> = {};
+    for (const [key, meta] of Object.entries(ASSET_META)) {
+      types[key] = {
+        label: meta.label,
+        color: meta.color,
+        value: 0,
+        changeAmt: 0,
+      };
+    }
 
     for (const p of openPositions) {
       const type = p.assetType;
