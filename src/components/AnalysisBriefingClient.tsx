@@ -7,14 +7,12 @@ import {
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
-  Mail,
   Minus,
   RefreshCw,
   TrendingDown,
   TrendingUp,
   Zap,
 } from "lucide-react";
-import { sendUserDigestEmailAction } from "@/app/analysis/actions";
 import { ASSET_META } from "@/lib/assets";
 import type { AnalysisPulse } from "@/lib/analysisPulse";
 import type { BriefingPayload, BriefingFocusMode } from "@/lib/analysisAi";
@@ -63,28 +61,6 @@ export function AnalysisBriefingClient({
   // Technical Refresh State
   const [techLoading, setTechLoading] = useState(false);
   const [techMsg, setTechMsg] = useState<string | null>(null);
-
-  // Email Send State
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  async function handleSendEmail() {
-    setEmailLoading(true);
-    setEmailMsg(null);
-    try {
-      const res = await sendUserDigestEmailAction();
-      if (res.ok) {
-        setEmailMsg({ ok: true, text: res.message || "Özet maili başarıyla gönderildi!" });
-      } else {
-        setEmailMsg({ ok: false, text: res.message || "Mail gönderilemedi." });
-      }
-    } catch {
-      setEmailMsg({ ok: false, text: "Bağlantı hatası oluştu." });
-    } finally {
-      setEmailLoading(false);
-      setTimeout(() => setEmailMsg(null), 7000);
-    }
-  }
 
   const symbolNotes = useMemo(() => {
     const map = new Map<string, string>();
@@ -218,19 +194,6 @@ export function AnalysisBriefingClient({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={handleSendEmail}
-              disabled={emailLoading}
-              className="btn btn-primary text-xs shadow-sm gap-1.5"
-            >
-              <Mail
-                size={14}
-                className={cn(emailLoading && "animate-spin")}
-              />
-              {emailLoading ? "Mail Gönderiliyor..." : "Özet Maili Gönder"}
-            </button>
-
-            <button
-              type="button"
               onClick={runTechnical}
               disabled={techLoading}
               className="btn btn-outline text-xs shadow-xs"
@@ -243,19 +206,6 @@ export function AnalysisBriefingClient({
             </button>
           </div>
         </div>
-
-        {emailMsg && (
-          <p
-            className={cn(
-              "text-xs font-semibold p-2.5 rounded-xl border inline-block mr-2",
-              emailMsg.ok
-                ? "text-[var(--color-profit)] bg-emerald-500/10 border-emerald-500/20"
-                : "text-[var(--color-loss)] bg-rose-500/10 border-rose-500/20",
-            )}
-          >
-            {emailMsg.text}
-          </p>
-        )}
 
         {techMsg && (
           <p className="text-xs font-semibold text-[var(--color-profit)] bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 inline-block">

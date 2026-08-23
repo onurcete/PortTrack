@@ -19,10 +19,8 @@ import {
 } from "recharts";
 import { History, TrendingUp, BarChart2, Activity, Calendar, PieChart, DollarSign } from "lucide-react";
 import { BackfillStatusBanner } from "@/components/BackfillStatusBanner";
-import { updateBesBalance } from "@/app/growth/actions";
 import {
   BACKLOG_FULL_UNTIL_YEAR,
-  BES_MANUAL_FROM_YEAR,
   GROWTH_DISPLAY_FROM_YEAR,
 } from "@/lib/backlog.constants";
 import { useCurrency } from "@/context/currency";
@@ -1637,15 +1635,6 @@ export function GrowthClient({
           </Card>
 
           <GrowthAiCommentary series={series} currency={currency} />
-
-          <Card className="p-6">
-            <h2 className="font-semibold mb-1">BES aylık bakiye</h2>
-            <p className="text-xs text-[var(--color-muted)] mb-4">
-              Excel&apos;de olmayan {BES_MANUAL_FROM_YEAR} ve sonraki aylar için
-              BES tutarını girin. Diğer kolonlar otomatik hesaplanır.
-            </p>
-            <BesUpdateForm onSaved={() => router.refresh()} />
-          </Card>
         </>
       )}
 
@@ -1655,66 +1644,5 @@ export function GrowthClient({
         </div>
       )}
     </div>
-  );
-}
-
-function BesUpdateForm({ onSaved }: { onSaved: () => void }) {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
-  const defaultMonth = new Date().toISOString().slice(0, 7);
-  const minMonth = `${BES_MANUAL_FROM_YEAR}-01`;
-
-  function submit(formData: FormData) {
-    setError(null);
-    setOk(null);
-    startTransition(async () => {
-      const res = await updateBesBalance(formData);
-      if (res.ok) {
-        setOk(res.message ?? "Kaydedildi.");
-        onSaved();
-      } else setError(res.message ?? "Hata.");
-    });
-  }
-
-  const inputCls =
-    "w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-brand)]";
-  const labelCls = "block text-xs font-semibold text-[var(--color-muted)] mb-1.5";
-
-  return (
-    <form action={submit} className="flex flex-wrap items-end gap-3">
-      <div className="min-w-[140px]">
-        <label className={labelCls}>Ay</label>
-        <input
-          type="month"
-          name="month"
-          required
-          min={minMonth}
-          defaultValue={defaultMonth}
-          className={inputCls}
-        />
-      </div>
-      <div className="min-w-[180px] flex-1">
-        <label className={labelCls}>BES tutarı (₺)</label>
-        <input
-          type="number"
-          name="besTRY"
-          step="any"
-          required
-          min={0}
-          placeholder="ör. 826000"
-          className={inputCls}
-        />
-      </div>
-      <button type="submit" disabled={pending} className="btn btn-primary">
-        {pending ? "Kaydediliyor..." : "Kaydet"}
-      </button>
-      {error && (
-        <p className="w-full text-sm text-[var(--color-loss)]">{error}</p>
-      )}
-      {ok && (
-        <p className="w-full text-sm text-[var(--color-profit)]">{ok}</p>
-      )}
-    </form>
   );
 }
