@@ -17,6 +17,7 @@ const PUBLIC = [
   "/api/auth/verify-otp",
   "/api/auth/demo",
   "/api/auth/google",
+  "/api/auth/forgot-password",
   "/api/cron",
 ];
 

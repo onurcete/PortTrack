@@ -16,6 +16,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 function LoginForm() {
   const router = useRouter();
@@ -25,6 +26,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -284,6 +286,13 @@ function LoginForm() {
                   <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
                     Şifre
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotModalOpen(true)}
+                    className="text-[11px] font-bold text-[var(--color-brand-strong)] hover:underline cursor-pointer"
+                  >
+                    Şifremi Unuttum?
+                  </button>
                 </div>
                 <div className="relative">
                   <Lock
@@ -358,6 +367,337 @@ function LoginForm() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Şifremi Unuttum Modalı */}
+      {forgotModalOpen && (
+        <ForgotPasswordModal
+          initialEmail={email}
+          onClose={() => setForgotModalOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ForgotPasswordModal({
+  initialEmail,
+  onClose,
+}: {
+  initialEmail: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [step, setStep] = useState<"email" | "code" | "success">("email");
+  const [resetEmail, setResetEmail] = useState(initialEmail || "");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [hasGoogle, setHasGoogle] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  // 1. Adım: Kod Gönder
+  async function handleSendCode(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!resetEmail.trim()) {
+      setError("Lütfen e-posta adresinizi giriniz.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/forgot-password/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setHasGoogle(!!data.hasGoogle);
+        setStep("code");
+        setResendTimer(60);
+        const timer = setInterval(() => {
+          setResendTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setError(data.error || "Şifre sıfırlama kodu gönderilemedi.");
+      }
+    } catch {
+      setError("Bağlantı hatası oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // 2. Adım: Kodu Doğrula ve Şifreyi Güncelle
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!code.trim() || code.trim().length !== 6) {
+      setError("Lütfen 6 haneli doğrulama kodunu giriniz.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("Yeni şifre en az 6 karakter olmalıdır.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Girdiğiniz şifreler birbiriyle eşleşmiyor.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/forgot-password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: resetEmail.trim(),
+          code: code.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setStep("success");
+        setTimeout(() => {
+          router.replace("/");
+          router.refresh();
+        }, 2000);
+      } else {
+        setError(data.error || "Şifre güncellenemedi.");
+      }
+    } catch {
+      setError("Bağlantı hatası oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div
+        className="relative w-full max-w-md bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[var(--color-border)]/40 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-brand-soft)] text-[var(--color-brand)] font-bold">
+              <Lock size={18} />
+            </div>
+            <div>
+              <h3 className="font-black text-base text-[var(--color-foreground)]">
+                Şifremi Sıfırla
+              </h3>
+              <p className="text-[11px] text-[var(--color-muted)] font-medium">
+                {step === "email"
+                  ? "Kayıtlı e-posta adresinize kod gönderin"
+                  : step === "code"
+                  ? "Doğrulama kodu ve yeni şifrenizi girin"
+                  : "İşlem tamamlandı"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Adım 1: E-Posta ile Kod İsteme */}
+        {step === "email" && (
+          <form onSubmit={handleSendCode} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                E-posta Adresiniz
+              </label>
+              <div className="relative">
+                <Mail
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+                />
+                <input
+                  type="email"
+                  required
+                  autoFocus
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 pl-10 pr-4 py-3 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all"
+                  placeholder="ornek@e-posta.com"
+                />
+              </div>
+              <p className="text-[11px] text-[var(--color-muted)]">
+                Hesabınıza bağlı e-posta adresine 6 haneli tek kullanımlık güvenlik kodu göndereceğiz.
+              </p>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-extrabold">
+                ⚠️ {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !resetEmail}
+              className="btn btn-primary w-full py-3 text-xs font-black rounded-xl shadow-md cursor-pointer"
+            >
+              {loading ? "Kod Gönderiliyor..." : "Doğrulama Kodu Gönder"}
+            </button>
+          </form>
+        )}
+
+        {/* Adım 2: Kodu ve Yeni Şifreyi Girme */}
+        {step === "code" && (
+          <form onSubmit={handleResetPassword} className="space-y-4">
+            {/* Bilgilendirme ve E-posta Değiştir Butonu */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/50 text-xs">
+              <div className="truncate pr-2">
+                <span className="text-[10px] text-[var(--color-muted)] block font-bold">Kod Gönderilen E-posta:</span>
+                <span className="font-extrabold text-[var(--color-foreground)] truncate">{resetEmail}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("email");
+                  setError("");
+                }}
+                className="text-[11px] font-bold text-[var(--color-brand-strong)] hover:underline shrink-0 cursor-pointer"
+              >
+                Değiştir
+              </button>
+            </div>
+
+            {/* Google ile Bağlı Hesap Hatırlatması */}
+            {hasGoogle && (
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-xs font-medium space-y-1">
+                <p className="font-extrabold">💡 Google ile Bağlı Hesap</p>
+                <p className="text-[11px] text-[var(--color-foreground)]/80">
+                  Bu hesaba Google ile de giriş yapabilirsiniz veya aşağıdan doğrudan yeni bir şifre belirleyebilirsiniz.
+                </p>
+              </div>
+            )}
+
+            {/* 6 Haneli Kod */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                6 Haneli Güvenlik Kodu
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={6}
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                className="w-full text-center text-xl tracking-[0.4em] font-black rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 py-2.5 outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all font-mono"
+                placeholder="123456"
+              />
+            </div>
+
+            {/* Yeni Şifre */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                Yeni Şifre
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 pl-3.5 pr-10 py-2.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all"
+                  placeholder="En az 6 karakter"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] p-1"
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Yeni Şifre Tekrarı */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-extrabold uppercase text-[var(--color-muted)] tracking-wider">
+                Yeni Şifre Tekrarı
+              </label>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/40 px-3.5 py-2.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand)]/20 transition-all"
+                placeholder="Yeni şifrenizi tekrar girin"
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-extrabold">
+                ⚠️ {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || code.length !== 6 || !newPassword || !confirmPassword}
+              className="btn btn-primary w-full py-3 text-xs font-black rounded-xl shadow-md cursor-pointer"
+            >
+              {loading ? "Şifre Güncelleniyor..." : "Şifreyi Güncelle ve Giriş Yap"}
+            </button>
+
+            {/* Tekrar Kod Gönder */}
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                disabled={resendTimer > 0 || loading}
+                onClick={() => handleSendCode()}
+                className={cn(
+                  "text-[11px] font-bold transition-colors cursor-pointer",
+                  resendTimer > 0
+                    ? "text-[var(--color-muted)] cursor-not-allowed"
+                    : "text-[var(--color-brand-strong)] hover:underline"
+                )}
+              >
+                {resendTimer > 0
+                  ? `Kodu tekrar gönder (${resendTimer}s)`
+                  : "Yeni Kod Gönder"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Adım 3: Başarılı Ekranı */}
+        {step === "success" && (
+          <div className="py-6 text-center space-y-3">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500 mb-1">
+              <CheckCircle2 size={32} />
+            </div>
+            <h4 className="text-lg font-black text-[var(--color-foreground)]">
+              Şifreniz Başarıyla Güncellendi!
+            </h4>
+            <p className="text-xs text-[var(--color-muted)]">
+              Oturumunuz açıldı. Portföy panelinize yönlendiriliyorsunuz...
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

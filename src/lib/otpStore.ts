@@ -43,3 +43,38 @@ export function removePendingUser(email: string): void {
   const normalizedEmail = email.trim().toLowerCase();
   otpStore.delete(normalizedEmail);
 }
+
+export interface ResetPasswordOtp {
+  email: string;
+  code: string;
+  expiresAt: number;
+}
+
+const resetOtpStore = new Map<string, ResetPasswordOtp>();
+
+/** Şifre sıfırlama için OTP kodunu 10 dakika saklar */
+export function setResetPasswordOtp(email: string, code: string): void {
+  const normalizedEmail = email.trim().toLowerCase();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 dakika
+  resetOtpStore.set(normalizedEmail, { email: normalizedEmail, code, expiresAt });
+}
+
+/** Şifre sıfırlama OTP kodunu getirir */
+export function getResetPasswordOtp(email: string): ResetPasswordOtp | null {
+  const normalizedEmail = email.trim().toLowerCase();
+  const data = resetOtpStore.get(normalizedEmail);
+  if (!data) return null;
+
+  if (Date.now() > data.expiresAt) {
+    resetOtpStore.delete(normalizedEmail);
+    return null;
+  }
+
+  return data;
+}
+
+/** Şifre sıfırlama tamamlanınca siler */
+export function removeResetPasswordOtp(email: string): void {
+  const normalizedEmail = email.trim().toLowerCase();
+  resetOtpStore.delete(normalizedEmail);
+}

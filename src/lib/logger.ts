@@ -4,6 +4,8 @@ import type { NextRequest } from "next/server";
 export type SystemAction =
   | "LOGIN"
   | "LOGIN_FAILED"
+  | "PASSWORD_RESET"
+  | "PASSWORD_RESET_REQUEST"
   | "ACTIVE_VISIT"
   | "PRICE_REFRESH_MANUAL"
   | "CRON_PRICE_REFRESH"
