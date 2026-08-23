@@ -157,9 +157,9 @@ export function GlobalPortfolioAiModal() {
 
       {/* Interactive Modal Dialog */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 md:p-8 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
           <div
-            className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+            className="relative w-full max-w-5xl lg:max-w-6xl h-[90vh] max-h-[880px] flex flex-col rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
