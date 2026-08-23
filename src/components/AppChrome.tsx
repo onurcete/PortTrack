@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
 import { CookieBanner } from "@/components/CookieBanner";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
+import { GlobalPortfolioAiModal } from "@/components/GlobalPortfolioAiModal";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -82,6 +83,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
       <CookieBanner />
       <FeedbackWidget />
+      <GlobalPortfolioAiModal />
     </div>
   );
 }

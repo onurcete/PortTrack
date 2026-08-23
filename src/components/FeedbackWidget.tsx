@@ -111,10 +111,10 @@ export function FeedbackWidget() {
       {/* Floating Pill Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-[var(--color-brand)] text-white font-extrabold text-xs shadow-xl hover:shadow-2xl hover:scale-105 transition-all cursor-pointer select-none ring-2 ring-[var(--color-brand)]/30 active:scale-95"
+        className="fixed bottom-5 left-5 z-30 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] font-extrabold text-xs shadow-lg hover:shadow-xl hover:scale-105 transition-all cursor-pointer select-none active:scale-95"
         title="Geri Bildirim & Destek"
       >
-        <MessageSquarePlus size={16} />
+        <MessageSquarePlus size={15} className="text-[var(--color-brand)]" />
         <span className="hidden sm:inline">Geri Bildirim</span>
       </button>
 

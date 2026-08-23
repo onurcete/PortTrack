@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { ASSET_META } from "@/lib/assets";
 import type { AnalysisPulse } from "@/lib/analysisPulse";
-import type { BriefingPayload, BriefingFocusMode } from "@/lib/analysisAi";
 import type { HoldingDTO } from "@/lib/analysisData";
 import type { TefasInvestorSummary } from "@/lib/tefasInvestors";
 import {
@@ -34,7 +33,6 @@ import {
   formatNumber,
   formatPercent,
 } from "@/lib/utils";
-import { PortfolioIntelligenceSection } from "./PortfolioIntelligenceSection";
 import { TefasInvestorSection } from "./TefasInvestorSection";
 
 interface AnalysisBriefingClientProps {
@@ -42,14 +40,6 @@ interface AnalysisBriefingClientProps {
   holdings: HoldingDTO[];
   tefasInvestors: TefasInvestorSummary | null;
   lastTechnicalDate: string | null;
-  initialBriefing: {
-    payload: BriefingPayload;
-    model: string;
-    createdAt: string;
-    contextHash: string;
-  } | null;
-  aiConfigured: boolean;
-  contextHash: string;
 }
 
 export function AnalysisBriefingClient({
@@ -57,16 +47,8 @@ export function AnalysisBriefingClient({
   holdings,
   tefasInvestors,
   lastTechnicalDate,
-  initialBriefing,
-  aiConfigured,
-  contextHash,
 }: AnalysisBriefingClientProps) {
   const router = useRouter();
-
-  // AI State
-  const [briefing, setBriefing] = useState(initialBriefing);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
 
   // Technical Refresh State
   const [techLoading, setTechLoading] = useState(false);
@@ -75,49 +57,10 @@ export function AnalysisBriefingClient({
   // Movers Tab State: "gainers" | "losers" | "all"
   const [moverTab, setMoverTab] = useState<"gainers" | "losers" | "all">("all");
 
-  const symbolNotes = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const row of briefing?.payload.perSymbol ?? []) {
-      map.set(row.symbol, row.note);
-    }
-    return map;
-  }, [briefing]);
-
   // Top Concentration Calculation
   const topConcentrationPct = useMemo(() => {
     return pulse.topWeights.reduce((sum, w) => sum + w.weightPct, 0);
   }, [pulse.topWeights]);
-
-  // AI Briefing Refresh
-  async function handleRefreshBriefing(mode: BriefingFocusMode = "general", force = true) {
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const res = await fetch(
-        `/api/analysis/briefing?mode=${mode}${force ? "&force=1" : ""}`,
-        { method: "POST" },
-      );
-      const data = await res.json();
-      if (!data.ok) {
-        setAiError(data.error ?? "Briefing üretilemedi");
-        return null;
-      }
-      const newBriefing = {
-        payload: data.payload,
-        model: data.model,
-        createdAt: data.createdAt,
-        contextHash: data.contextHash,
-      };
-      setBriefing(newBriefing);
-      router.refresh();
-      return newBriefing;
-    } catch {
-      setAiError("Bağlantı hatası");
-      return null;
-    } finally {
-      setAiLoading(false);
-    }
-  }
 
   // Run Technical Analysis
   async function runTechnical() {
@@ -592,21 +535,11 @@ export function AnalysisBriefingClient({
       {tefasInvestors && (
         <TefasInvestorSection
           tefasInvestors={tefasInvestors}
-          symbolNotes={symbolNotes}
+          symbolNotes={new Map()}
         />
       )}
 
-      {/* 6. Portföy Zekâsı (MCP Asistanı) & Günlük Bülten */}
-      <PortfolioIntelligenceSection
-        briefing={briefing}
-        aiConfigured={aiConfigured}
-        contextHash={contextHash}
-        onRefresh={handleRefreshBriefing}
-        aiLoading={aiLoading}
-        aiError={aiError}
-      />
-
-      {/* 7. YTD Yasal Uyarı Kutusu */}
+      {/* 6. YTD Yasal Uyarı Kutusu */}
       <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-[var(--color-muted)] flex items-start gap-3 mt-6">
         <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
         <div className="space-y-1">
@@ -614,7 +547,7 @@ export function AnalysisBriefingClient({
             Yasal Uyarı (YTD)
           </p>
           <p className="leading-relaxed">
-            Bu sayfada sunulan AI briefing yanıtları, TEFAS yatırımcı hareketleri ve istatistiksel göstergeler yalnızca bilgilendirme ve kişisel analiz amaçlıdır. SPK mevzuatı kapsamında yatırım tavsiyesi veya portföy yönetim emri teşkil etmez.
+            Bu sayfada sunulan analiz göstergeleri, TEFAS yatırımcı hareketleri ve istatistiksel hesaplamalar yalnızca bilgilendirme ve kişisel analiz amaçlıdır. SPK mevzuatı kapsamında yatırım tavsiyesi veya portföy yönetim emri teşkil etmez.
           </p>
         </div>
       </div>
