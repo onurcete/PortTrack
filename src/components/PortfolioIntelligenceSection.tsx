@@ -319,9 +319,9 @@ export function PortfolioIntelligenceSection({
                   </div>
                 </div>
 
-                {/* AI Markdown Answer */}
-                <div className="text-xs text-[var(--color-foreground)] font-normal leading-relaxed whitespace-pre-line space-y-2 prose prose-invert prose-xs max-w-none">
-                  {item.answer}
+                {/* AI Formatted Response */}
+                <div className="text-xs text-[var(--color-foreground)] leading-relaxed space-y-2">
+                  <FormattedMarkdownResponse content={item.answer} />
                 </div>
               </div>
             ))}
@@ -480,5 +480,152 @@ export function PortfolioIntelligenceSection({
         )}
       </div>
     </section>
+  );
+}
+
+function parseInlineBold(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={index} className="font-black text-[var(--color-foreground)]">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+}
+
+function FormattedMarkdownResponse({ content }: { content: string }) {
+  // 1. "Portföy Notu" bölümünü ayır
+  const noteRegex = /(?:💡\s*)?(?:\*\*)?Portföy Notu(?:\*\*)?:?\s*([\s\S]*)$/i;
+  let mainContent = content;
+  let noteText: string | null = null;
+
+  const noteMatch = content.match(noteRegex);
+  if (noteMatch && noteMatch[1]) {
+    noteText = noteMatch[1].trim();
+    mainContent = content.slice(0, noteMatch.index).trim();
+  }
+
+  const lines = mainContent.split("\n");
+  const elements: React.ReactNode[] = [];
+  let currentList: React.ReactNode[] = [];
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className="space-y-1.5 my-2">
+          {currentList}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  lines.forEach((rawLine, idx) => {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushList();
+      elements.push(<div key={`space-${idx}`} className="h-1.5" />);
+      return;
+    }
+
+    // Başlık (# veya ## veya ###)
+    if (line.startsWith("#")) {
+      flushList();
+      const cleanHeader = line.replace(/^#+\s*/, "");
+      elements.push(
+        <h4
+          key={`header-${idx}`}
+          className="text-xs sm:text-sm font-black text-[var(--color-foreground)] mt-3.5 mb-1.5 flex items-center gap-1.5"
+        >
+          <span className="h-2 w-2 rounded-full bg-[var(--color-brand)]" />
+          {parseInlineBold(cleanHeader)}
+        </h4>
+      );
+      return;
+    }
+
+    // Numaralı Varlık / Başlık (örn: "1. **BES (BES)**:" veya "2. **PHE (TEFAS)**:")
+    const numberedMatch = line.match(/^(\d+)\.\s*(.+)$/);
+    if (numberedMatch) {
+      flushList();
+      const num = numberedMatch[1];
+      const itemTitle = numberedMatch[2];
+      elements.push(
+        <div
+          key={`num-${idx}`}
+          className="flex items-center gap-2 pt-2.5 pb-1 font-black text-xs sm:text-sm text-[var(--color-foreground)]"
+        >
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-black text-[10px]">
+            {num}
+          </span>
+          <span className="tracking-tight">{parseInlineBold(itemTitle)}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Madde İşareti (örn: "- Miktar: 1" veya "- Güncel Değer: 881.000 TL")
+    if (line.startsWith("- ") || line.startsWith("* ") || line.startsWith("• ")) {
+      const cleanBullet = line.replace(/^[-*•]\s*/, "");
+      const kvMatch = cleanBullet.match(/^([^:]+):\s*(.+)$/);
+
+      if (kvMatch) {
+        const key = kvMatch[1].trim().replace(/^\*\*(.*)\*\*$/, "$1");
+        const val = kvMatch[2].trim();
+        currentList.push(
+          <li key={`kv-${idx}`} className="ml-5 flex items-baseline gap-2 text-xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-brand)]/70 shrink-0 mt-1.5" />
+            <span className="text-[var(--color-muted)] font-medium">
+              <strong className="text-[var(--color-foreground)] font-extrabold">{key}:</strong>{" "}
+              <span className="font-bold text-[var(--color-brand-strong)] tabular-nums">
+                {parseInlineBold(val)}
+              </span>
+            </span>
+          </li>
+        );
+      } else {
+        currentList.push(
+          <li key={`bullet-${idx}`} className="ml-5 flex items-start gap-2 text-xs text-[var(--color-foreground)]/90">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-brand)] shrink-0 mt-1.5" />
+            <span>{parseInlineBold(cleanBullet)}</span>
+          </li>
+        );
+      }
+      return;
+    }
+
+    // Standart Paragraf
+    flushList();
+    elements.push(
+      <p key={`p-${idx}`} className="text-xs text-[var(--color-foreground)]/90 font-medium leading-relaxed">
+        {parseInlineBold(line)}
+      </p>
+    );
+  });
+
+  flushList();
+
+  return (
+    <div className="space-y-1 font-sans">
+      {elements}
+
+      {/* Portföy Notu Callout Kartı */}
+      {noteText && (
+        <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-[var(--color-surface-muted)]/40 to-indigo-500/10 border border-amber-500/30 text-xs text-[var(--color-foreground)] space-y-1.5 shadow-xs">
+          <div className="flex items-center gap-1.5 font-black text-amber-600 dark:text-amber-400 text-xs uppercase tracking-wider">
+            <span className="text-sm">💡</span>
+            <span>Portföy Notu & Stratejik Çıkarım</span>
+          </div>
+          <p className="leading-relaxed font-semibold text-[var(--color-foreground)]/95 text-xs">
+            {parseInlineBold(noteText)}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
