@@ -372,7 +372,11 @@ export async function executeGetMonthlyGrowthHistory(
   userId: string,
   args?: { year?: number },
 ) {
-  const series = await getGrowthSeries(userId);
+  const [series, prodPerf] = await Promise.all([
+    getGrowthSeries(userId),
+    getProductPerformance(userId, 36).catch(() => ({ months: [], rows: [] })),
+  ]);
+
   if (!series || series.length === 0) {
     return {
       message: "Portföy için henüz geçmiş büyüme verisi bulunmuyor.",
@@ -398,6 +402,37 @@ export async function executeGetMonthlyGrowthHistory(
     const mNum = parseInt(m);
     const yNum = parseInt(y);
 
+    // O ayın varlık bazlı getirileri
+    const mIdx = (prodPerf.months as string[]).indexOf(p.month);
+    let topGainers: Array<{ symbol: string; assetType: string; returnPctTRY: number }> = [];
+    let topLosers: Array<{ symbol: string; assetType: string; returnPctTRY: number }> = [];
+
+    if (mIdx !== -1) {
+      const assetList: Array<{ symbol: string; assetType: string; returnPctTRY: number }> = [];
+      for (const r of prodPerf.rows) {
+        const ret = r.returnsTRY[mIdx];
+        if (ret !== null && ret !== undefined && typeof ret === "number") {
+          assetList.push({
+            symbol: r.symbol,
+            assetType: r.assetType,
+            returnPctTRY: ret,
+          });
+        }
+      }
+
+      topGainers = [...assetList]
+        .filter((a) => a.returnPctTRY > 0)
+        .sort((a, b) => b.returnPctTRY - a.returnPctTRY)
+        .slice(0, 3)
+        .map((a) => ({ symbol: a.symbol, assetType: a.assetType, returnPctTRY: Number(a.returnPctTRY.toFixed(2)) }));
+
+      topLosers = [...assetList]
+        .filter((a) => a.returnPctTRY < 0)
+        .sort((a, b) => a.returnPctTRY - b.returnPctTRY)
+        .slice(0, 3)
+        .map((a) => ({ symbol: a.symbol, assetType: a.assetType, returnPctTRY: Number(a.returnPctTRY.toFixed(2)) }));
+    }
+
     return {
       year: yNum,
       month: p.month,
@@ -408,6 +443,10 @@ export async function executeGetMonthlyGrowthHistory(
       monthlyReturnPctTRY: Number(returnPctTRY.toFixed(2)),
       monthlyGainUSD: Math.round(changeUSD),
       monthlyReturnPctUSD: Number(returnPctUSD.toFixed(2)),
+      keyMoversThisMonth: {
+        topGainers,
+        topLosers,
+      },
     };
   });
 

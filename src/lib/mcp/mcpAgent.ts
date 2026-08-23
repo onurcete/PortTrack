@@ -40,77 +40,81 @@ export async function askPortfolioAgent(
     { role: "user", content: question },
   ];
 
-  // 1. Aşama: Modelin hangi tool'ları çağıracağını belirlemesi
-  const firstResponse = await client.chat.completions.create({
-    model,
-    messages,
-    tools: PORTFOLIO_MCP_TOOLS,
-    tool_choice: "auto",
-    temperature: 0.2,
-  });
-
-  const responseMessage = firstResponse.choices[0]?.message;
-  const toolCalls = responseMessage?.tool_calls || [];
   const usedTools: string[] = [];
+  let turn = 0;
+  const maxTurns = 3;
 
-  // Eğer model doğrudan araç çağırmadan yanıt verdiyse veya soru genel bir tanımsa:
-  if (toolCalls.length === 0) {
-    return {
-      answer:
-        responseMessage?.content ||
-        "Portföyünüzle ilgili spesifik bir analiz yapmak için lütfen yukarıdaki hızlı analiz butonlarını deneyin veya net bir soru sorun.",
-      usedTools: [],
+  while (turn < maxTurns) {
+    turn++;
+    const response = await client.chat.completions.create({
       model,
-      durationMs: Date.now() - startTime,
-    };
-  }
+      messages,
+      tools: PORTFOLIO_MCP_TOOLS,
+      tool_choice: "auto",
+      temperature: 0.2,
+    });
 
-  // 2. Aşama: Seçilen tool'ları sunucu tarafında paralel olarak çalıştır
-  messages.push(responseMessage);
+    const responseMessage = response.choices[0]?.message;
+    if (!responseMessage) break;
 
-  for (const call of toolCalls) {
-    if (call.type === "function") {
-      const toolName = call.function.name;
-      usedTools.push(toolName);
+    const toolCalls = responseMessage.tool_calls || [];
+    if (toolCalls.length === 0) {
+      // Model düşünmeyi tamamlayıp nihai analizi üretti
+      return {
+        answer:
+          responseMessage.content ||
+          "Portföyünüzle ilgili spesifik bir analiz yapmak için lütfen yukarıdaki hızlı analiz butonlarını deneyin veya net bir soru sorun.",
+        usedTools: Array.from(new Set(usedTools)),
+        model,
+        durationMs: Date.now() - startTime,
+      };
+    }
 
-      let parsedArgs: any = {};
-      try {
-        parsedArgs = JSON.parse(call.function.arguments || "{}");
-      } catch {
-        parsedArgs = {};
-      }
+    messages.push(responseMessage);
 
-      try {
-        const { result } = await dispatchMcpTool(userId, toolName, parsedArgs);
-        messages.push({
-          role: "tool",
-          tool_call_id: call.id,
-          content: JSON.stringify(result),
-        });
-      } catch (err: any) {
-        messages.push({
-          role: "tool",
-          tool_call_id: call.id,
-          content: JSON.stringify({ error: err?.message || "Araç çalıştırılamadı" }),
-        });
+    // Bu turdaki tool çağrılarını çalıştır
+    for (const call of toolCalls) {
+      if (call.type === "function") {
+        const toolName = call.function.name;
+        usedTools.push(toolName);
+
+        let parsedArgs: any = {};
+        try {
+          parsedArgs = JSON.parse(call.function.arguments || "{}");
+        } catch {
+          parsedArgs = {};
+        }
+
+        try {
+          const { result } = await dispatchMcpTool(userId, toolName, parsedArgs);
+          messages.push({
+            role: "tool",
+            tool_call_id: call.id,
+            content: JSON.stringify(result),
+          });
+        } catch (err: any) {
+          messages.push({
+            role: "tool",
+            tool_call_id: call.id,
+            content: JSON.stringify({ error: err?.message || "Araç çalıştırılamadı" }),
+          });
+        }
       }
     }
   }
 
-  // 3. Aşama: Tool sonuçlarını sentezleyip nihai finansal raporu oluştur
-  const secondResponse = await client.chat.completions.create({
+  // Maksimum tur dolduysa nihai sentezi al
+  const finalResponse = await client.chat.completions.create({
     model,
     messages,
-    temperature: 0.4,
+    temperature: 0.3,
   });
 
-  const finalAnswer =
-    secondResponse.choices[0]?.message?.content ||
-    "Portföy analiz verileri işlendi fakat özet üretilemedi.";
-
   return {
-    answer: finalAnswer,
-    usedTools,
+    answer:
+      finalResponse.choices[0]?.message?.content ||
+      "Portföy analiz verileri işlendi fakat özet üretilemedi.",
+    usedTools: Array.from(new Set(usedTools)),
     model,
     durationMs: Date.now() - startTime,
   };
