@@ -123,18 +123,22 @@ export const PORTFOLIO_MCP_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "get_portfolio_contributors",
       description:
-        "Portföyün genel kâr veya zararına en çok katkı sağlayan en iyi kazandıranları (Top Gainers) ve en çok kaybettirenleri (Top Losers) parasal ve yüzdesel olarak getirir.",
+        "Portföyün seçilen dönemde (2026 yılı, YTD, MTD, Günlük veya Tüm Zamanlar) en çok kazandıran (Top Gainers) ve en çok kaybettiren (Top Losers) varlıklarını/enstrümanlarını getirir. Kullanıcı 2026 yılında en çok kazandıran enstrümanı sorduğunda year: 2026 veya period: 'YTD' ile bu araç çağrılmalıdır.",
       parameters: {
         type: "object",
         properties: {
           period: {
             type: "string",
-            enum: ["DAILY", "MTD", "ALL_TIME"],
-            description: "Katkı analizinin dönemi (Varsayılan: MTD).",
+            enum: ["DAILY", "MTD", "YTD", "ALL_TIME"],
+            description: "Katkı analizinin dönemi (DAILY, MTD, YTD, ALL_TIME).",
+          },
+          year: {
+            type: "number",
+            description: "Spesifik bir yıl (Örn: 2026, 2025). Belirtilirse sadece o yılın getirilerine göre sıralar.",
           },
           limit: {
             type: "number",
-            description: "Her kategori için getirilecek pozisyon sayısı (Varsayılan: 3).",
+            description: "Her kategori için getirilecek pozisyon sayısı (Varsayılan: 5).",
           },
         },
         required: [],

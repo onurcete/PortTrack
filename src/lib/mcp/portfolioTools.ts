@@ -182,14 +182,76 @@ export async function executeGetPortfolioPerformance(userId: string, args?: { pe
  */
 export async function executeGetPortfolioContributors(
   userId: string,
-  args?: { period?: string; limit?: number },
+  args?: { period?: string; year?: number; limit?: number },
 ) {
   const p = await getPortfolio(userId);
   const openPos = p.positions.filter((x) => x.quantity > 1e-9 && x.valueTRY > 0);
-  const limit = args?.limit || 3;
-  const period = args?.period || "MTD";
+  const limit = args?.limit || 5;
+  const currentYear = new Date().getFullYear();
+  const targetYear = args?.year || (args?.period === "YTD" ? currentYear : null);
 
-  if (period === "DAILY") {
+  // 1. Belirli bir Yıl veya YTD (Yılbaşından Beri) Katkıları
+  if (targetYear) {
+    const prodPerf = await getProductPerformance(userId, 36).catch(() => ({ months: [], rows: [] }));
+    const yearMonthIndices = (prodPerf.months as string[])
+      .map((m, idx) => (m.startsWith(`${targetYear}-`) ? idx : -1))
+      .filter((idx) => idx !== -1);
+
+    if (yearMonthIndices.length > 0) {
+      const yearAssets: Array<{
+        symbol: string;
+        assetType: string;
+        yearReturnPctTRY: number;
+        currentValueTRY: number | null;
+      }> = [];
+
+      for (const row of prodPerf.rows) {
+        let compound = 1.0;
+        let hasData = false;
+        for (const mIdx of yearMonthIndices) {
+          const ret = row.returnsTRY[mIdx];
+          if (ret !== null && ret !== undefined && !isNaN(ret)) {
+            compound *= 1 + ret / 100;
+            hasData = true;
+          }
+        }
+
+        if (hasData) {
+          const pos = openPos.find((x) => x.symbol === row.symbol);
+          yearAssets.push({
+            symbol: row.symbol,
+            assetType: row.assetType,
+            yearReturnPctTRY: Number(((compound - 1) * 100).toFixed(2)),
+            currentValueTRY: pos ? Math.round(pos.valueTRY) : null,
+          });
+        }
+      }
+
+      const gainers = [...yearAssets].sort((a, b) => b.yearReturnPctTRY - a.yearReturnPctTRY);
+      const losers = [...yearAssets].sort((a, b) => a.yearReturnPctTRY - b.yearReturnPctTRY);
+
+      return {
+        period: `${targetYear} Yılı (YTD) Getirileri`,
+        year: targetYear,
+        monthsIncluded: yearMonthIndices.map((i) => prodPerf.months[i]),
+        topGainers: gainers.slice(0, limit).map((x) => ({
+          symbol: x.symbol,
+          assetType: x.assetType,
+          returnPctTRY: x.yearReturnPctTRY,
+          currentValueTRY: x.currentValueTRY,
+        })),
+        topLosers: losers.slice(0, limit).map((x) => ({
+          symbol: x.symbol,
+          assetType: x.assetType,
+          returnPctTRY: x.yearReturnPctTRY,
+          currentValueTRY: x.currentValueTRY,
+        })),
+      };
+    }
+  }
+
+  // 2. Günlük Değişim
+  if (args?.period === "DAILY") {
     const valid = openPos.filter((x) => x.dailyChangePct !== null && x.dailyChangePct !== undefined);
     const sorted = [...valid].sort((a, b) => (b.dailyChangePct ?? 0) - (a.dailyChangePct ?? 0));
     return {
@@ -209,22 +271,22 @@ export async function executeGetPortfolioContributors(
     };
   }
 
-  // Varsayılan: MTD veya All-time profit
+  // 3. Tüm Zamanlar (All Time Total Profit)
   const sorted = [...openPos].sort((a, b) => b.unrealizedPctTRY - a.unrealizedPctTRY);
   return {
-    period: "ALL_TIME (Toplam Kâr/Zarar Katkısı)",
+    period: "ALL_TIME (Toplam Geçmiş Kâr Katkısı)",
     topGainers: sorted.slice(0, limit).map((x) => ({
       symbol: x.symbol,
       assetType: x.assetType,
-      profitPct: Number(x.unrealizedPctTRY.toFixed(2)),
-      profitTRY: Math.round(x.unrealizedTRY),
+      allTimeProfitPct: Number(x.unrealizedPctTRY.toFixed(2)),
+      allTimeProfitTRY: Math.round(x.unrealizedTRY),
       valueTRY: Math.round(x.valueTRY),
     })),
     topLosers: sorted.slice(-limit).reverse().map((x) => ({
       symbol: x.symbol,
       assetType: x.assetType,
-      profitPct: Number(x.unrealizedPctTRY.toFixed(2)),
-      profitTRY: Math.round(x.unrealizedTRY),
+      allTimeProfitPct: Number(x.unrealizedPctTRY.toFixed(2)),
+      allTimeProfitTRY: Math.round(x.unrealizedTRY),
       valueTRY: Math.round(x.valueTRY),
     })),
   };
