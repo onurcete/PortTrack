@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -15,6 +15,10 @@ import {
   Calendar,
   X,
   Zap,
+  Flame,
+  Search,
+  ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
 import type { TefasInvestorSummary, TefasFundInvestorStats } from "@/lib/tefasInvestors";
 import { cn, formatNumber, formatPercent } from "@/lib/utils";
@@ -33,38 +37,80 @@ export function TefasInvestorSection({
 }: TefasInvestorSectionProps) {
   const [filter, setFilter] = useState<TefasFilter>("ALL");
   const [viewMode, setViewMode] = useState<TefasViewMode>("GRID");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedFund, setSelectedFund] = useState<TefasFundInvestorStats | null>(null);
 
   const { funds, risingCount, fallingCount, flatCount, topInflow, topOutflow } = tefasInvestors;
 
-  // Filtered funds list
-  const filteredFunds = funds.filter((f) => {
-    if (filter === "RISING") return (f.weekDeltaPct ?? 0) > 0.1;
-    if (filter === "FALLING") return (f.weekDeltaPct ?? 0) < -0.1;
-    return true;
-  });
+  // Filtered funds list by filter & search query
+  const filteredFunds = useMemo(() => {
+    return funds.filter((f) => {
+      // Type filter
+      if (filter === "RISING" && (f.weekDeltaPct ?? 0) <= 0.1) return false;
+      if (filter === "FALLING" && (f.weekDeltaPct ?? 0) >= -0.1) return false;
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        if (!f.symbol.toLowerCase().includes(q)) return false;
+      }
+
+      return true;
+    });
+  }, [funds, filter, searchQuery]);
 
   const totalFunds = funds.length;
   const risingPct = totalFunds > 0 ? (risingCount / totalFunds) * 100 : 0;
   const fallingPct = totalFunds > 0 ? (fallingCount / totalFunds) * 100 : 0;
   const flatPct = totalFunds > 0 ? (flatCount / totalFunds) * 100 : 0;
 
+  // Total net investor influx across all portfolio TEFAS funds
+  const totalNetDelta = useMemo(() => {
+    return funds.reduce((acc, f) => acc + (f.weekDelta ?? 0), 0);
+  }, [funds]);
+
+  const topInflowFund = useMemo(() => {
+    if (!topInflow) return null;
+    return funds.find((f) => f.symbol === topInflow.symbol) ?? null;
+  }, [funds, topInflow]);
+
+  const topOutflowFund = useMemo(() => {
+    if (!topOutflow) return null;
+    return funds.find((f) => f.symbol === topOutflow.symbol) ?? null;
+  }, [funds, topOutflow]);
+
   return (
-    <section className="space-y-6 pt-6 border-t border-[var(--color-border)]/50">
+    <section className="space-y-6 pt-4 border-t border-[var(--color-border)]/50">
       {/* Section Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--color-brand-strong)] flex items-center gap-1.5">
             <Users size={14} className="text-[var(--color-brand)]" />
-            Fon Akış & Talep Analizi
+            TEFAS Fon Akışı & Yatırımcı İntelligence
           </span>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-[var(--color-foreground)] mt-1">
-            TEFAS Haftalık Yatırımcı Sayısı Dinamikleri
+            Haftalık Yatırımcı Sayısı Dinamikleri
           </h2>
+          <p className="text-xs text-[var(--color-muted)] mt-0.5">
+            Portföyünüzdeki fonlara olan haftalık yatırımcı giriş/çıkış trendi ve piyasa ilgisi.
+          </p>
         </div>
 
-        {/* View Mode & Live Badge */}
-        <div className="flex items-center gap-2">
+        {/* View Mode & Search Controls */}
+        <div className="flex items-center gap-2.5">
+          {/* Search Box */}
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+            <input
+              type="text"
+              placeholder="Fon Ara (örn: TCD)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs font-semibold rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-brand)] transition-all w-36 sm:w-44"
+            />
+          </div>
+
+          {/* Grid / Table Switcher */}
           <div className="flex items-center gap-1 bg-[var(--color-surface-muted)]/60 p-1 rounded-xl border border-[var(--color-border)]/50">
             <button
               type="button"
@@ -94,146 +140,179 @@ export function TefasInvestorSection({
         </div>
       </div>
 
-      {/* Overview Analytics Bar (Glassmorphism Header) */}
-      <div className="card p-6 bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/20 to-[var(--color-brand-soft)]/15 border border-[var(--color-border)]/60 shadow-md rounded-2xl space-y-5">
-        {/* Top Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Sentiment Distribution Card */}
-          <div className="card p-4 bg-[var(--color-surface)] border border-[var(--color-border)]/50 rounded-xl space-y-2.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
-              Yatırımcı Talebi Dağılımı
+      {/* 3-Card Interactive Bento Intelligence Header */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Card 1: Yatırımcı Talebi & Sentiment Dağılımı */}
+        <div className="card p-5 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-2xl shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] flex items-center gap-1.5">
+              <Users size={13} className="text-[var(--color-brand)]" />
+              Genel Fon Talep Dengesi
             </span>
-            
-            {/* Visual Bar */}
-            <div className="relative h-3 w-full bg-[var(--color-surface-muted)] rounded-full overflow-hidden flex">
+            <span
+              className={cn(
+                "text-[10px] font-black px-2 py-0.5 rounded-lg border tabular-nums",
+                totalNetDelta >= 0
+                  ? "bg-emerald-500/10 border-emerald-500/20 text-[var(--color-profit)]"
+                  : "bg-rose-500/10 border-rose-500/20 text-[var(--color-loss)]"
+              )}
+            >
+              Net {totalNetDelta >= 0 ? `+${formatNumber(totalNetDelta, 0)}` : formatNumber(totalNetDelta, 0)} Yatırımcı
+            </span>
+          </div>
+
+          {/* Segmented Gradient Bar */}
+          <div className="space-y-1.5">
+            <div className="relative h-3 w-full bg-[var(--color-surface-muted)] rounded-full overflow-hidden flex shadow-inner">
               <div
-                className="bg-[var(--color-profit)] h-full transition-all duration-500"
+                className="bg-emerald-500 h-full transition-all duration-500"
                 style={{ width: `${risingPct}%` }}
                 title={`Artan: %${risingPct.toFixed(0)}`}
               />
               <div
-                className="bg-amber-500/60 h-full transition-all duration-500"
+                className="bg-amber-400/80 h-full transition-all duration-500"
                 style={{ width: `${flatPct}%` }}
                 title={`Nötr: %${flatPct.toFixed(0)}`}
               />
               <div
-                className="bg-[var(--color-loss)] h-full transition-all duration-500"
+                className="bg-rose-500 h-full transition-all duration-500"
                 style={{ width: `${fallingPct}%` }}
                 title={`Azalan: %${fallingPct.toFixed(0)}`}
               />
             </div>
 
-            <div className="flex justify-between items-center text-xs font-bold pt-1">
+            <div className="flex justify-between items-center text-xs font-bold pt-0.5">
               <span className="text-[var(--color-profit)] flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-[var(--color-profit)]" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                 {risingCount} Fon Artışta (%{risingPct.toFixed(0)})
               </span>
               <span className="text-[var(--color-loss)] flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-[var(--color-loss)]" />
+                <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                 {fallingCount} Fon Azalışta (%{fallingPct.toFixed(0)})
               </span>
             </div>
           </div>
+        </div>
 
-          {/* Top Inflow Highlight Card */}
-          {topInflow ? (
-            <div className="card p-4 bg-gradient-to-br from-emerald-500/10 via-[var(--color-surface)] to-[var(--color-surface)] border border-emerald-500/30 rounded-xl space-y-1 relative overflow-hidden">
-              <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-profit)]">
-                <span className="flex items-center gap-1">
-                  <TrendingUp size={13} /> En Yüksek Yatırımcı Girişi
-                </span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[var(--color-profit)]">
-                  HAFTALIK TOP
-                </span>
-              </div>
+        {/* Card 2: En Yüksek Yatırımcı Girişi (Top Inflow) */}
+        {topInflow ? (
+          <div
+            onClick={() => topInflowFund && setSelectedFund(topInflowFund)}
+            className="card p-5 bg-gradient-to-br from-emerald-500/10 via-[var(--color-surface)] to-[var(--color-surface)] border border-emerald-500/30 hover:border-emerald-500/60 rounded-2xl shadow-xs transition-all cursor-pointer space-y-2 relative overflow-hidden group"
+          >
+            <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-profit)]">
+              <span className="flex items-center gap-1">
+                <TrendingUp size={13} /> Haftanın Talep Lideri
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[var(--color-profit)] font-black text-[9px]">
+                TOP GİRİŞ
+              </span>
+            </div>
 
-              <div className="flex items-baseline justify-between pt-1">
-                <span className="text-lg font-black text-[var(--color-foreground)] tracking-tight">
+            <div className="flex items-baseline justify-between pt-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-black text-[var(--color-foreground)] tracking-tight group-hover:text-[var(--color-profit)] transition-colors">
                   {topInflow.symbol}
                 </span>
-                <span className="text-sm font-black text-[var(--color-profit)] tabular-nums flex items-center gap-0.5">
-                  <ArrowUpRight size={14} />
-                  {formatPercent(topInflow.weekDeltaPct)}
-                </span>
+                {topInflowFund?.latest != null && (
+                  <span className="text-[10px] font-bold text-[var(--color-muted)]">
+                    ({formatNumber(topInflowFund.latest, 0)} kişi)
+                  </span>
+                )}
               </div>
-
-              <p className="text-xs text-[var(--color-muted)] font-medium pt-0.5">
-                Net <strong className="text-[var(--color-profit)]">+{formatNumber(topInflow.weekDelta, 0)}</strong> yeni kişi katıldı
-              </p>
+              <span className="text-sm font-black text-[var(--color-profit)] tabular-nums flex items-center gap-0.5">
+                <ArrowUpRight size={14} />
+                +{formatPercent(topInflow.weekDeltaPct)}
+              </span>
             </div>
-          ) : (
-            <div className="card p-4 border border-[var(--color-border)]/50 rounded-xl flex items-center justify-center text-xs text-[var(--color-muted)]">
-              Giriş verisi yok
+
+            <p className="text-xs text-[var(--color-muted)] font-medium">
+              Haftalık net <strong className="text-[var(--color-profit)]">+{formatNumber(topInflow.weekDelta, 0)}</strong> yeni yatırımcı katıldı
+            </p>
+          </div>
+        ) : (
+          <div className="card p-5 border border-[var(--color-border)]/50 rounded-2xl flex items-center justify-center text-xs text-[var(--color-muted)]">
+            Giriş verisi bulunmuyor
+          </div>
+        )}
+
+        {/* Card 3: En Yüksek Yatırımcı Çıkışı (Top Outflow) */}
+        {topOutflow ? (
+          <div
+            onClick={() => topOutflowFund && setSelectedFund(topOutflowFund)}
+            className="card p-5 bg-gradient-to-br from-rose-500/10 via-[var(--color-surface)] to-[var(--color-surface)] border border-rose-500/30 hover:border-rose-500/60 rounded-2xl shadow-xs transition-all cursor-pointer space-y-2 relative overflow-hidden group"
+          >
+            <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-loss)]">
+              <span className="flex items-center gap-1">
+                <TrendingDown size={13} /> En Yüksek Yatırımcı Çıkışı
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-[var(--color-loss)] font-black text-[9px]">
+                TOP ÇIKIŞ
+              </span>
             </div>
-          )}
 
-          {/* Top Outflow Highlight Card */}
-          {topOutflow ? (
-            <div className="card p-4 bg-gradient-to-br from-rose-500/10 via-[var(--color-surface)] to-[var(--color-surface)] border border-rose-500/30 rounded-xl space-y-1 relative overflow-hidden">
-              <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-loss)]">
-                <span className="flex items-center gap-1">
-                  <TrendingDown size={13} /> En Yüksek Yatırımcı Çıkışı
-                </span>
-                <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-[var(--color-loss)]">
-                  HAFTALIK ÇIKIŞ
-                </span>
-              </div>
-
-              <div className="flex items-baseline justify-between pt-1">
-                <span className="text-lg font-black text-[var(--color-foreground)] tracking-tight">
+            <div className="flex items-baseline justify-between pt-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-black text-[var(--color-foreground)] tracking-tight group-hover:text-[var(--color-loss)] transition-colors">
                   {topOutflow.symbol}
                 </span>
-                <span className="text-sm font-black text-[var(--color-loss)] tabular-nums flex items-center gap-0.5">
-                  <ArrowDownRight size={14} />
-                  {formatPercent(topOutflow.weekDeltaPct)}
-                </span>
-              </div>
-
-              <p className="text-xs text-[var(--color-muted)] font-medium pt-0.5">
-                Net <strong className="text-[var(--color-loss)]">{formatNumber(topOutflow.weekDelta, 0)}</strong> kişi ayrıldı
-              </p>
-            </div>
-          ) : (
-            <div className="card p-4 border border-[var(--color-border)]/50 rounded-xl flex items-center justify-center text-xs text-[var(--color-muted)]">
-              Çıkış verisi yok
-            </div>
-          )}
-        </div>
-
-        {/* Filter Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--color-border)]/40">
-          <div className="flex items-center gap-1.5">
-            {[
-              { id: "ALL", label: `Tüm Fonlar (${totalFunds})` },
-              { id: "RISING", label: `📈 Talep Artanlar (${risingCount})` },
-              { id: "FALLING", label: `📉 Talep Azalanlar (${fallingCount})` },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setFilter(tab.id as TefasFilter)}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
-                  filter === tab.id
-                    ? "bg-[var(--color-brand)] text-white shadow-xs"
-                    : "bg-[var(--color-surface)] border border-[var(--color-border)]/50 text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                {topOutflowFund?.latest != null && (
+                  <span className="text-[10px] font-bold text-[var(--color-muted)]">
+                    ({formatNumber(topOutflowFund.latest, 0)} kişi)
+                  </span>
                 )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+              </div>
+              <span className="text-sm font-black text-[var(--color-loss)] tabular-nums flex items-center gap-0.5">
+                <ArrowDownRight size={14} />
+                {formatPercent(topOutflow.weekDeltaPct)}
+              </span>
+            </div>
 
-          <span className="text-[11px] text-[var(--color-muted)] flex items-center gap-1">
-            <Info size={12} /> Detaylar için fon kartlarına tıklayın
-          </span>
+            <p className="text-xs text-[var(--color-muted)] font-medium">
+              Haftalık net <strong className="text-[var(--color-loss)]">{formatNumber(topOutflow.weekDelta, 0)}</strong> yatırımcı ayrıldı
+            </p>
+          </div>
+        ) : (
+          <div className="card p-5 border border-[var(--color-border)]/50 rounded-2xl flex items-center justify-center text-xs text-[var(--color-muted)]">
+            Çıkış verisi bulunmuyor
+          </div>
+        )}
+      </div>
+
+      {/* Filter Tabs Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2">
+          {[
+            { id: "ALL", label: `Tüm TEFAS Fonları (${totalFunds})` },
+            { id: "RISING", label: `📈 Talep Artanlar (${risingCount})` },
+            { id: "FALLING", label: `📉 Talep Azalanlar (${fallingCount})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setFilter(tab.id as TefasFilter)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
+                filter === tab.id
+                  ? "bg-[var(--color-foreground)] text-white shadow-xs font-black"
+                  : "bg-[var(--color-surface)] border border-[var(--color-border)]/60 text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
+
+        <span className="text-[11px] text-[var(--color-muted)] flex items-center gap-1 font-medium">
+          <Info size={12} className="text-[var(--color-brand)]" />
+          Grafiğini ve geçmişini görmek için fona tıklayın
+        </span>
       </div>
 
       {/* Funds Content Display */}
       {filteredFunds.length === 0 ? (
         <div className="card p-8 text-center text-xs text-[var(--color-muted)] rounded-2xl">
-          Seçilen filtreye uygun TEFAS fonu bulunamadı.
+          Seçilen filtreye veya arama kriterine uygun TEFAS fonu bulunamadı.
         </div>
       ) : viewMode === "GRID" ? (
         /* Rich Interactive Cards View */
@@ -248,20 +327,20 @@ export function TefasInvestorSection({
               <div
                 key={f.symbol}
                 onClick={() => setSelectedFund(f)}
-                className="card p-4 border border-[var(--color-border)]/60 hover:border-[var(--color-brand)]/50 shadow-xs hover:shadow-md transition-all cursor-pointer rounded-2xl space-y-3 relative group"
+                className="card p-4 bg-[var(--color-surface)] border border-[var(--color-border)]/60 hover:border-[var(--color-brand)]/60 shadow-xs hover:shadow-md transition-all cursor-pointer rounded-2xl space-y-3 relative group"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-xs shadow-2xs">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white font-black text-xs shadow-2xs">
                       {f.symbol}
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-base text-[var(--color-foreground)] group-hover:text-[var(--color-brand-strong)] transition-colors">
+                      <h4 className="font-black text-sm text-[var(--color-foreground)] group-hover:text-[var(--color-brand-strong)] transition-colors">
                         {f.symbol}
                       </h4>
-                      <span className="text-[10px] text-[var(--color-muted)] font-medium">
-                        TEFAS Yatırımcı Fonu
+                      <span className="text-[10px] text-[var(--color-muted)] font-bold">
+                        TEFAS Fonu
                       </span>
                     </div>
                   </div>
@@ -269,11 +348,11 @@ export function TefasInvestorSection({
                   {/* Trend Pill */}
                   <span
                     className={cn(
-                      "text-[10px] font-extrabold px-2.5 py-1 rounded-full border flex items-center gap-1",
+                      "text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border flex items-center gap-1",
                       isRising
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-[var(--color-profit)]"
+                        ? "bg-emerald-500/10 border-emerald-500/25 text-[var(--color-profit)]"
                         : isFalling
-                        ? "bg-rose-500/10 border-rose-500/20 text-[var(--color-loss)]"
+                        ? "bg-rose-500/10 border-rose-500/25 text-[var(--color-loss)]"
                         : "bg-[var(--color-surface-muted)] border-[var(--color-border)]/40 text-[var(--color-muted)]"
                     )}
                   >
@@ -283,7 +362,7 @@ export function TefasInvestorSection({
                 </div>
 
                 {/* Main Stats: Investor Count & Delta */}
-                <div className="pt-2 border-t border-[var(--color-border)]/40 space-y-1">
+                <div className="pt-2 border-t border-[var(--color-border)]/30 space-y-1">
                   <div className="flex justify-between items-baseline">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
                       Toplam Yatırımcı
@@ -306,7 +385,7 @@ export function TefasInvestorSection({
                       )}
                     >
                       <span>
-                        {deltaCount > 0 ? `+${formatNumber(deltaCount, 0)}` : formatNumber(deltaCount, 0)} kişi
+                        {deltaCount > 0 ? `+${formatNumber(deltaCount, 0)}` : formatNumber(deltaCount, 0)}
                       </span>
                       <span>({f.weekDeltaPct != null ? formatPercent(f.weekDeltaPct) : "—"})</span>
                     </div>
@@ -355,8 +434,8 @@ export function TefasInvestorSection({
                     >
                       <td className="p-3.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm text-[var(--color-foreground)]">{f.symbol}</span>
-                          <span className="text-[10px] text-[var(--color-muted)] px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)]">
+                          <span className="font-black text-sm text-[var(--color-foreground)]">{f.symbol}</span>
+                          <span className="text-[10px] font-bold text-[var(--color-muted)] px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)]">
                             TEFAS
                           </span>
                         </div>
@@ -509,7 +588,7 @@ function TefasFundDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)]/50 bg-gradient-to-r from-indigo-500/10 to-purple-500/10">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-sm shadow-md">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 text-white font-black text-sm shadow-md">
               {symbol}
             </div>
             <div>
