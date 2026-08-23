@@ -36,9 +36,20 @@ export async function GET(req: NextRequest) {
       take: 150,
     });
 
-    // 2. Kullanıcı Giriş & Aktif Ziyaret İstatistikleri
+    // 2. Kullanıcı Giriş, Aktif Ziyaret & İşlem İstatistikleri
     const allUsers = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        _count: {
+          select: {
+            transactions: true,
+          },
+        },
+      },
     });
 
     const activityLogs = await prisma.systemLog.findMany({
@@ -62,6 +73,7 @@ export async function GET(req: NextRequest) {
         createdAt: u.createdAt,
         loginCount,
         activeVisitCount,
+        transactionCount: u._count.transactions,
         totalSessions: loginCount + activeVisitCount,
         lastActive,
       };

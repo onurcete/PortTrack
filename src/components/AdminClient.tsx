@@ -119,8 +119,9 @@ export interface UserStatDTO {
   name: string;
   role: string;
   createdAt: string;
-  loginCount: number;
-  activeVisitCount: number;
+  loginCount?: number;
+  activeVisitCount?: number;
+  transactionCount: number;
   totalSessions: number;
   lastActive: string | null;
 }
@@ -621,7 +622,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                       <Users size={18} className="text-[var(--color-brand)]" />
                       Kullanıcı Aktivite & Oturum İstatistikleri
                     </h3>
-                    <p className="text-xs text-[var(--color-muted)] mt-0.5">Kullanıcıların şifreli girişleri, çerezli aktif ziyaretleri ve son görülme zamanları</p>
+                    <p className="text-xs text-[var(--color-muted)] mt-0.5">Kullanıcıların toplam oturumları, girdikleri işlem sayıları ve son görülme zamanları</p>
                   </div>
                 </div>
 
@@ -632,8 +633,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                         <th className="py-3 px-3">Kullanıcı</th>
                         <th className="py-3 px-3">E-Posta</th>
                         <th className="py-3 px-3">Rol</th>
-                        <th className="py-3 px-3 text-center">Form Girişi</th>
-                        <th className="py-3 px-3 text-center">Aktif Ziyaret</th>
+                        <th className="py-3 px-3 text-center">Girilen İşlem</th>
                         <th className="py-3 px-3 text-center">Toplam Oturum</th>
                         <th className="py-3 px-3 text-right">Son Aktif Görülme</th>
                       </tr>
@@ -649,13 +649,8 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                             </span>
                           </td>
                           <td className="py-3 px-3 text-center">
-                            <span className="inline-block px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              {u.loginCount} Kez
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 text-center">
-                            <span className="inline-block px-2 py-0.5 text-[11px] font-bold rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                              {u.activeVisitCount} Ziyaret
+                            <span className="inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              {u.transactionCount ?? 0} İşlem
                             </span>
                           </td>
                           <td className="py-3 px-3 text-center font-bold text-[var(--color-text)]">
@@ -664,7 +659,7 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                           <td className="py-3 px-3 text-right text-[var(--color-muted)]">
                             {u.lastActive
                               ? new Date(u.lastActive).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                              : "Henüz aktifleflmedi"}
+                              : "Henüz aktifleşmedi"}
                           </td>
                         </tr>
                       ))}
