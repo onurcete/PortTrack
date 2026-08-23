@@ -33,15 +33,38 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const cookie = req.cookies.get(AUTH_COOKIE)?.value;
-  const userId = cookie ? await getSessionUser(cookie) : null;
+  const rawCookie = req.cookies.get(AUTH_COOKIE)?.value;
+  let userId: string | null = null;
+  if (rawCookie) {
+    userId = await getSessionUser(rawCookie);
+  }
 
-  if (userId) return NextResponse.next();
+  if (userId) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-user-id", userId);
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  }
 
-  // API icin 401, sayfalar icin /login yonlendirme
+  // API için 401
   if (pathname.startsWith("/api")) {
     return NextResponse.json({ ok: false, error: "Yetkisiz" }, { status: 401 });
   }
+
+  // Next.js RSC / prefetch isteklerinde arka plan ön yüklemesinin tüm ekranı yönlendirmesini engelle
+  const isPrefetch =
+    req.headers.get("next-router-prefetch") ||
+    req.headers.get("purpose") === "prefetch" ||
+    req.headers.get("x-middleware-prefetch");
+
+  if (isPrefetch) {
+    return new NextResponse(null, { status: 401 });
+  }
+
+  // Normal sayfa istekleri için /login yönlendirmesi
   const url = req.nextUrl.clone();
   url.pathname = "/login";
   url.searchParams.set("next", pathname);
@@ -49,5 +72,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|sitemap\\.xml|robots\\.txt|showcase|.*\\.(?:png|jpg|jpeg|gif|svg|ico)).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|sitemap\\.xml|robots\\.txt|showcase|.*\\.(?:png|jpg|jpeg|gif|svg|ico)).*)",
+  ],
 };

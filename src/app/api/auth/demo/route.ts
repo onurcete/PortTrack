@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const token = await createSession(demoUser.id);
+    const token = await createSession(demoUser.id, 24 * 60 * 60 * 1000); // 24 saat
 
     const res = NextResponse.redirect(new URL("/", req.url));
     res.cookies.set(AUTH_COOKIE, token, {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 2, // 2 saat
+      maxAge: 60 * 60 * 24, // 24 saat
     });
 
     console.log("✅ Demo girişi başarılı:", demoUser.email);
