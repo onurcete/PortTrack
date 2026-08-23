@@ -64,7 +64,7 @@ export const PORTFOLIO_MCP_TOOLS: ChatCompletionTool[] = [
     function: {
       name: "get_portfolio_performance",
       description:
-        "Portföyün seçilen döneme ait getiri yüzdelerini ve parasal değişimini döner (1W = Son 1 Hafta, 1M = Cari Ay / MTD, YTD = Yılbaşından Beri, ALL = Tüm Zamanlar).",
+        "Portföyün seçilen döneme ait getiri yüzdelerini ve parasal değişimini döner (1W = Son 1 Hafta, 1M = Cari Ay / MTD, YTD = Yılbaşından Beri, ALL = Tüm Zamanlar). Yıl veya aylık döküm istendiğinde de kullanılabilir.",
       parameters: {
         type: "object",
         properties: {
@@ -73,8 +73,30 @@ export const PORTFOLIO_MCP_TOOLS: ChatCompletionTool[] = [
             enum: ["1W", "1M", "YTD", "ALL"],
             description: "İncelenecek performans dönemi.",
           },
+          year: {
+            type: "number",
+            description: "İncelenecek spesifik yıl (Örn: 2026, 2025).",
+          },
         },
-        required: ["period"],
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_monthly_growth_history",
+      description:
+        "Portföyün yıllara ve aylara göre (örn: 2026, 2025, 2024 vb.) ay ay net parasal kazançlarını (TL ve USD olarak), ay sonu portföy değerlerini ve aylık getiri yüzdelerini getirir. Kullanıcı 2026 yılında aylık ne kadar kazandığını veya geçmiş ayların performansını sorduğunda bu araç çağrılmalıdır.",
+      parameters: {
+        type: "object",
+        properties: {
+          year: {
+            type: "number",
+            description: "Filtrelenecek yıl (Örn: 2026, 2025). Boş bırakılırsa tüm mevcut yıllar döner.",
+          },
+        },
+        required: [],
       },
     },
   },

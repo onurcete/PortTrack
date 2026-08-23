@@ -42,8 +42,14 @@ interface PortfolioIntelligenceProps {
 
 const SMART_PROMPT_CHIPS = [
   {
-    icon: TrendingUp,
+    icon: BarChart3,
     color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    label: "2026 Aylık Kazanç Dökümü",
+    query: "2026 yılında aylık TL ve USD bazında ne kadar kazanç sağladım? Ay ay getirilerimi özetle.",
+  },
+  {
+    icon: TrendingUp,
+    color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
     label: "BIST100 & Benchmark Kıyası",
     query: "Bu ay portföyüm BIST100 ve diğer piyasa göstergelerine (Altın, Dolar) göre nasıl performans gösterdi? Aradaki fark nereden kaynaklandı?",
   },
@@ -186,7 +192,7 @@ export function PortfolioIntelligenceSection({
                 </h2>
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/30 shadow-2xs">
                   <Zap size={11} className="text-amber-400 fill-amber-400" />
-                  8 ANALİZ ARACI AKTİF
+                  9 ANALİZ ARACI AKTİF
                 </span>
               </div>
               <p className="text-xs text-[var(--color-muted)] font-medium mt-0.5">

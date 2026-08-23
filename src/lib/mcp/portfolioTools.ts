@@ -1,5 +1,5 @@
 import { getPortfolio } from "@/lib/data";
-import { getPeriodReturns, getBenchmarkComparisonData } from "@/lib/history";
+import { getPeriodReturns, getBenchmarkComparisonData, getGrowthSeries } from "@/lib/history";
 import { prisma } from "@/lib/prisma";
 
 export interface ToolExecutionResult {
@@ -361,6 +361,72 @@ export async function executeGetTefasInsights(userId: string) {
 }
 
 /**
+ * 9. get_monthly_growth_history
+ */
+export async function executeGetMonthlyGrowthHistory(
+  userId: string,
+  args?: { year?: number },
+) {
+  const series = await getGrowthSeries(userId);
+  if (!series || series.length === 0) {
+    return {
+      message: "Portföy için henüz geçmiş büyüme verisi bulunmuyor.",
+      years: [],
+    };
+  }
+
+  const validPoints = series.filter((p) => !p.isSyntheticBaseline);
+  const monthNames = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+  ];
+
+  const monthlyData = validPoints.map((p, idx) => {
+    const prev = idx > 0 ? validPoints[idx - 1] : null;
+    const changeTRY = prev ? p.valueTRY - prev.valueTRY : 0;
+    const returnPctTRY = prev && prev.valueTRY > 0 ? ((p.valueTRY / prev.valueTRY) - 1) * 100 : 0;
+
+    const changeUSD = prev ? p.valueUSD - prev.valueUSD : 0;
+    const returnPctUSD = prev && prev.valueUSD > 0 ? ((p.valueUSD / prev.valueUSD) - 1) * 100 : 0;
+
+    const [y, m] = p.month.split("-");
+    const mNum = parseInt(m);
+    const yNum = parseInt(y);
+
+    return {
+      year: yNum,
+      month: p.month,
+      monthName: monthNames[mNum - 1] || `${mNum}. Ay`,
+      monthEndValueTRY: Math.round(p.valueTRY),
+      monthEndValueUSD: Math.round(p.valueUSD),
+      monthlyGainTRY: Math.round(changeTRY),
+      monthlyReturnPctTRY: Number(returnPctTRY.toFixed(2)),
+      monthlyGainUSD: Math.round(changeUSD),
+      monthlyReturnPctUSD: Number(returnPctUSD.toFixed(2)),
+    };
+  });
+
+  if (args?.year) {
+    const filtered = monthlyData.filter((d) => d.year === args.year);
+    const totalGainTRY = filtered.reduce((sum, d) => sum + d.monthlyGainTRY, 0);
+    const totalGainUSD = filtered.reduce((sum, d) => sum + d.monthlyGainUSD, 0);
+
+    return {
+      requestedYear: args.year,
+      availableMonthsCount: filtered.length,
+      yearTotalGainTRY: Math.round(totalGainTRY),
+      yearTotalGainUSD: Math.round(totalGainUSD),
+      monthlyBreakdown: filtered,
+    };
+  }
+
+  return {
+    totalMonthsAvailable: monthlyData.length,
+    monthlyBreakdown: monthlyData,
+  };
+}
+
+/**
  * Ana Tool Router Yönlendiricisi
  */
 export async function dispatchMcpTool(
@@ -382,6 +448,9 @@ export async function dispatchMcpTool(
       break;
     case "get_portfolio_performance":
       result = await executeGetPortfolioPerformance(userId, args);
+      break;
+    case "get_monthly_growth_history":
+      result = await executeGetMonthlyGrowthHistory(userId, args);
       break;
     case "get_portfolio_contributors":
       result = await executeGetPortfolioContributors(userId, args);
