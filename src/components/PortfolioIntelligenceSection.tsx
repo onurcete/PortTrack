@@ -503,6 +503,99 @@ function parseInlineBold(text: string): React.ReactNode[] {
   });
 }
 
+function renderTable(tableLines: string[], keyPrefix: string): React.ReactNode {
+  const parsedRows = tableLines.map((row) =>
+    row
+      .split("|")
+      .map((c) => c.trim())
+      .filter((_, idx, arr) => idx !== 0 && idx !== arr.length - 1)
+  );
+
+  if (parsedRows.length < 2) return null;
+
+  const headerRow = parsedRows[0];
+  const dataRows = parsedRows.slice(1).filter((r) => !r.every((c) => /^[:\s-]+$/.test(c)));
+
+  return (
+    <div key={keyPrefix} className="overflow-x-auto my-3.5 rounded-2xl border border-[var(--color-border)]/70 bg-[var(--color-surface)] shadow-xs">
+      <table className="w-full text-left text-xs border-collapse font-sans">
+        <thead>
+          <tr className="bg-[var(--color-surface-muted)]/60 border-b border-[var(--color-border)]/60 text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+            {headerRow.map((col, cIdx) => (
+              <th key={cIdx} className={cn("px-3.5 py-2.5 font-black whitespace-nowrap", cIdx > 0 && "text-right")}>
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--color-border)]/30 text-xs">
+          {dataRows.map((row, rIdx) => (
+            <tr key={rIdx} className="hover:bg-[var(--color-surface-muted)]/30 transition-colors">
+              {row.map((cell, cIdx) => {
+                const headerText = (headerRow[cIdx] || "").toLowerCase();
+                const isFirstCol = cIdx === 0;
+
+                const cleanNum = cell.replace(/[%,₺$\s]/g, "").replace(",", ".");
+                const numVal = parseFloat(cleanNum);
+                const isNumeric = !isNaN(numVal) && !isFirstCol && !isNaN(Number(cleanNum));
+
+                const isPositive = isNumeric && numVal > 0;
+                const isNegative = isNumeric && numVal < 0;
+
+                const isPercentCol =
+                  headerText.includes("%") ||
+                  headerText.includes("getiri") ||
+                  headerText.includes("oran") ||
+                  cell.includes("%");
+
+                const isAmountCol =
+                  headerText.includes("kar") ||
+                  headerText.includes("kâr") ||
+                  headerText.includes("tl") ||
+                  headerText.includes("usd") ||
+                  headerText.includes("değer");
+
+                return (
+                  <td
+                    key={cIdx}
+                    className={cn(
+                      "px-3.5 py-2.5 whitespace-nowrap",
+                      isFirstCol
+                        ? "font-extrabold text-[var(--color-foreground)]"
+                        : "text-right font-bold tabular-nums",
+                      isPercentCol && isPositive && "text-[var(--color-profit)] font-black",
+                      isPercentCol && isNegative && "text-[var(--color-loss)] font-black",
+                      !isPercentCol && isAmountCol && isPositive && "text-[var(--color-profit)]/90",
+                      !isPercentCol && isAmountCol && isNegative && "text-[var(--color-loss)]/90",
+                    )}
+                  >
+                    {isPercentCol && isNumeric ? (
+                      <span
+                        className={cn(
+                          "inline-block px-2 py-0.5 rounded-lg text-[11px] font-black tabular-nums shadow-2xs",
+                          isPositive
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : isNegative
+                            ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                            : "text-[var(--color-muted)]",
+                        )}
+                      >
+                        {isPositive ? "+" : ""}%{Math.abs(numVal).toFixed(2)}
+                      </span>
+                    ) : (
+                      parseInlineBold(cell)
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function FormattedMarkdownResponse({ content }: { content: string }) {
   // 1. "Portföy Notu" bölümünü ayır
   const noteRegex = /(?:💡\s*)?(?:\*\*)?Portföy Notu(?:\*\*)?:?\s*([\s\S]*)$/i;
@@ -518,20 +611,39 @@ function FormattedMarkdownResponse({ content }: { content: string }) {
   const lines = mainContent.split("\n");
   const elements: React.ReactNode[] = [];
   let currentList: React.ReactNode[] = [];
+  let currentTableLines: string[] = [];
 
   const flushList = () => {
     if (currentList.length > 0) {
       elements.push(
         <ul key={`list-${elements.length}`} className="space-y-1.5 my-2">
           {currentList}
-        </ul>
+        </ul>,
       );
       currentList = [];
     }
   };
 
+  const flushTable = () => {
+    if (currentTableLines.length > 0) {
+      const tableNode = renderTable(currentTableLines, `table-${elements.length}`);
+      if (tableNode) elements.push(tableNode);
+      currentTableLines = [];
+    }
+  };
+
   lines.forEach((rawLine, idx) => {
     const line = rawLine.trim();
+
+    // Tablo Satırı Kontrolü (| ile başlar ve | ile biter)
+    if (line.startsWith("|") && line.endsWith("|")) {
+      flushList();
+      currentTableLines.push(line);
+      return;
+    }
+
+    // Tablo bittiyse flush et
+    flushTable();
 
     if (!line) {
       flushList();
@@ -550,7 +662,7 @@ function FormattedMarkdownResponse({ content }: { content: string }) {
         >
           <span className="h-2 w-2 rounded-full bg-[var(--color-brand)]" />
           {parseInlineBold(cleanHeader)}
-        </h4>
+        </h4>,
       );
       return;
     }
@@ -570,7 +682,7 @@ function FormattedMarkdownResponse({ content }: { content: string }) {
             {num}
           </span>
           <span className="tracking-tight">{parseInlineBold(itemTitle)}</span>
-        </div>
+        </div>,
       );
       return;
     }
@@ -592,14 +704,14 @@ function FormattedMarkdownResponse({ content }: { content: string }) {
                 {parseInlineBold(val)}
               </span>
             </span>
-          </li>
+          </li>,
         );
       } else {
         currentList.push(
           <li key={`bullet-${idx}`} className="ml-5 flex items-start gap-2 text-xs text-[var(--color-foreground)]/90">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-brand)] shrink-0 mt-1.5" />
             <span>{parseInlineBold(cleanBullet)}</span>
-          </li>
+          </li>,
         );
       }
       return;
@@ -610,11 +722,12 @@ function FormattedMarkdownResponse({ content }: { content: string }) {
     elements.push(
       <p key={`p-${idx}`} className="text-xs text-[var(--color-foreground)]/90 font-medium leading-relaxed">
         {parseInlineBold(line)}
-      </p>
+      </p>,
     );
   });
 
   flushList();
+  flushTable();
 
   return (
     <div className="space-y-1 font-sans">
