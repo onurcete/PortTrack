@@ -4,6 +4,8 @@ import { resolvePriceMapping, type AssetType } from "@/lib/assets";
 import { fetchYahooHistory, fetchTefasHistory, currencyToTryRate } from "@/lib/prices";
 import { buildFxLookup } from "@/lib/portfolio";
 import { requireUser } from "@/lib/auth";
+import { computeIndicators, type TechnicalIndicators } from "@/lib/technical";
+import { generateAnalysis } from "@/lib/commentary";
 
 export const runtime = "nodejs";
 
@@ -140,6 +142,55 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // 5. Teknik Analiz verisi (Varsa DB'den al, yoksa history'den canlı hesapla)
+    let analysis: any = null;
+    try {
+      const dbAnalysis = await prisma.technicalAnalysis.findFirst({
+        where: {
+          symbol,
+        },
+        orderBy: { date: "desc" },
+      });
+
+      if (dbAnalysis) {
+        analysis = {
+          symbol: dbAnalysis.symbol,
+          assetType: dbAnalysis.assetType as AssetType,
+          date: dbAnalysis.date.toISOString(),
+          indicators: dbAnalysis.indicators as unknown as TechnicalIndicators,
+          score: dbAnalysis.score,
+          commentary: dbAnalysis.commentary,
+          trendSignal: dbAnalysis.trendSignal,
+          macdSignal: dbAnalysis.macdSignal,
+          rsiZone: dbAnalysis.rsiZone,
+          alerts: dbAnalysis.alerts as string[],
+        };
+      } else if (history.length >= 14) {
+        const bars = history.map((h) => ({
+          date: new Date(h.date),
+          close: h.closeNative ?? h.closeTRY,
+        }));
+        const ind = computeIndicators(bars);
+        if (ind) {
+          const gen = generateAnalysis(symbol, ind);
+          analysis = {
+            symbol,
+            assetType,
+            date: new Date().toISOString(),
+            indicators: ind,
+            score: gen.score,
+            commentary: gen.commentary,
+            trendSignal: gen.trendSignal,
+            macdSignal: gen.macdSignal,
+            rsiZone: gen.rsiZone,
+            alerts: gen.alerts,
+          };
+        }
+      }
+    } catch (techErr) {
+      console.warn("Teknik analiz hesabı opsiyonel hatası:", techErr);
+    }
+
     return NextResponse.json({
       ok: true,
       symbol,
@@ -147,6 +198,7 @@ export async function GET(req: NextRequest) {
       currency: mapping.currency,
       history,
       transactions,
+      analysis,
     });
   } catch (err) {
     console.error("Hisse detay geçmişi API hatası:", err);

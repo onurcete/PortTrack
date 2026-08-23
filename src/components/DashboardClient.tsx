@@ -14,6 +14,8 @@ import {
   Filter,
   X,
   Flame,
+  Activity,
+  Layers,
 } from "lucide-react";
 import { useCurrency } from "@/context/currency";
 import { Card, Badge } from "@/components/ui";
@@ -23,6 +25,7 @@ import { NotesDrawer } from "@/components/NotesDrawer";
 import { BackfillStatusBanner } from "@/components/BackfillStatusBanner";
 import { formatMoney, formatPercent, formatNumber, formatDate, monthLabel, cn } from "@/lib/utils";
 import { getCellStyle } from "@/components/PerformanceClient";
+import { TechnicalAnalysisContent } from "@/components/TechnicalAnalysisContent";
 import {
   BarChart,
   Bar,
@@ -2054,6 +2057,7 @@ function PositionDetailModal({
   currency: "TRY" | "USD";
   onClose: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"details" | "technical">("details");
   const [timeframe, setTimeframe] = useState<"3M" | "6M" | "1Y" | "ALL">("1Y");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2240,249 +2244,309 @@ function PositionDetailModal({
       title={position.name ? `${position.symbol} - ${position.name}` : `${position.symbol} Detayları`}
       size="xl"
     >
-      <div className="space-y-6">
-        {/* Pozisyon Özet Kartları */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
-            <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Adet</p>
-            <p className="text-sm font-bold mt-0.5 tabular-nums">{formatNumber(position.quantity, 4)}</p>
-          </div>
-          <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
-            <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Ort. Maliyet</p>
-            <p className="text-sm font-bold mt-0.5 tabular-nums">
-              {formatMoney(isTRY ? position.avgCostTRY : (position.costUSD / position.quantity), currency)}
-            </p>
-          </div>
-          <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
-            <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Güncel Değer</p>
-            <p className="text-sm font-bold mt-0.5 tabular-nums">
-              {formatMoney(isTRY ? position.valueTRY : position.valueUSD, currency)}
-            </p>
-          </div>
-          <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
-            <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Kâr / Zarar</p>
-            <div className="text-sm font-bold mt-0.5">
-              <ProfitValue
-                value={isTRY ? position.unrealizedTRY : position.unrealizedUSD}
-                currency={currency}
-                pct={isTRY ? position.unrealizedPctTRY : position.unrealizedPctUSD}
-              />
-            </div>
-          </div>
+      <div className="space-y-5">
+        {/* Sekme Seçici (Tab Bar) */}
+        <div className="flex items-center gap-1.5 p-1 bg-[var(--color-surface-muted)]/50 rounded-xl border border-[var(--color-border)]/50">
+          <button
+            type="button"
+            onClick={() => setActiveTab("details")}
+            className={cn(
+              "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none",
+              activeTab === "details"
+                ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-xs border border-[var(--color-border)]/60"
+                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+            )}
+          >
+            <Layers size={14} className="text-[var(--color-brand-strong)]" />
+            <span>Varlık & Pozisyon Detayı</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("technical")}
+            className={cn(
+              "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none relative",
+              activeTab === "technical"
+                ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-xs border border-[var(--color-border)]/60"
+                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+            )}
+          >
+            <Activity size={14} className="text-amber-500" />
+            <span>Teknik Analiz</span>
+            {data?.analysis?.score != null && (
+              <span
+                className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-black tabular-nums border",
+                  data.analysis.score >= 65
+                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                    : data.analysis.score <= 35
+                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                    : "bg-slate-500/10 text-[var(--color-muted)] border-slate-500/20"
+                )}
+              >
+                {data.analysis.score}
+              </span>
+            )}
+          </button>
         </div>
 
-        {/* Grafik Bölümü */}
-        <div className="border border-[var(--color-border)]/40 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h3 className="font-semibold text-sm">Fiyat Geçmişi & İşlem Noktaları</h3>
-            {/* Zaman dilimi seçimi */}
-            <div className="inline-flex rounded-lg bg-[var(--color-surface-muted)] p-0.5 border border-[var(--color-border)]/40">
-              {(["3M", "6M", "1Y", "ALL"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTimeframe(t)}
-                  className={cn(
-                    "rounded-md px-2 py-0.5 text-[11px] font-bold transition-all duration-150 cursor-pointer",
-                    timeframe === t
-                      ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm"
-                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-                  )}
-                >
-                  {t === "ALL" ? "Hepsi" : t}
-                </button>
-              ))}
+        {activeTab === "details" ? (
+          <div className="space-y-6">
+            {/* Pozisyon Özet Kartları */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
+                <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Adet</p>
+                <p className="text-sm font-bold mt-0.5 tabular-nums">{formatNumber(position.quantity, 4)}</p>
+              </div>
+              <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
+                <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Ort. Maliyet</p>
+                <p className="text-sm font-bold mt-0.5 tabular-nums">
+                  {formatMoney(isTRY ? position.avgCostTRY : (position.costUSD / position.quantity), currency)}
+                </p>
+              </div>
+              <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
+                <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Güncel Değer</p>
+                <p className="text-sm font-bold mt-0.5 tabular-nums">
+                  {formatMoney(isTRY ? position.valueTRY : position.valueUSD, currency)}
+                </p>
+              </div>
+              <div className="bg-[var(--color-surface-muted)]/30 p-3 rounded-xl border border-[var(--color-border)]/40">
+                <p className="text-[10px] font-bold text-[var(--color-muted)] uppercase">Kâr / Zarar</p>
+                <div className="text-sm font-bold mt-0.5">
+                  <ProfitValue
+                    value={isTRY ? position.unrealizedTRY : position.unrealizedUSD}
+                    currency={currency}
+                    pct={isTRY ? position.unrealizedPctTRY : position.unrealizedPctUSD}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
 
-          {loading ? (
-            <div className="h-64 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand-strong)]" />
-            </div>
-          ) : error ? (
-            <div className="h-64 flex items-center justify-center text-xs text-red-500 font-semibold">
-              {error}
-            </div>
-          ) : historyWithTx.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-xs text-[var(--color-muted)]">
-              Geçmiş fiyat verisi bulunamadı.
-            </div>
-          ) : (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={historyWithTx}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
-                >
-                  <defs>
-                    <linearGradient id="colorDetails" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-brand)" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--color-border)"
-                    opacity={0.3}
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(tick) => {
-                      const d = new Date(tick);
-                      return d.toLocaleDateString("tr-TR", { month: "short", year: "2-digit" });
-                    }}
-                    tick={{ fill: "var(--color-muted)", fontSize: 10 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    domain={["auto", "auto"]}
-                    tick={{ fill: "var(--color-muted)", fontSize: 10 }}
-                    tickFormatter={(v) => formatMoney(v, currency, { compact: true })}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    content={<CustomTooltipDetail isTRY={isTRY} />}
-                    contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
-                  />
-                  
-                  {/* Ortalama maliyet referans çizgisi */}
-                  {position.quantity > 1e-9 && costVal > 0 && (
-                    <ReferenceLine
-                      y={costVal}
-                      stroke="var(--color-muted)"
-                      strokeWidth={1.5}
-                      strokeDasharray="4 4"
-                      label={{
-                        value: `Ort. Maliyet: ${formatMoney(costVal, currency)}`,
-                        fill: "var(--color-muted)",
-                        fontSize: 9,
-                        position: "insideTopLeft",
-                      }}
-                    />
-                  )}
+            {/* Grafik Bölümü */}
+            <div className="border border-[var(--color-border)]/40 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h3 className="font-semibold text-sm">Fiyat Geçmişi & İşlem Noktaları</h3>
+                {/* Zaman dilimi seçimi */}
+                <div className="inline-flex rounded-lg bg-[var(--color-surface-muted)] p-0.5 border border-[var(--color-border)]/40">
+                  {(["3M", "6M", "1Y", "ALL"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTimeframe(t)}
+                      className={cn(
+                        "rounded-md px-2 py-0.5 text-[11px] font-bold transition-all duration-150 cursor-pointer",
+                        timeframe === t
+                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      )}
+                    >
+                      {t === "ALL" ? "Hepsi" : t}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                  <Area
-                    type="monotone"
-                    dataKey={priceKey}
-                    stroke="var(--color-brand)"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorDetails)"
-                    dot={<CustomDot />}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
+              {loading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand-strong)]" />
+                </div>
+              ) : error ? (
+                <div className="h-64 flex items-center justify-center text-xs text-red-500 font-semibold">
+                  {error}
+                </div>
+              ) : historyWithTx.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-xs text-[var(--color-muted)]">
+                  Geçmiş fiyat verisi bulunamadı.
+                </div>
+              ) : (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={historyWithTx}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorDetails" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-brand)" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--color-border)"
+                        opacity={0.3}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(tick) => {
+                          const d = new Date(tick);
+                          return d.toLocaleDateString("tr-TR", { month: "short", year: "2-digit" });
+                        }}
+                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        domain={["auto", "auto"]}
+                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        tickFormatter={(v) => formatMoney(v, currency, { compact: true })}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        content={<CustomTooltipDetail isTRY={isTRY} />}
+                        contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
+                      />
+                      
+                      {/* Ortalama maliyet referans çizgisi */}
+                      {position.quantity > 1e-9 && costVal > 0 && (
+                        <ReferenceLine
+                          y={costVal}
+                          stroke="var(--color-muted)"
+                          strokeWidth={1.5}
+                          strokeDasharray="4 4"
+                          label={{
+                            value: `Ort. Maliyet: ${formatMoney(costVal, currency)}`,
+                            fill: "var(--color-muted)",
+                            fontSize: 9,
+                            position: "insideTopLeft",
+                          }}
+                        />
+                      )}
 
-        {/* Aylık Performans */}
-        {!loading && !error && monthlyPerformances.length > 0 && (
-          <div className="border border-[var(--color-border)]/40 rounded-xl p-4 space-y-3">
-            <h3 className="font-semibold text-sm">Son 1 Yıllık Aylık Performans</h3>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
-              {monthlyPerformances.map((mp) => (
-                <div
-                  key={mp.monthKey}
-                  className="flex flex-col items-center justify-center p-2 rounded-lg border border-[var(--color-border)]/35 text-center select-none"
-                  style={getCellStyle(mp.pct)}
-                >
-                  <span className="text-[10px] opacity-75 font-semibold uppercase tracking-wider">
-                    {monthLabel(mp.monthKey)}
-                  </span>
-                  <span className="text-xs font-bold mt-1 tabular-nums">
-                    {mp.pct == null ? "–" : formatPercent(mp.pct)}
+                      <Area
+                        type="monotone"
+                        dataKey={priceKey}
+                        stroke="var(--color-brand)"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#colorDetails)"
+                        dot={<CustomDot />}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            {/* Aylık Performans */}
+            {!loading && !error && monthlyPerformances.length > 0 && (
+              <div className="border border-[var(--color-border)]/40 rounded-xl p-4 space-y-3">
+                <h3 className="font-semibold text-sm">Son 1 Yıllık Aylık Performans</h3>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+                  {monthlyPerformances.map((mp) => (
+                    <div
+                      key={mp.monthKey}
+                      className="flex flex-col items-center justify-center p-2 rounded-lg border border-[var(--color-border)]/35 text-center select-none"
+                      style={getCellStyle(mp.pct)}
+                    >
+                      <span className="text-[10px] opacity-75 font-semibold uppercase tracking-wider">
+                        {monthLabel(mp.monthKey)}
+                      </span>
+                      <span className="text-xs font-bold mt-1 tabular-nums">
+                        {mp.pct == null ? "–" : formatPercent(mp.pct)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Yatırımcı Sayısı (Son 1 Hafta) */}
+            {!loading && !error && position.assetType === "TEFAS" && lastWeekInvestors.length > 0 && (
+              <div className="border border-[var(--color-border)]/40 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm text-[var(--color-text)]">Yatırımcı Sayısı (Son 1 Hafta)</h3>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/25">
+                    TEFAS
                   </span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+                <div className="h-44 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={lastWeekInvestors} margin={{ top: 20, right: 5, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        domain={["dataMin - 10", "dataMax + 10"]}
+                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        tickFormatter={(v) => v.toLocaleString("tr-TR")}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        content={<CustomTooltipInvestors />}
+                        contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
+                        cursor={{ fill: "color-mix(in srgb, var(--color-muted) 12%, transparent)" }}
+                      />
+                      <Bar dataKey="investors" fill="var(--color-brand)" radius={[4, 4, 0, 0]}>
+                        <LabelList
+                          dataKey="investors"
+                          position="top"
+                          formatter={(v: any) => v != null ? Number(v).toLocaleString("tr-TR") : ""}
+                          style={{ fill: "var(--color-foreground)", fontSize: 9, fontWeight: 600 }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
 
-        {/* Yatırımcı Sayısı (Son 1 Hafta) */}
-        {!loading && !error && position.assetType === "TEFAS" && lastWeekInvestors.length > 0 && (
-          <div className="border border-[var(--color-border)]/40 rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm text-[var(--color-text)]">Yatırımcı Sayısı (Son 1 Hafta)</h3>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/25">
-                TEFAS
-              </span>
-            </div>
-            <div className="h-44 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={lastWeekInvestors} margin={{ top: 20, right: 5, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fill: "var(--color-muted)", fontSize: 10 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    domain={["dataMin - 10", "dataMax + 10"]}
-                    tick={{ fill: "var(--color-muted)", fontSize: 10 }}
-                    tickFormatter={(v) => v.toLocaleString("tr-TR")}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    content={<CustomTooltipInvestors />}
-                    contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
-                    cursor={{ fill: "color-mix(in srgb, var(--color-muted) 12%, transparent)" }}
-                  />
-                  <Bar dataKey="investors" fill="var(--color-brand)" radius={[4, 4, 0, 0]}>
-                    <LabelList
-                      dataKey="investors"
-                      position="top"
-                      formatter={(v: any) => v != null ? Number(v).toLocaleString("tr-TR") : ""}
-                      style={{ fill: "var(--color-foreground)", fontSize: 9, fontWeight: 600 }}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {/* İşlem Geçmişi */}
+            {data?.transactions && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">İşlem Geçmişi ({data.transactions.length})</h3>
+                <div className="overflow-x-auto border border-[var(--color-border)]/55 rounded-xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="theme-table-head text-[var(--color-muted)] font-bold border-b border-[var(--color-border)]/50">
+                        <th className="px-4 py-2.5">Tarih</th>
+                        <th className="px-4 py-2.5">İşlem</th>
+                        <th className="px-4 py-2.5 text-right">Adet</th>
+                        <th className="px-4 py-2.5 text-right">Birim Fiyat</th>
+                        <th className="px-4 py-2.5 text-right">Toplam</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-border)]/40 font-medium">
+                      {data.transactions.map((t: any) => (
+                        <tr key={t.id} className="theme-surface-hover transition-colors">
+                          <td className="px-4 py-2">{new Date(t.date).toLocaleDateString("tr-TR")}</td>
+                          <td className="px-4 py-2">
+                            <span
+                              className={cn(
+                                "font-bold",
+                                t.side === "BUY" ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]",
+                              )}
+                            >
+                              {t.side === "BUY" ? "Alış" : "Satış"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-right tabular-nums">{formatNumber(t.quantity, 4)}</td>
+                          <td className="px-4 py-2 text-right tabular-nums">{formatMoney(t.unitPrice, t.currency)}</td>
+                          <td className="px-4 py-2 text-right tabular-nums">{formatMoney(t.total, t.currency)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* İşlem Geçmişi */}
-        {data?.transactions && (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-sm">İşlem Geçmişi ({data.transactions.length})</h3>
-            <div className="overflow-x-auto border border-[var(--color-border)]/55 rounded-xl">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="theme-table-head text-[var(--color-muted)] font-bold border-b border-[var(--color-border)]/50">
-                    <th className="px-4 py-2.5">Tarih</th>
-                    <th className="px-4 py-2.5">İşlem</th>
-                    <th className="px-4 py-2.5 text-right">Adet</th>
-                    <th className="px-4 py-2.5 text-right">Birim Fiyat</th>
-                    <th className="px-4 py-2.5 text-right">Toplam</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]/40 font-medium">
-                  {data.transactions.map((t: any) => (
-                    <tr key={t.id} className="theme-surface-hover transition-colors">
-                      <td className="px-4 py-2">{new Date(t.date).toLocaleDateString("tr-TR")}</td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={cn(
-                            "font-bold",
-                            t.side === "BUY" ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]",
-                          )}
-                        >
-                          {t.side === "BUY" ? "Alış" : "Satış"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{formatNumber(t.quantity, 4)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{formatMoney(t.unitPrice, t.currency)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{formatMoney(t.total, t.currency)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        ) : (
+          <div className="space-y-6">
+            <TechnicalAnalysisContent
+              analysis={data?.analysis ?? null}
+              symbol={position.symbol}
+              assetType={position.assetType}
+              currentPriceNative={position.currentPriceNative}
+              nativeCurrency={position.nativeCurrency}
+              loading={loading}
+            />
           </div>
         )}
       </div>
