@@ -433,6 +433,44 @@ export async function executeGetMonthlyGrowthHistory(
         .map((a) => ({ symbol: a.symbol, assetType: a.assetType, returnPctTRY: Number(a.returnPctTRY.toFixed(2)) }));
     }
 
+    // Varlık sınıflarına göre değişimler (TEFAS, BIST, Altın, BES vb.)
+    const assetClassPerformance: Array<{
+      assetType: string;
+      label: string;
+      currentValueTRY: number;
+      changeTRY: number;
+      returnPctTRY: number | null;
+    }> = [];
+
+    if (prev && p.byType && prev.byType) {
+      const typeLabels: Record<string, string> = {
+        TEFAS: "TEFAS Yatırım Fonları",
+        BIST: "BIST Hisse Senetleri",
+        METAL: "Kıymetli Madenler (Altın/Gümüş)",
+        FOREIGN: "Yabancı Hisse Senetleri",
+        CRYPTO: "Kripto Varlıklar",
+        FX: "Döviz / Nakit",
+        BES: "Bireysel Emeklilik (BES)",
+      };
+
+      for (const [typeKey, label] of Object.entries(typeLabels)) {
+        const currVal = (p.byType as any)?.[typeKey]?.valueTRY ?? 0;
+        const prevVal = (prev.byType as any)?.[typeKey]?.valueTRY ?? 0;
+        if (currVal > 0 || prevVal > 0) {
+          const diffTRY = currVal - prevVal;
+          const retPct = prevVal > 0 ? Number(((currVal / prevVal - 1) * 100).toFixed(2)) : null;
+          assetClassPerformance.push({
+            assetType: typeKey,
+            label,
+            currentValueTRY: Math.round(currVal),
+            changeTRY: Math.round(diffTRY),
+            returnPctTRY: retPct,
+          });
+        }
+      }
+      assetClassPerformance.sort((a, b) => a.changeTRY - b.changeTRY);
+    }
+
     return {
       year: yNum,
       month: p.month,
@@ -443,6 +481,7 @@ export async function executeGetMonthlyGrowthHistory(
       monthlyReturnPctTRY: Number(returnPctTRY.toFixed(2)),
       monthlyGainUSD: Math.round(changeUSD),
       monthlyReturnPctUSD: Number(returnPctUSD.toFixed(2)),
+      assetClassPerformance,
       keyMoversThisMonth: {
         topGainers,
         topLosers,
