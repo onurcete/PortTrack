@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { loadAnalysisBundle } from "@/lib/analysisData";
-import { askAnalysisAi, isOpenAiConfigured } from "@/lib/analysisAi";
+import { askPortfolioAgent } from "@/lib/mcp/mcpAgent";
+import { isOpenAiConfigured } from "@/lib/analysisAi";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
@@ -30,13 +30,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const bundle = await loadAnalysisBundle(userId);
-    const { answer, model } = await askAnalysisAi(bundle.context, question);
+    const { answer, usedTools, model, durationMs } = await askPortfolioAgent(
+      userId,
+      question,
+    );
 
     return NextResponse.json({
       ok: true,
       answer,
+      usedTools,
       model,
+      durationMs,
     });
   } catch (err) {
     console.error("Ask AI error:", err);

@@ -34,7 +34,7 @@ import {
   formatNumber,
   formatPercent,
 } from "@/lib/utils";
-import { AnalysisAiSection } from "./AnalysisAiSection";
+import { PortfolioIntelligenceSection } from "./PortfolioIntelligenceSection";
 import { TefasInvestorSection } from "./TefasInvestorSection";
 
 interface AnalysisBriefingClientProps {
@@ -596,8 +596,8 @@ export function AnalysisBriefingClient({
         />
       )}
 
-      {/* 6. AI Günlük Portföy Bülteni & Yorumları */}
-      <AnalysisAiSection
+      {/* 6. Portföy Zekâsı (MCP Asistanı) & Günlük Bülten */}
+      <PortfolioIntelligenceSection
         briefing={briefing}
         aiConfigured={aiConfigured}
         contextHash={contextHash}
