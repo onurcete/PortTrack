@@ -2241,55 +2241,107 @@ function PositionDetailModal({
     <Modal
       open={true}
       onClose={onClose}
-      title={position.name ? `${position.symbol} - ${position.name}` : `${position.symbol} Detayları`}
       size="xl"
-    >
-      <div className="space-y-5">
-        {/* Sekme Seçici (Tab Bar) */}
-        <div className="flex items-center gap-1.5 p-1 bg-[var(--color-surface-muted)]/50 rounded-xl border border-[var(--color-border)]/50">
-          <button
-            type="button"
-            onClick={() => setActiveTab("details")}
-            className={cn(
-              "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none",
-              activeTab === "details"
-                ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-xs border border-[var(--color-border)]/60"
-                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-            )}
-          >
-            <Layers size={14} className="text-[var(--color-brand-strong)]" />
-            <span>Varlık & Pozisyon Detayı</span>
-          </button>
+      header={
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--color-border)]/60 px-5 sm:px-6 py-3.5 bg-gradient-to-r from-[var(--color-surface)] via-[var(--color-surface-muted)]/20 to-[var(--color-surface)]">
+          {/* Sol: Sembol & Varlık Bilgisi */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-white font-black text-xs shrink-0 shadow-xs"
+              style={{ backgroundColor: ASSET_META[position.assetType]?.color ?? "#6366f1" }}
+            >
+              {position.symbol.slice(0, 3)}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-base sm:text-lg tracking-tight text-[var(--color-foreground)]">
+                  {position.symbol}
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-muted)] border border-[var(--color-border)]/50">
+                  {ASSET_META[position.assetType]?.label ?? position.assetType}
+                </span>
+                {position.dailyChangePct != null && (
+                  <span
+                    className={cn(
+                      "text-xs font-black tabular-nums flex items-center gap-0.5",
+                      position.dailyChangePct > 0
+                        ? "text-[var(--color-profit)]"
+                        : position.dailyChangePct < 0
+                        ? "text-[var(--color-loss)]"
+                        : "text-[var(--color-muted)]"
+                    )}
+                  >
+                    {position.dailyChangePct > 0 ? "▲" : position.dailyChangePct < 0 ? "▼" : ""}
+                    {formatPercent(position.dailyChangePct)}
+                  </span>
+                )}
+              </div>
+              {position.name && (
+                <p className="text-xs text-[var(--color-muted)] truncate max-w-xs sm:max-w-md font-medium">
+                  {position.name}
+                </p>
+              )}
+            </div>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("technical")}
-            className={cn(
-              "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none relative",
-              activeTab === "technical"
-                ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-xs border border-[var(--color-border)]/60"
-                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-            )}
-          >
-            <Activity size={14} className="text-amber-500" />
-            <span>Teknik Analiz</span>
-            {data?.analysis?.score != null && (
-              <span
+          {/* Sağ: İki Sekmeli Navigasyon Barı & Kapat Butonu */}
+          <div className="flex items-center gap-2.5 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
+            <div className="flex items-center p-1 bg-[var(--color-surface-muted)]/80 rounded-xl border border-[var(--color-border)]/70 shadow-inner flex-1 sm:flex-initial">
+              <button
+                type="button"
+                onClick={() => setActiveTab("details")}
                 className={cn(
-                  "px-1.5 py-0.2 rounded-full text-[10px] font-black tabular-nums border",
-                  data.analysis.score >= 65
-                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                    : data.analysis.score <= 35
-                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                    : "bg-slate-500/10 text-[var(--color-muted)] border-slate-500/20"
+                  "flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none",
+                  activeTab === "details"
+                    ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/60 font-black"
+                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                 )}
               >
-                {data.analysis.score}
-              </span>
-            )}
-          </button>
-        </div>
+                <Layers size={14} className={activeTab === "details" ? "text-[var(--color-brand-strong)]" : "opacity-60"} />
+                <span>Varlık & Pozisyon</span>
+              </button>
 
+              <button
+                type="button"
+                onClick={() => setActiveTab("technical")}
+                className={cn(
+                  "flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none relative",
+                  activeTab === "technical"
+                    ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/60 font-black"
+                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                )}
+              >
+                <Activity size={14} className={activeTab === "technical" ? "text-amber-500" : "opacity-60 text-amber-500"} />
+                <span>Teknik Analiz</span>
+                {data?.analysis?.score != null && (
+                  <span
+                    className={cn(
+                      "px-1.5 py-0.2 rounded-full text-[10px] font-black tabular-nums border",
+                      data.analysis.score >= 65
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                        : data.analysis.score <= 35
+                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                        : "bg-slate-500/15 text-[var(--color-muted)] border-slate-500/30"
+                    )}
+                  >
+                    {data.analysis.score}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="rounded-xl p-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer border border-transparent hover:border-[var(--color-border)]/50"
+              title="Kapat"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-6">
         {activeTab === "details" ? (
           <div className="space-y-6">
             {/* Pozisyon Özet Kartları */}
