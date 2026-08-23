@@ -36,7 +36,10 @@ export async function updateBesBalance(
   }
   try {
     await upsertBesMonth(month, besTRY, userId);
+    revalidatePath("/");
+    revalidatePath("/transactions");
     revalidatePath("/growth");
+    revalidatePath("/performance");
     return { ok: true, message: `${month} BES güncellendi.` };
   } catch (err) {
     return {

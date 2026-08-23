@@ -134,16 +134,51 @@ export async function upsertBesMonth(
     });
   }
 
-  // BES sembollü işlemin toplam ve birim fiyatını güncelleyelim
-  await prisma.transaction.updateMany({
+  // BES sembollü işlemin toplam ve birim fiyatını güncelleyelim veya yoksa oluşturalım
+  const existingTx = await prisma.transaction.findFirst({
     where: { symbol: "BES", userId },
-    data: { total: besTRY, unitPrice: besTRY, quantity: 1 },
   });
+  if (existingTx) {
+    await prisma.transaction.updateMany({
+      where: { symbol: "BES", userId },
+      data: { total: besTRY, unitPrice: besTRY, quantity: 1, date: new Date(y, m - 1, 1) },
+    });
+  } else {
+    await prisma.transaction.create({
+      data: {
+        userId,
+        date: new Date(y, m - 1, 1),
+        assetType: "BES",
+        symbol: "BES",
+        side: "BUY",
+        unitPrice: besTRY,
+        quantity: 1,
+        total: besTRY,
+        currency: "TRY",
+        note: "Bireysel Emeklilik Sistemi (BES)",
+      },
+    });
+  }
 
-  // Instrument üzerindeki dummy manualPrice temizlensin
-  await prisma.instrument.updateMany({
-    where: { symbol: "BES", userId },
-    data: { manualPrice: null },
+  // Instrument üzerindeki dummy manualPrice temizlensin / kaydı sağlansın
+  await prisma.instrument.upsert({
+    where: { symbol_userId: { symbol: "BES", userId } },
+    create: {
+      symbol: "BES",
+      userId,
+      assetType: "BES",
+      name: "Bireysel Emeklilik Sistemi",
+      currency: "TRY",
+      priceSource: "manual",
+      manualPrice: null,
+    },
+    update: {
+      assetType: "BES",
+      name: "Bireysel Emeklilik Sistemi",
+      currency: "TRY",
+      priceSource: "manual",
+      manualPrice: null,
+    },
   });
 }
 

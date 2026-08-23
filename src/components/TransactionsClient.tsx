@@ -51,6 +51,8 @@ import {
   getSymbolPrice,
   type BulkTxItemInput,
 } from "@/app/transactions/actions";
+import { updateBesBalance } from "@/app/growth/actions";
+import { BES_MANUAL_FROM_YEAR } from "@/lib/backlog.constants";
 
 export interface TxDTO {
   id: string;
@@ -1397,12 +1399,25 @@ function TransactionForm({
     editing ? editing.date.slice(0, 10) : new Date().toISOString().slice(0, 10)
   );
 
+  const [besMonth, setBesMonth] = useState(
+    editing ? editing.date.slice(0, 7) : new Date().toISOString().slice(0, 7)
+  );
+  const [besBalance, setBesBalance] = useState<string>(
+    editing?.assetType === "BES" ? String(editing.total || editing.unitPrice) : ""
+  );
+
   const unitPriceRef = useRef<HTMLInputElement>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
 
   function onAssetChange(v: AssetType) {
     setAssetType(v);
-    setCurrency(v === "FOREIGN" ? "USD" : "TRY");
+    if (v === "BES") {
+      setSymbol("BES");
+      setCurrency("TRY");
+    } else {
+      if (symbol === "BES") setSymbol("");
+      setCurrency(v === "FOREIGN" ? "USD" : "TRY");
+    }
   }
 
   function cleanSymbol(sym: string): string {
@@ -1507,6 +1522,27 @@ function TransactionForm({
 
   function submit(formData: FormData) {
     setError(null);
+
+    // BES Özel İşlem Gönderimi
+    if (assetType === "BES") {
+      const besVal = parseFloat(besBalance);
+      if (!Number.isFinite(besVal) || besVal < 0) {
+        setError("Geçerli bir BES bakiyesi giriniz.");
+        return;
+      }
+      startTransition(async () => {
+        const res = await updateBesBalance(formData);
+        if (res.ok) {
+          onDone();
+          triggerBackfillBanner();
+          fetch("/api/history/backfill?mode=smart", { method: "POST" }).catch(() => null);
+        } else {
+          setError(res.message ?? "Hata oluştu.");
+        }
+      });
+      return;
+    }
+
     const todayStr = new Date().toISOString().slice(0, 10);
     const parsedQty = parseFloat(qtyInput) || 0;
     const parsedPrice = parseFloat(priceInput) || 0;
@@ -1579,251 +1615,334 @@ function TransactionForm({
         <BulkTransactionGrid transactions={transactions} onDone={onDone} />
       ) : (
         <form action={submit} className="space-y-5">
-      {/* 1. İşlem Yönü Segmented Switcher (Alış / Satış) */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
-            İşlem Yönü
-          </label>
-          {side === "SELL" && symbol && (
-            <span className="text-[11px] font-bold text-[var(--color-brand-strong)]">
-              Mevcut Varlık: {formatNumber(currentQty, 4)} adet
-            </span>
-          )}
-        </div>
-        <input type="hidden" name="side" value={side} />
-        <div className="grid grid-cols-2 gap-2 bg-[var(--color-surface-muted)]/50 p-1.5 rounded-2xl border border-[var(--color-border)]/60">
-          <button
-            type="button"
-            onClick={() => setSide("BUY")}
-            className={cn(
-              "py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
-              side === "BUY"
-                ? "bg-[var(--color-profit)] text-white shadow-md ring-2 ring-emerald-500/20"
-                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-            )}
-          >
-            <Plus size={15} />
-            Alış İle Ekle (BUY)
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSide("SELL");
-              if (symbol) {
-                const qty = getCurrentHoldingQty(symbol);
-                if (qty > 0) {
-                  setQtyInput(String(qty));
-                  if (quantityRef.current) quantityRef.current.value = String(qty);
-                }
-              }
-            }}
-            className={cn(
-              "py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
-              side === "SELL"
-                ? "bg-[var(--color-loss)] text-white shadow-md ring-2 ring-rose-500/20"
-                : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-            )}
-          >
-            <Minus size={15} />
-            Satış İle Çıkar (SELL)
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Varlık Türü & Sembol Seçimi */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Varlık Türü */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
-            Varlık Türü
-          </label>
-          <div className="relative">
-            <select
-              name="assetType"
-              value={assetType}
-              onChange={(e) => onAssetChange(e.target.value as AssetType)}
-              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)] cursor-pointer"
-            >
-              {ASSET_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {ASSET_META[t].label} ({t === "FOREIGN" ? "USD $" : "TRY ₺"})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Sembol Combobox */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
-            Sembol Kodu
-          </label>
-          <SymbolCombobox
-            value={symbol}
-            onChange={handleSymbolChange}
-            onSelect={handleSymbolSelect}
-            assetType={assetType}
-            transactions={transactions}
-            placeholder="Örn: AAPL, THYAO, BTC..."
-          />
-        </div>
-      </div>
-
-      {/* 3. Tarih & Para Birimi */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Tarih */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
-            İşlem Tarihi
-          </label>
-          <input type="hidden" name="date" value={dateInput} />
-          <ModernDatePicker
-            value={dateInput}
-            onChange={(newDate) => setDateInput(newDate)}
-          />
-        </div>
-
-        {/* Para Birimi */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
-            Para Birimi
-          </label>
-          <input type="hidden" name="currency" value={currency} />
-          <div className="grid grid-cols-2 gap-1.5 bg-[var(--color-surface-muted)]/50 p-1 rounded-xl border border-[var(--color-border)]/60">
-            <button
-              type="button"
-              onClick={() => setCurrency("TRY")}
-              className={cn(
-                "py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer",
-                currency === "TRY"
-                  ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
-                  : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-              )}
-            >
-              ₺ Türk Lirası (TRY)
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrency("USD")}
-              className={cn(
-                "py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer",
-                currency === "USD"
-                  ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
-                  : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-              )}
-            >
-              $ Amerikan Doları (USD)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Adet & Birim Fiyat */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Adet */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
-            İşlem Adedi
-          </label>
-          <input
-            ref={quantityRef}
-            name="quantity"
-            type="number"
-            step="any"
-            required
-            value={qtyInput}
-            onChange={(e) => setQtyInput(e.target.value)}
-            placeholder="0.00"
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold tabular-nums outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]"
-          />
-        </div>
-
-        {/* Birim Fiyat */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
-              Birim Fiyat ({curSym(currency)})
+          {/* Varlık Türü Seçici (Her zaman en üstte erişilebilir) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+              Varlık Türü
             </label>
-            {fetchingPrice && (
-              <span className="text-[10px] font-bold text-[var(--color-brand-strong)] flex items-center gap-1">
-                <span className="inline-block w-2.5 h-2.5 border-2 border-[var(--color-brand)] border-t-transparent rounded-full animate-spin"></span>
-                Fiyat Getiriliyor...
-              </span>
-            )}
+            <div className="relative">
+              <select
+                name="assetType"
+                value={assetType}
+                onChange={(e) => onAssetChange(e.target.value as AssetType)}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)] cursor-pointer"
+              >
+                {ASSET_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {ASSET_META[t].label} ({t === "FOREIGN" ? "USD $" : "TRY ₺"})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <input
-            ref={unitPriceRef}
-            name="unitPrice"
-            type="number"
-            step="any"
-            required
-            value={priceInput}
-            onChange={(e) => setPriceInput(e.target.value)}
-            placeholder="0.00"
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold tabular-nums outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]"
-          />
-        </div>
-      </div>
 
-      {/* 5. Live Total Summary Card */}
-      <div className="p-4 bg-gradient-to-br from-[var(--color-brand-soft)]/30 to-[var(--color-surface-muted)]/20 border border-[var(--color-brand)]/20 rounded-xl flex items-center justify-between">
-        <div>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
-            Tahmini Toplam İşlem Tutarı
-          </span>
-          <div className="text-lg font-black tracking-tight tabular-nums text-[var(--color-foreground)] mt-0.5">
-            {formatMoney(computedTotal, currency)}
-          </div>
-        </div>
+          {assetType === "BES" ? (
+            /* BES Özel Bakiye Güncelleme Formu */
+            <div className="space-y-4 pt-1">
+              <div className="rounded-2xl border border-[var(--color-brand)]/20 bg-gradient-to-br from-[var(--color-brand-soft)]/20 to-[var(--color-surface-muted)]/30 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-black text-[var(--color-foreground)]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[var(--color-brand)] text-white text-xs">
+                    🛡️
+                  </span>
+                  <span>Bireysel Emeklilik Sistemi (BES) Bakiye Güncelleme</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-[var(--color-muted)]">
+                  BES için ilgili ayın toplam güncel fon/hesap bakiyesini girin. Sistem bu tutarı portföy gelişiminizin seçilen ayına işler ve işlemler tablosundaki BES satırını günceller.
+                </p>
+              </div>
 
-        <div className="text-right">
-          <span className="text-[10px] font-bold text-[var(--color-muted)] block">Hesaplama:</span>
-          <span className="text-xs font-bold tabular-nums text-[var(--color-brand-strong)]">
-            {parsedQty} × {parsedPrice.toFixed(2)} {curSym(currency)}
-          </span>
-        </div>
-      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Ay Seçimi */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                    Dönem (Ay / Yıl)
+                  </label>
+                  <input
+                    type="month"
+                    name="month"
+                    required
+                    min={`${BES_MANUAL_FROM_YEAR}-01`}
+                    value={besMonth}
+                    onChange={(e) => setBesMonth(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)] cursor-pointer"
+                  />
+                </div>
 
-      {/* Custom Total Override (Optional) */}
-      <div className="space-y-1">
-        <label className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
-          Özel Toplam Tutar (Opsiyonel — Boş bırakılırsa Adet × Birim Fiyat alınır)
-        </label>
-        <input
-          name="total"
-          type="number"
-          step="any"
-          defaultValue={editing?.total ?? ""}
-          placeholder={computedTotal > 0 ? String(computedTotal) : "Otomatik hesaplanır"}
-          className="w-full rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] px-3.5 py-2 text-xs font-medium tabular-nums outline-none focus:border-[var(--color-brand)]"
-        />
-      </div>
+                {/* BES Güncel Bakiyesi (₺) */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                    Toplam BES Bakiyesi (₺)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="besTRY"
+                      step="any"
+                      required
+                      min={0}
+                      value={besBalance}
+                      onChange={(e) => setBesBalance(e.target.value)}
+                      placeholder="Örn: 850000"
+                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] pl-3.5 pr-10 py-2.5 text-xs font-bold tabular-nums outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-[var(--color-muted)] pointer-events-none">
+                      ₺
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-      {error && (
-        <p className="text-xs font-bold text-[var(--color-loss)] bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">
-          {error}
-        </p>
-      )}
+              {/* Hata Bildirimi */}
+              {error && (
+                <p className="text-xs font-bold text-[var(--color-loss)] bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">
+                  {error}
+                </p>
+              )}
 
-      {/* Form Action Buttons */}
-      <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]/50">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-primary text-xs py-2.5 px-6 font-extrabold shadow-md hover:shadow-lg transition-all"
-        >
-          {pending ? (
-            <span className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              Kaydediliyor & Güncel Fiyat Alınıyor...
-            </span>
+              {/* Aksiyon Butonu */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]/50">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="btn btn-primary text-xs py-2.5 px-6 font-extrabold shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+                >
+                  {pending ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      BES Bakiyesi Kaydediliyor...
+                    </span>
+                  ) : (
+                    "BES Bakiyesini Kaydet"
+                  )}
+                </button>
+              </div>
+            </div>
           ) : (
-            editing ? "Değişiklikleri Kaydet" : "Yeni İşlemi Kaydet"
+            /* Standart Varlık İşlemi Alanları */
+            <>
+              {/* 1. İşlem Yönü Switcher */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                    İşlem Yönü
+                  </label>
+                  {side === "SELL" && symbol && (
+                    <span className="text-[11px] font-bold text-[var(--color-brand-strong)]">
+                      Mevcut Varlık: {formatNumber(currentQty, 4)} adet
+                    </span>
+                  )}
+                </div>
+                <input type="hidden" name="side" value={side} />
+                <div className="grid grid-cols-2 gap-2 bg-[var(--color-surface-muted)]/50 p-1.5 rounded-2xl border border-[var(--color-border)]/60">
+                  <button
+                    type="button"
+                    onClick={() => setSide("BUY")}
+                    className={cn(
+                      "py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
+                      side === "BUY"
+                        ? "bg-[var(--color-profit)] text-white shadow-md ring-2 ring-emerald-500/20"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    )}
+                  >
+                    <Plus size={15} />
+                    Alış İle Ekle (BUY)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSide("SELL");
+                      if (symbol) {
+                        const qty = getCurrentHoldingQty(symbol);
+                        if (qty > 0) {
+                          setQtyInput(String(qty));
+                          if (quantityRef.current) quantityRef.current.value = String(qty);
+                        }
+                      }
+                    }}
+                    className={cn(
+                      "py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2",
+                      side === "SELL"
+                        ? "bg-[var(--color-loss)] text-white shadow-md ring-2 ring-rose-500/20"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    )}
+                  >
+                    <Minus size={15} />
+                    Satış İle Çıkar (SELL)
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Sembol Seçimi */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                  Sembol Kodu
+                </label>
+                <SymbolCombobox
+                  value={symbol}
+                  onChange={handleSymbolChange}
+                  onSelect={handleSymbolSelect}
+                  assetType={assetType}
+                  transactions={transactions}
+                  placeholder="Örn: AAPL, THYAO, BTC..."
+                />
+              </div>
+
+              {/* 3. Tarih & Para Birimi */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Tarih */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                    İşlem Tarihi
+                  </label>
+                  <input type="hidden" name="date" value={dateInput} />
+                  <ModernDatePicker
+                    value={dateInput}
+                    onChange={(newDate) => setDateInput(newDate)}
+                  />
+                </div>
+
+                {/* Para Birimi */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                    Para Birimi
+                  </label>
+                  <input type="hidden" name="currency" value={currency} />
+                  <div className="grid grid-cols-2 gap-1.5 bg-[var(--color-surface-muted)]/50 p-1 rounded-xl border border-[var(--color-border)]/60">
+                    <button
+                      type="button"
+                      onClick={() => setCurrency("TRY")}
+                      className={cn(
+                        "py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer",
+                        currency === "TRY"
+                          ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      )}
+                    >
+                      ₺ Türk Lirası (TRY)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrency("USD")}
+                      className={cn(
+                        "py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer",
+                        currency === "USD"
+                          ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-2xs border border-[var(--color-border)]/60"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      )}
+                    >
+                      $ Amerikan Doları (USD)
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Adet & Birim Fiyat */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Adet */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                    İşlem Adedi
+                  </label>
+                  <input
+                    ref={quantityRef}
+                    name="quantity"
+                    type="number"
+                    step="any"
+                    required
+                    value={qtyInput}
+                    onChange={(e) => setQtyInput(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold tabular-nums outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]"
+                  />
+                </div>
+
+                {/* Birim Fiyat */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                      Birim Fiyat ({curSym(currency)})
+                    </label>
+                    {fetchingPrice && (
+                      <span className="text-[10px] font-bold text-[var(--color-brand-strong)] flex items-center gap-1">
+                        <span className="inline-block w-2.5 h-2.5 border-2 border-[var(--color-brand)] border-t-transparent rounded-full animate-spin"></span>
+                        Fiyat Getiriliyor...
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    ref={unitPriceRef}
+                    name="unitPrice"
+                    type="number"
+                    step="any"
+                    required
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs font-bold tabular-nums outline-none focus:border-[var(--color-brand)] focus:ring-2 focus:ring-[var(--color-brand-soft)]"
+                  />
+                </div>
+              </div>
+
+              {/* 5. Canlı Toplam Kartı */}
+              <div className="p-4 bg-gradient-to-br from-[var(--color-brand-soft)]/30 to-[var(--color-surface-muted)]/20 border border-[var(--color-brand)]/20 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                    Tahmini Toplam İşlem Tutarı
+                  </span>
+                  <div className="text-lg font-black tracking-tight tabular-nums text-[var(--color-foreground)] mt-0.5">
+                    {formatMoney(computedTotal, currency)}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-[var(--color-muted)] block">Hesaplama:</span>
+                  <span className="text-xs font-bold tabular-nums text-[var(--color-brand-strong)]">
+                    {parsedQty} × {parsedPrice.toFixed(2)} {curSym(currency)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Özel Toplam Tutar (Opsiyonel) */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                  Özel Toplam Tutar (Opsiyonel — Boş bırakılırsa Adet × Birim Fiyat alınır)
+                </label>
+                <input
+                  name="total"
+                  type="number"
+                  step="any"
+                  defaultValue={editing?.total ?? ""}
+                  placeholder={computedTotal > 0 ? String(computedTotal) : "Otomatik hesaplanır"}
+                  className="w-full rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] px-3.5 py-2 text-xs font-medium tabular-nums outline-none focus:border-[var(--color-brand)]"
+                />
+              </div>
+
+              {error && (
+                <p className="text-xs font-bold text-[var(--color-loss)] bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">
+                  {error}
+                </p>
+              )}
+
+              {/* Standart İşlem Butonu */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]/50">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="btn btn-primary text-xs py-2.5 px-6 font-extrabold shadow-md hover:shadow-lg transition-all"
+                >
+                  {pending ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Kaydediliyor & Güncel Fiyat Alınıyor...
+                    </span>
+                  ) : (
+                    editing ? "Değişiklikleri Kaydet" : "Yeni İşlemi Kaydet"
+                  )}
+                </button>
+              </div>
+            </>
           )}
-        </button>
-      </div>
-    </form>
+        </form>
       )}
     </div>
   );
