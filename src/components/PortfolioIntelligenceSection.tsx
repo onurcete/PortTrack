@@ -192,7 +192,7 @@ export function PortfolioIntelligenceSection({
                 </h2>
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/30 shadow-2xs">
                   <Zap size={11} className="text-amber-400 fill-amber-400" />
-                  9 ANALİZ ARACI AKTİF
+                  10 ANALİZ ARACI AKTİF
                 </span>
               </div>
               <p className="text-xs text-[var(--color-muted)] font-medium mt-0.5">
@@ -608,7 +608,27 @@ function FormattedMarkdownResponse({ content }: { content: string }) {
     mainContent = content.slice(0, noteMatch.index).trim();
   }
 
-  const lines = mainContent.split("\n");
+  const rawLines = mainContent.split("\n");
+  // Tablo satırları arasındaki boşlukları (\n\n) temizle
+  const lines: string[] = [];
+  for (let i = 0; i < rawLines.length; i++) {
+    const trimmed = rawLines[i].trim();
+    if (trimmed === "") {
+      const prev = lines[lines.length - 1] || "";
+      let next = "";
+      for (let j = i + 1; j < rawLines.length; j++) {
+        if (rawLines[j].trim() !== "") {
+          next = rawLines[j].trim();
+          break;
+        }
+      }
+      if (prev.startsWith("|") && prev.endsWith("|") && next.startsWith("|") && next.endsWith("|")) {
+        continue; // Tablo içi boş satırı atla
+      }
+    }
+    lines.push(trimmed);
+  }
+
   const elements: React.ReactNode[] = [];
   let currentList: React.ReactNode[] = [];
   let currentTableLines: string[] = [];

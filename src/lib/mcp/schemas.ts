@@ -103,6 +103,24 @@ export const PORTFOLIO_MCP_TOOLS: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "get_holding_monthly_performance",
+      description:
+        "Portföyde tutulan varlıkların (hisseler, TEFAS fonları, yabancı borsa, döviz vb.) geçmiş aylardaki tek tek getiri yüzdelerini getirir. Kullanıcı belirli bir ayın (örn: Mart 2026, 2026-03) neden düşük veya yüksek performans gösterdiğini, hangi varlıkların o ay düştüğünü veya yükseldiğini sorduğunda bu araç çağrılmalıdır.",
+      parameters: {
+        type: "object",
+        properties: {
+          month: {
+            type: "string",
+            description: "İncelenecek ay (Format: 'YYYY-MM', Örn: '2026-03' veya '2026-01'). Boş bırakılırsa en son aylar döner.",
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_portfolio_contributors",
       description:
         "Portföyün genel kâr veya zararına en çok katkı sağlayan en iyi kazandıranları (Top Gainers) ve en çok kaybettirenleri (Top Losers) parasal ve yüzdesel olarak getirir.",

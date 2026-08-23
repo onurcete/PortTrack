@@ -1,5 +1,10 @@
 import { getPortfolio } from "@/lib/data";
-import { getPeriodReturns, getBenchmarkComparisonData, getGrowthSeries } from "@/lib/history";
+import {
+  getPeriodReturns,
+  getBenchmarkComparisonData,
+  getGrowthSeries,
+  getProductPerformance,
+} from "@/lib/history";
 import { prisma } from "@/lib/prisma";
 
 export interface ToolExecutionResult {
@@ -427,6 +432,66 @@ export async function executeGetMonthlyGrowthHistory(
 }
 
 /**
+ * 10. get_holding_monthly_performance
+ */
+export async function executeGetHoldingMonthlyPerformance(
+  userId: string,
+  args?: { month?: string },
+) {
+  const prodPerf = await getProductPerformance(userId, 24);
+  if (!prodPerf || prodPerf.months.length === 0) {
+    return {
+      message: "Varlık bazlı getiri geçmişi bulunamadı.",
+      months: [],
+    };
+  }
+
+  // Belirli bir ay veya en son ay
+  const targetMonth =
+    args?.month && prodPerf.months.includes(args.month)
+      ? args.month
+      : prodPerf.months[prodPerf.months.length - 1];
+
+  const monthIdx = prodPerf.months.indexOf(targetMonth);
+  if (monthIdx === -1) {
+    return {
+      message: `Belirtilen ${args?.month} ayı için getiri verisi bulunamadı. Mevcut aylar: ${prodPerf.months.join(", ")}`,
+      availableMonths: prodPerf.months,
+    };
+  }
+
+  const assetResults = prodPerf.rows
+    .map((row) => {
+      const retTRY = row.returnsTRY[monthIdx];
+      const retUSD = row.returnsUSD[monthIdx];
+      return {
+        symbol: row.symbol,
+        assetType: row.assetType,
+        returnTRY: retTRY !== null ? Number(retTRY.toFixed(2)) : null,
+        returnUSD: retUSD !== null ? Number(retUSD.toFixed(2)) : null,
+        totalTRY: row.totalTRY !== null ? Math.round(row.totalTRY) : null,
+      };
+    })
+    .filter((a) => a.returnTRY !== null);
+
+  const gainers = [...assetResults]
+    .filter((a) => (a.returnTRY ?? 0) > 0)
+    .sort((a, b) => (b.returnTRY ?? 0) - (a.returnTRY ?? 0));
+
+  const losers = [...assetResults]
+    .filter((a) => (a.returnTRY ?? 0) < 0)
+    .sort((a, b) => (a.returnTRY ?? 0) - (b.returnTRY ?? 0));
+
+  return {
+    month: targetMonth,
+    totalAssetsTracked: assetResults.length,
+    topGainersOfThisMonth: gainers.slice(0, 5),
+    topLosersOfThisMonth: losers.slice(0, 5),
+    allAssetReturns: assetResults,
+  };
+}
+
+/**
  * Ana Tool Router Yönlendiricisi
  */
 export async function dispatchMcpTool(
@@ -451,6 +516,9 @@ export async function dispatchMcpTool(
       break;
     case "get_monthly_growth_history":
       result = await executeGetMonthlyGrowthHistory(userId, args);
+      break;
+    case "get_holding_monthly_performance":
+      result = await executeGetHoldingMonthlyPerformance(userId, args);
       break;
     case "get_portfolio_contributors":
       result = await executeGetPortfolioContributors(userId, args);
