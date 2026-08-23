@@ -2243,61 +2243,25 @@ function PositionDetailModal({
       onClose={onClose}
       size="xl"
       header={
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--color-border)]/60 px-5 sm:px-6 py-3.5 bg-gradient-to-r from-[var(--color-surface)] via-[var(--color-surface-muted)]/20 to-[var(--color-surface)]">
-          {/* Sol: Sembol & Varlık Bilgisi */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white font-black text-xs shrink-0 shadow-xs"
-              style={{ backgroundColor: ASSET_META[position.assetType]?.color ?? "#6366f1" }}
-            >
-              {position.symbol.slice(0, 3)}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-black text-base sm:text-lg tracking-tight text-[var(--color-foreground)]">
-                  {position.symbol}
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-muted)] border border-[var(--color-border)]/50">
-                  {ASSET_META[position.assetType]?.label ?? position.assetType}
-                </span>
-                {position.dailyChangePct != null && (
-                  <span
-                    className={cn(
-                      "text-xs font-black tabular-nums flex items-center gap-0.5",
-                      position.dailyChangePct > 0
-                        ? "text-[var(--color-profit)]"
-                        : position.dailyChangePct < 0
-                        ? "text-[var(--color-loss)]"
-                        : "text-[var(--color-muted)]"
-                    )}
-                  >
-                    {position.dailyChangePct > 0 ? "▲" : position.dailyChangePct < 0 ? "▼" : ""}
-                    {formatPercent(position.dailyChangePct)}
-                  </span>
-                )}
-              </div>
-              {position.name && (
-                <p className="text-xs text-[var(--color-muted)] truncate max-w-xs sm:max-w-md font-medium">
-                  {position.name}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Sağ: İki Sekmeli Navigasyon Barı & Kapat Butonu */}
-          <div className="flex items-center gap-2.5 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
-            <div className="flex items-center p-1 bg-[var(--color-surface-muted)]/80 rounded-xl border border-[var(--color-border)]/70 shadow-inner flex-1 sm:flex-initial">
+        <div className="flex flex-col border-b border-[var(--color-border)]/70 bg-[var(--color-surface)]">
+          {/* Üst Bar: Sol Tarafta Belirgin Sekmeler, Sağ Tarafta Kapat Butonu */}
+          <div className="flex items-center justify-between border-b border-[var(--color-border)]/50 px-4 sm:px-6 pt-2 bg-[var(--color-surface-muted)]/30">
+            {/* Sol: Büyük ve Belirgin Sekmeler */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setActiveTab("details")}
                 className={cn(
-                  "flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none",
+                  "flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-black transition-all border-b-2 -mb-px cursor-pointer select-none rounded-t-xl",
                   activeTab === "details"
-                    ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/60 font-black"
-                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    ? "bg-[var(--color-surface)] border-[var(--color-brand)] text-[var(--color-brand-strong)] shadow-xs"
+                    : "border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface)]/50"
                 )}
               >
-                <Layers size={14} className={activeTab === "details" ? "text-[var(--color-brand-strong)]" : "opacity-60"} />
+                <Layers
+                  size={16}
+                  className={activeTab === "details" ? "text-[var(--color-brand)]" : "text-[var(--color-muted)]"}
+                />
                 <span>Varlık & Pozisyon</span>
               </button>
 
@@ -2305,18 +2269,21 @@ function PositionDetailModal({
                 type="button"
                 onClick={() => setActiveTab("technical")}
                 className={cn(
-                  "flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer select-none relative",
+                  "flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-black transition-all border-b-2 -mb-px cursor-pointer select-none rounded-t-xl",
                   activeTab === "technical"
-                    ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/60 font-black"
-                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    ? "bg-[var(--color-surface)] border-[var(--color-brand)] text-[var(--color-brand-strong)] shadow-xs"
+                    : "border-transparent text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface)]/50"
                 )}
               >
-                <Activity size={14} className={activeTab === "technical" ? "text-amber-500" : "opacity-60 text-amber-500"} />
+                <Activity
+                  size={16}
+                  className={activeTab === "technical" ? "text-amber-500" : "text-[var(--color-muted)]"}
+                />
                 <span>Teknik Analiz</span>
                 {data?.analysis?.score != null && (
                   <span
                     className={cn(
-                      "px-1.5 py-0.2 rounded-full text-[10px] font-black tabular-nums border",
+                      "px-1.5 py-0.5 rounded-md text-[10px] font-black tabular-nums border",
                       data.analysis.score >= 65
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                         : data.analysis.score <= 35
@@ -2324,19 +2291,62 @@ function PositionDetailModal({
                         : "bg-slate-500/15 text-[var(--color-muted)] border-slate-500/30"
                     )}
                   >
-                    {data.analysis.score}
+                    {data.analysis.score}/100
                   </span>
                 )}
               </button>
             </div>
 
+            {/* Sağ: Kapat Butonu */}
             <button
               onClick={onClose}
-              className="rounded-xl p-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer border border-transparent hover:border-[var(--color-border)]/50"
+              className="rounded-xl p-2 mb-1.5 text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors cursor-pointer border border-transparent hover:border-[var(--color-border)]/50"
               title="Kapat"
             >
               <X size={18} />
             </button>
+          </div>
+
+          {/* Alt Bilgi Barı: Sembol & Varlık Detayları */}
+          <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-3 bg-[var(--color-surface)]">
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-white font-black text-xs shrink-0 shadow-xs"
+                style={{ backgroundColor: ASSET_META[position.assetType]?.color ?? "#6366f1" }}
+              >
+                {position.symbol.slice(0, 3)}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-black text-base sm:text-lg tracking-tight text-[var(--color-foreground)]">
+                    {position.symbol}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-muted)] border border-[var(--color-border)]/50">
+                    {ASSET_META[position.assetType]?.label ?? position.assetType}
+                  </span>
+                  {position.dailyChangePct != null && (
+                    <span
+                      className={cn(
+                        "text-xs font-black tabular-nums flex items-center gap-0.5",
+                        position.dailyChangePct > 0
+                          ? "text-[var(--color-profit)]"
+                          : position.dailyChangePct < 0
+                          ? "text-[var(--color-loss)]"
+                          : "text-[var(--color-muted)]"
+                      )}
+                    >
+                      {position.dailyChangePct > 0 ? "▲" : position.dailyChangePct < 0 ? "▼" : ""}
+                      {formatPercent(position.dailyChangePct)}
+                    </span>
+                  )}
+                </div>
+                {position.name && (
+                  <p className="text-xs text-[var(--color-muted)] truncate max-w-xs sm:max-w-md font-medium">
+                    {position.name}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       }
