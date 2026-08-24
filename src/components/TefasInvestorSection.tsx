@@ -36,7 +36,7 @@ export function TefasInvestorSection({
   symbolNotes,
 }: TefasInvestorSectionProps) {
   const [filter, setFilter] = useState<TefasFilter>("ALL");
-  const [viewMode, setViewMode] = useState<TefasViewMode>("GRID");
+  const [viewMode, setViewMode] = useState<TefasViewMode>("TABLE");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFund, setSelectedFund] = useState<TefasFundInvestorStats | null>(null);
 

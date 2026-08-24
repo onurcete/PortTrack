@@ -112,43 +112,37 @@ export function AnalysisBriefingClient({
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20">
       {/* 1. Header Section */}
-      <header className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[var(--color-brand-strong)] flex items-center gap-1.5">
-              <Zap size={14} className="text-amber-500" />
-              Portföy İstihbaratı & Dinamikler
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--color-foreground)] mt-1">
-              Portföy & Piyasa Analiz Paneli
-            </h1>
-            <p className="text-xs text-[var(--color-muted)] mt-1">
-              TEFAS yatırımcı hareketleri, varlık dağılım dengesi ve en çok hareket eden varlıkların anlık özeti.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={runTechnical}
-              disabled={techLoading}
-              className="btn btn-outline text-xs shadow-xs gap-1.5 cursor-pointer"
-            >
-              <RefreshCw
-                size={14}
-                className={cn(techLoading && "animate-spin")}
-              />
-              {techLoading ? "Hesaplanıyor..." : "Teknik Analizi Yenile"}
-            </button>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-foreground)]">
+            Analiz
+          </h1>
+          <p className="text-sm text-[var(--color-muted)] mt-1">
+            TEFAS yatırımcı dinamikleri, varlık dağılım dengesi ve getiri ısı haritası
+          </p>
         </div>
 
-        {techMsg && (
-          <p className="text-xs font-semibold text-[var(--color-profit)] bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 inline-block animate-in fade-in">
-            {techMsg}
-          </p>
-        )}
-      </header>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={runTechnical}
+            disabled={techLoading}
+            className="btn btn-outline text-xs shadow-xs gap-1.5 cursor-pointer"
+          >
+            <RefreshCw
+              size={14}
+              className={cn(techLoading && "animate-spin")}
+            />
+            {techLoading ? "Hesaplanıyor..." : "Teknik Analizi Yenile"}
+          </button>
+        </div>
+      </div>
+
+      {techMsg && (
+        <p className="text-xs font-semibold text-[var(--color-profit)] bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 inline-block animate-in fade-in">
+          {techMsg}
+        </p>
+      )}
 
       {/* 2. Top 4 KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
