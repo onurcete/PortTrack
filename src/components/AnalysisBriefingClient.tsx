@@ -1,15 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   PieChart,
-  RefreshCw,
 } from "lucide-react";
 import type { HoldingDTO } from "@/lib/analysisData";
 import type { TefasInvestorSummary } from "@/lib/tefasInvestors";
-import { cn } from "@/lib/utils";
 import { TefasInvestorSection } from "./TefasInvestorSection";
 import {
   PerformanceHeatmapSection,
@@ -26,39 +22,8 @@ interface AnalysisBriefingClientProps {
 export function AnalysisBriefingClient({
   holdings,
   tefasInvestors,
-  lastTechnicalDate,
   productPerformance,
 }: AnalysisBriefingClientProps) {
-  const router = useRouter();
-
-  // Technical Refresh State
-  const [techLoading, setTechLoading] = useState(false);
-  const [techMsg, setTechMsg] = useState<string | null>(null);
-
-  // Run Technical Analysis
-  async function runTechnical() {
-    setTechLoading(true);
-    setTechMsg(null);
-    try {
-      const res = await fetch("/api/analysis/run", { method: "POST" });
-      const data = await res.json();
-      if (data.ok) {
-        setTechMsg(
-          `${data.analyzed ?? 0} varlık analiz edildi` +
-            (data.skipped ? `, ${data.skipped} atlandı` : ""),
-        );
-        router.refresh();
-      } else {
-        setTechMsg(data.error ?? "Teknik analiz başarısız");
-      }
-    } catch {
-      setTechMsg("Bağlantı hatası");
-    } finally {
-      setTechLoading(false);
-      setTimeout(() => setTechMsg(null), 6000);
-    }
-  }
-
   if (holdings.length === 0) {
     return (
       <div className="max-w-6xl mx-auto space-y-8 py-12 text-center">
@@ -75,40 +40,7 @@ export function AnalysisBriefingClient({
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20">
-      {/* 1. Header Section */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--color-foreground)]">
-            Analiz
-          </h1>
-          <p className="text-sm text-[var(--color-muted)] mt-1">
-            TEFAS yatırımcı dinamikleri ve ürün bazlı getiri ısı haritası
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={runTechnical}
-            disabled={techLoading}
-            className="btn btn-outline text-xs shadow-xs gap-1.5 cursor-pointer"
-          >
-            <RefreshCw
-              size={14}
-              className={cn(techLoading && "animate-spin")}
-            />
-            {techLoading ? "Hesaplanıyor..." : "Teknik Analizi Yenile"}
-          </button>
-        </div>
-      </div>
-
-      {techMsg && (
-        <p className="text-xs font-semibold text-[var(--color-profit)] bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 inline-block animate-in fade-in">
-          {techMsg}
-        </p>
-      )}
-
-      {/* 2. TEFAS Fon Akış & Yatırımcı Analizi Section */}
+      {/* 1. TEFAS Fon Akış & Yatırımcı Analizi Section */}
       {tefasInvestors && (
         <TefasInvestorSection
           tefasInvestors={tefasInvestors}
@@ -116,10 +48,10 @@ export function AnalysisBriefingClient({
         />
       )}
 
-      {/* 3. Ürün Getiri Isı Haritası (Heatmap) */}
+      {/* 2. Ürün Getiri Isı Haritası (Heatmap) */}
       <PerformanceHeatmapSection data={productPerformance} />
 
-      {/* 4. YTD Yasal Uyarı Kutusu */}
+      {/* 3. YTD Yasal Uyarı Kutusu */}
       <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-[var(--color-muted)] flex items-start gap-3 mt-6">
         <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
         <div className="space-y-1">
