@@ -14,7 +14,6 @@ export default async function AnalysisPage() {
 
   return (
     <AnalysisBriefingClient
-      pulse={bundle.pulse}
       holdings={bundle.holdings}
       tefasInvestors={bundle.tefasInvestors}
       lastTechnicalDate={bundle.lastTechnicalDate}
