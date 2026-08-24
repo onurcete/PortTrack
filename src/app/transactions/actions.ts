@@ -50,7 +50,7 @@ function revalidateAll() {
   revalidatePath("/");
   revalidatePath("/transactions");
   revalidatePath("/growth");
-  revalidatePath("/performance");
+  revalidatePath("/analysis");
 }
 
 import { smartBackfillUserSymbols } from "@/lib/history";

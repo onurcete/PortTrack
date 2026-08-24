@@ -23,7 +23,6 @@ const NAV = [
   { href: "/", label: "Genel Bakış", shortLabel: "Genel", icon: LayoutDashboard },
   { href: "/transactions", label: "İşlemler", shortLabel: "İşlemler", icon: ArrowLeftRight },
   { href: "/growth", label: "Portföy Gelişimi", shortLabel: "Gelişim", icon: TrendingUp },
-  { href: "/performance", label: "Ürün Performansı", shortLabel: "Performans", icon: LineChart },
   { href: "/analysis", label: "Analiz", shortLabel: "Analiz", icon: Activity },
   { href: "/settings", label: "Ayarlar", shortLabel: "Ayarlar", icon: Settings },
 ];

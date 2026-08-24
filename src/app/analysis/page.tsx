@@ -1,12 +1,16 @@
 import { AnalysisBriefingClient } from "@/components/AnalysisBriefingClient";
 import { requireUser } from "@/lib/auth";
 import { loadAnalysisBundle } from "@/lib/analysisData";
+import { getProductPerformance } from "@/lib/history";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalysisPage() {
   const userId = await requireUser();
-  const bundle = await loadAnalysisBundle(userId);
+  const [bundle, productPerformance] = await Promise.all([
+    loadAnalysisBundle(userId),
+    getProductPerformance(userId, 12),
+  ]);
 
   return (
     <AnalysisBriefingClient
@@ -14,6 +18,7 @@ export default async function AnalysisPage() {
       holdings={bundle.holdings}
       tefasInvestors={bundle.tefasInvestors}
       lastTechnicalDate={bundle.lastTechnicalDate}
+      productPerformance={productPerformance}
     />
   );
 }

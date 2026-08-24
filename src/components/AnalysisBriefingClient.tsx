@@ -34,12 +34,17 @@ import {
   formatPercent,
 } from "@/lib/utils";
 import { TefasInvestorSection } from "./TefasInvestorSection";
+import {
+  PerformanceHeatmapSection,
+  type ProductPerformanceDTO,
+} from "./PerformanceHeatmapSection";
 
 interface AnalysisBriefingClientProps {
   pulse: AnalysisPulse;
   holdings: HoldingDTO[];
   tefasInvestors: TefasInvestorSummary | null;
   lastTechnicalDate: string | null;
+  productPerformance: ProductPerformanceDTO;
 }
 
 export function AnalysisBriefingClient({
@@ -47,6 +52,7 @@ export function AnalysisBriefingClient({
   holdings,
   tefasInvestors,
   lastTechnicalDate,
+  productPerformance,
 }: AnalysisBriefingClientProps) {
   const router = useRouter();
 
@@ -539,7 +545,10 @@ export function AnalysisBriefingClient({
         />
       )}
 
-      {/* 6. YTD Yasal Uyarı Kutusu */}
+      {/* 6. Ürün Getiri Isı Haritası (Heatmap) */}
+      <PerformanceHeatmapSection data={productPerformance} />
+
+      {/* 7. YTD Yasal Uyarı Kutusu */}
       <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-[var(--color-muted)] flex items-start gap-3 mt-6">
         <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
         <div className="space-y-1">

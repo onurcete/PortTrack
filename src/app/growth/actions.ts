@@ -39,7 +39,7 @@ export async function updateBesBalance(
     revalidatePath("/");
     revalidatePath("/transactions");
     revalidatePath("/growth");
-    revalidatePath("/performance");
+    revalidatePath("/analysis");
     return { ok: true, message: `${month} BES güncellendi.` };
   } catch (err) {
     return {

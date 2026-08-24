@@ -24,7 +24,7 @@ import { Modal } from "@/components/Modal";
 import { NotesDrawer } from "@/components/NotesDrawer";
 import { BackfillStatusBanner } from "@/components/BackfillStatusBanner";
 import { formatMoney, formatPercent, formatNumber, formatDate, monthLabel, cn } from "@/lib/utils";
-import { getCellStyle } from "@/components/PerformanceClient";
+import { getCellStyle } from "@/components/PerformanceHeatmapSection";
 import { TechnicalAnalysisContent } from "@/components/TechnicalAnalysisContent";
 import {
   BarChart,
