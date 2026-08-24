@@ -253,7 +253,8 @@ function CombinedReturnCell({
   currency,
   assetReturns = [],
   borderClasses,
-  xirrPct,
+  xirrTRY,
+  xirrUSD,
 }: {
   label: string;
   pct: number | null;
@@ -261,7 +262,8 @@ function CombinedReturnCell({
   currency: "TRY" | "USD";
   assetReturns?: { label: string; pct: number }[];
   borderClasses: string;
-  xirrPct?: number | null;
+  xirrTRY?: number | null;
+  xirrUSD?: number | null;
 }) {
   if (pct === null || amt === null) return null;
   const positive = pct > 0;
@@ -290,7 +292,7 @@ function CombinedReturnCell({
         </div>
       </div>
 
-      {/* Sağ Kısım: Varlık Getirileri (Dikey Liste) veya XIRR */}
+      {/* Sağ Kısım: Varlık Getirileri (Dikey Liste) veya XIRR (TL + USD) */}
       {assetReturns.length > 0 ? (
         <div className="flex flex-col gap-1 text-[11px] sm:text-xs text-[var(--color-muted)]/90 font-medium justify-center pl-4 border-l border-[var(--color-border)]/45 shrink-0 select-none">
           {assetReturns.map((item, idx) => {
@@ -309,18 +311,39 @@ function CombinedReturnCell({
             );
           })}
         </div>
-      ) : xirrPct !== undefined && xirrPct !== null && (
-        <div className="flex flex-col items-center justify-center pl-4 border-l border-[var(--color-border)]/45 shrink-0 select-none">
-          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--color-muted)] mb-1">XIRR</span>
-          <span
-            className={cn(
-              "text-xl sm:text-2xl font-black tabular-nums tracking-tight leading-none",
-              xirrPct >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]",
-            )}
-          >
-            {formatPercent(xirrPct)}
+      ) : (xirrTRY !== undefined || xirrUSD !== undefined) && (
+        <div className="flex flex-col justify-center pl-4 border-l border-[var(--color-border)]/45 shrink-0 select-none min-w-[110px]">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--color-muted)] mb-1.5 text-right block">
+            XIRR (YILLIK)
           </span>
-          <span className="text-[8px] font-semibold text-[var(--color-muted)] mt-1.5 tracking-wide">Yıllık Getiri</span>
+          <div className="flex flex-col gap-1 text-[11px] sm:text-xs font-medium">
+            {xirrTRY !== undefined && xirrTRY !== null && (
+              <div className="flex items-center justify-between gap-3 text-right">
+                <span className="text-[10px] sm:text-[11px] font-bold text-[var(--color-muted)]">TRY</span>
+                <span
+                  className={cn(
+                    "font-extrabold tabular-nums tracking-tight",
+                    xirrTRY >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
+                  )}
+                >
+                  {formatPercent(xirrTRY)}
+                </span>
+              </div>
+            )}
+            {xirrUSD !== undefined && xirrUSD !== null && (
+              <div className="flex items-center justify-between gap-3 text-right">
+                <span className="text-[10px] sm:text-[11px] font-bold text-[var(--color-muted)]">USD</span>
+                <span
+                  className={cn(
+                    "font-extrabold tabular-nums tracking-tight",
+                    xirrUSD >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
+                  )}
+                >
+                  {formatPercent(xirrUSD)}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -570,7 +593,8 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             amt={allTimeAmt ?? null}
             currency={currency}
             borderClasses=""
-            xirrPct={portfolioXirr}
+            xirrTRY={data.portfolioXirrTRY}
+            xirrUSD={data.portfolioXirrUSD}
           />
         </div>
       </div>
