@@ -65,7 +65,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
   }, [isLoggedIn]);
 
   // Active Interactive Demo Tab
-  const [activeTab, setActiveTab] = useState<"overview" | "matrix" | "ai" | "import">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "matrix" | "analysis" | "ai" | "import">("overview");
 
   // Interactive AI Assistant Simulation State
   const [aiQuestionIndex, setAiQuestionIndex] = useState<number>(0);
@@ -338,37 +338,50 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
           </div>
 
           {/* Interactive Navigation Tabs */}
-          <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-[var(--color-surface-muted)]/80 border border-[var(--color-border)] rounded-2xl max-w-3xl mx-auto shadow-inner">
+          <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-[var(--color-surface-muted)]/80 border border-[var(--color-border)] rounded-2xl max-w-4xl mx-auto shadow-inner">
             <button
               onClick={() => setActiveTab("overview")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
+                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
                 activeTab === "overview"
                   ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-md border border-[var(--color-border)]/80"
                   : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
               )}
             >
               <PieChart size={15} className="text-[var(--color-brand)]" />
-              <span>Genel Bakış & Varlıklar</span>
+              <span>Genel Bakış</span>
             </button>
 
             <button
               onClick={() => setActiveTab("matrix")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
+                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
                 activeTab === "matrix"
                   ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-md border border-[var(--color-border)]/80"
                   : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
               )}
             >
               <BarChart2 size={15} className="text-emerald-500" />
-              <span>Getiri & XIRR Matrisi</span>
+              <span>Getiri Matrisi</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("analysis")}
+              className={cn(
+                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
+                activeTab === "analysis"
+                  ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-md border border-[var(--color-border)]/80"
+                  : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+              )}
+            >
+              <Activity size={15} className="text-amber-500" />
+              <span>Analiz & TEFAS</span>
             </button>
 
             <button
               onClick={() => setActiveTab("ai")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
+                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
                 activeTab === "ai"
                   ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-md border border-[var(--color-border)]/80"
                   : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
@@ -381,7 +394,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             <button
               onClick={() => setActiveTab("import")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
+                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer",
                 activeTab === "import"
                   ? "bg-[var(--color-surface)] text-[var(--color-foreground)] shadow-md border border-[var(--color-border)]/80"
                   : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
@@ -622,7 +635,167 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           )}
 
-          {/* Tab Screen 3: Portföy Zekâsı AI */}
+          {/* Tab Screen 3: Analiz & TEFAS Dinamikleri */}
+          {activeTab === "analysis" && (
+            <div className="card p-5 sm:p-7 bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl rounded-3xl space-y-6 animate-in fade-in duration-300">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[var(--color-border)]/60 text-xs font-bold text-[var(--color-muted)]">
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-sm text-[var(--color-foreground)]">Portföy Analizi & TEFAS Dinamikleri</span>
+                  <span className="text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-md">
+                    ● Sermaye Akışları & Isı Haritası
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg bg-[var(--color-surface-muted)] text-[var(--color-foreground)] border border-[var(--color-border)]/60 text-[11px] font-bold">
+                    30 Açık Pozisyon
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 text-[11px] font-extrabold">
+                    %62.5 Talep Artışı
+                  </span>
+                </div>
+              </div>
+
+              {/* 4 KPI Strip */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/60 space-y-1">
+                  <span className="text-[10px] font-black uppercase text-[var(--color-muted)]">TOPLAM BÜYÜKLÜK</span>
+                  <div className="text-xl font-black text-[var(--color-foreground)]">3.408.871 ₺</div>
+                  <div className="text-[11px] font-semibold text-[var(--color-muted)]">Ort: 113.629 ₺ / varlık</div>
+                </div>
+                <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/60 space-y-1">
+                  <span className="text-[10px] font-black uppercase text-[var(--color-muted)]">VARLIK ÇEŞİTLİLİĞİ</span>
+                  <div className="text-xl font-black text-cyan-400">5 Farklı Tür</div>
+                  <div className="text-[11px] font-semibold text-[var(--color-muted)]">En büyük 3 varlık: %55.8 pay</div>
+                </div>
+                <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/60 space-y-1">
+                  <span className="text-[10px] font-black uppercase text-[var(--color-muted)]">TEFAS FON TALEBİ</span>
+                  <div className="text-xl font-black text-emerald-400">+5 / -3 Fon</div>
+                  <div className="text-[11px] font-semibold text-emerald-500">Yatırımcı Çeken: %62.5</div>
+                </div>
+                <div className="p-4 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/60 space-y-1">
+                  <span className="text-[10px] font-black uppercase text-[var(--color-muted)]">GÜNÜN LİDERİ</span>
+                  <div className="text-xl font-black text-emerald-400">MSTR (+4,88%)</div>
+                  <div className="text-[11px] font-semibold text-[var(--color-muted)]">NVDA (+2,15%)</div>
+                </div>
+              </div>
+
+              {/* Sub-grid: TEFAS Investor Flows & Heatmap Preview */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* TEFAS Investor Flows */}
+                <div className="p-5 bg-[var(--color-surface-muted)]/20 border border-[var(--color-border)]/60 rounded-2xl space-y-3.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-[var(--color-foreground)] flex items-center gap-2">
+                      <Users size={15} className="text-purple-400" />
+                      TEFAS Haftalık Yatırımcı Akışı
+                    </span>
+                    <span className="text-[10px] font-bold text-[var(--color-muted)]">Kişi Sayısı Değişimi</span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-black text-xs">PHE</span>
+                        <div>
+                          <div className="font-extrabold text-xs text-[var(--color-foreground)]">PHE Fonu</div>
+                          <div className="text-[10px] text-[var(--color-muted)]">%15.6 portföy ağırlığı</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-black text-emerald-400">+2.450 Kişi</span>
+                        <div className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.2 rounded">Güçlü Talep</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-black text-xs">TLY</span>
+                        <div>
+                          <div className="font-extrabold text-xs text-[var(--color-foreground)]">TLY Fonu</div>
+                          <div className="text-[10px] text-[var(--color-muted)]">%8.4 portföy ağırlığı</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-black text-emerald-400">+1.890 Kişi</span>
+                        <div className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.2 rounded">Pozitif Giriş</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)]/60 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-black text-xs">OTJ</span>
+                        <div>
+                          <div className="font-extrabold text-xs text-[var(--color-foreground)]">OTJ Fonu</div>
+                          <div className="text-[10px] text-[var(--color-muted)]">%5.0 portföy ağırlığı</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-black text-rose-400">-420 Kişi</span>
+                        <div className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-1.5 py-0.2 rounded">Çıkış Trendi</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Heatmap Preview */}
+                <div className="p-5 bg-[var(--color-surface-muted)]/20 border border-[var(--color-border)]/60 rounded-2xl space-y-3.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-[var(--color-foreground)] flex items-center gap-2">
+                      <BarChart2 size={15} className="text-emerald-400" />
+                      Ürün Bazlı Aylık Performans Isı Haritası
+                    </span>
+                    <span className="text-[10px] font-bold text-[var(--color-muted)]">Son 5 Ay</span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[11px] text-center border-collapse">
+                      <thead>
+                        <tr className="text-[10px] font-extrabold text-[var(--color-muted)] uppercase">
+                          <th className="p-1.5 text-left">Varlık</th>
+                          <th className="p-1.5">NİS</th>
+                          <th className="p-1.5">MAY</th>
+                          <th className="p-1.5">HAZ</th>
+                          <th className="p-1.5">TEM</th>
+                          <th className="p-1.5">AĞU</th>
+                          <th className="p-1.5 text-right">Toplam</th>
+                        </tr>
+                      </thead>
+                      <tbody className="font-bold tabular-nums divide-y divide-[var(--color-border)]/30">
+                        <tr>
+                          <td className="p-1.5 text-left font-black text-[var(--color-foreground)]">PHE</td>
+                          <td className="p-1.5 bg-emerald-500/30 text-emerald-300 rounded">+6.4%</td>
+                          <td className="p-1.5 bg-emerald-500/50 text-emerald-200 rounded">+12.3%</td>
+                          <td className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded">+3.8%</td>
+                          <td className="p-1.5 bg-emerald-500/60 text-emerald-200 rounded">+18.5%</td>
+                          <td className="p-1.5 bg-emerald-500/40 text-emerald-300 rounded">+8.2%</td>
+                          <td className="p-1.5 text-right font-black text-emerald-400">+56.2%</td>
+                        </tr>
+                        <tr>
+                          <td className="p-1.5 text-left font-black text-[var(--color-foreground)]">NVDA</td>
+                          <td className="p-1.5 bg-emerald-500/70 text-emerald-100 rounded">+28.5%</td>
+                          <td className="p-1.5 bg-emerald-500/40 text-emerald-300 rounded">+9.4%</td>
+                          <td className="p-1.5 bg-rose-500/30 text-rose-300 rounded">-4.2%</td>
+                          <td className="p-1.5 bg-emerald-500/80 text-emerald-100 rounded">+34.1%</td>
+                          <td className="p-1.5 bg-emerald-500/30 text-emerald-300 rounded">+5.6%</td>
+                          <td className="p-1.5 text-right font-black text-emerald-400">+88.4%</td>
+                        </tr>
+                        <tr>
+                          <td className="p-1.5 text-left font-black text-[var(--color-foreground)]">THYAO</td>
+                          <td className="p-1.5 bg-emerald-500/30 text-emerald-300 rounded">+7.1%</td>
+                          <td className="p-1.5 bg-rose-500/25 text-rose-300 rounded">-3.5%</td>
+                          <td className="p-1.5 bg-emerald-500/50 text-emerald-200 rounded">+14.2%</td>
+                          <td className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded">+4.0%</td>
+                          <td className="p-1.5 bg-emerald-500/40 text-emerald-300 rounded">+6.8%</td>
+                          <td className="p-1.5 text-right font-black text-emerald-400">+31.2%</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab Screen 4: Portföy Zekâsı AI */}
           {activeTab === "ai" && (
             <div className="card p-5 sm:p-7 bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl rounded-3xl space-y-5 animate-in fade-in duration-300">
               <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]/60">
@@ -690,33 +863,107 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           )}
 
-          {/* Tab Screen 4: CSV & Excel İçe Aktar */}
+          {/* Tab Screen 5: CSV & Excel İçe Aktar (Enriched Details) */}
           {activeTab === "import" && (
             <div className="card p-5 sm:p-7 bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl rounded-3xl space-y-6 animate-in fade-in duration-300">
-              <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]/60 text-xs font-bold">
-                <span className="text-sm font-black text-[var(--color-foreground)]">Banka & Aracı Kurum Ekstre Aktarımı</span>
-                <span className="text-[11px] text-emerald-500 font-extrabold">.csv · .xlsx · .xls</span>
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[var(--color-border)]/60 text-xs font-bold text-[var(--color-muted)]">
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-sm text-[var(--color-foreground)]">Ultra-Hızlı CSV & Excel İçe Aktarma Motoru</span>
+                  <span className="text-[10px] text-blue-500 font-bold bg-blue-500/10 px-2 py-0.5 rounded-md">
+                    .csv · .xlsx · .xls
+                  </span>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 text-[11px] font-extrabold">
+                  ✓ %100 Otomatik Kolon Algılama
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/60 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-extrabold text-[var(--color-brand-strong)]">
-                    <CheckCircle2 size={16} className="text-emerald-500" />
-                    <span>Otomatik Kolon & Tür Eşleme</span>
+              {/* 3-Step Pipeline Visual Graphic */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Step 1 */}
+                <div className="p-4 bg-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/60 rounded-2xl space-y-2.5 relative">
+                  <div className="flex items-center justify-between text-xs font-black text-[var(--color-brand-strong)]">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-5 w-5 rounded-full bg-[var(--color-brand)] text-white text-[10px] flex items-center justify-center">1</span>
+                      Dosya Seç & Yükle
+                    </span>
+                    <FileSpreadsheet size={16} className="text-emerald-500" />
                   </div>
-                  <p className="text-xs text-[var(--color-muted)] font-medium leading-relaxed">
-                    Midas, İş Bankası, Garanti BBVA, Yapı Kredi, Ziraat, TEB, Binance ve diğer tüm platformlardan aldığınız ekstreleri doğrudan yükleyin. Sistem tarih, adet, sembol ve para birimini otomatik tanır.
+                  <div className="p-3 bg-[var(--color-surface)] border border-dashed border-[var(--color-border)] rounded-xl text-center space-y-1">
+                    <FileSpreadsheet size={22} className="text-emerald-500 mx-auto" />
+                    <div className="text-xs font-extrabold text-[var(--color-foreground)]">portfoy_ekstre.xlsx</div>
+                    <div className="text-[10px] text-[var(--color-muted)]">128 İşlem Satırı · 142 KB</div>
+                  </div>
+                  <p className="text-[11px] text-[var(--color-muted)] leading-relaxed font-medium">
+                    Sürükleyip bırakın. Virgüllü veya noktalı sayı ve tarih formatları otomatik tanınır.
                   </p>
                 </div>
 
-                <div className="p-5 bg-[var(--color-surface-muted)]/30 rounded-2xl border border-[var(--color-border)]/60 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-extrabold text-[var(--color-brand-strong)]">
-                    <ShieldCheck size={16} className="text-blue-500" />
-                    <span>Önizleme & Doğrulama Güvencesi</span>
+                {/* Step 2 */}
+                <div className="p-4 bg-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/60 rounded-2xl space-y-2.5 relative">
+                  <div className="flex items-center justify-between text-xs font-black text-indigo-400">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-5 w-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center">2</span>
+                      Akıllı Tür Eşleme
+                    </span>
+                    <GitCompareArrows size={16} className="text-indigo-400" />
                   </div>
-                  <p className="text-xs text-[var(--color-muted)] font-medium leading-relaxed">
-                    Yüklenen hiçbir satır siz onaylamadan veritabanına işlenmez. Hatalı veya belirsiz kayıtlar önceden işaretlenir, dilerseniz tek tıkla kategori türünü değiştirebilirsiniz.
+                  <div className="space-y-1 text-[11px] font-bold">
+                    <div className="flex justify-between p-1.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)]/50">
+                      <span>PHE / TLY</span>
+                      <span className="text-purple-400 font-extrabold">TEFAS Fonu 🟢</span>
+                    </div>
+                    <div className="flex justify-between p-1.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)]/50">
+                      <span>NVDA / AAPL</span>
+                      <span className="text-cyan-400 font-extrabold">Yabancı (USD) 🟢</span>
+                    </div>
+                    <div className="flex justify-between p-1.5 rounded bg-[var(--color-surface)] border border-[var(--color-border)]/50">
+                      <span>THYAO</span>
+                      <span className="text-blue-400 font-extrabold">BIST Hissesi 🟢</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[var(--color-muted)] leading-relaxed font-medium">
+                    Sembolleriniz PortTrack varlık havuzuyla eşlenir; dilerseniz tek tıkla değiştirebilirsiniz.
                   </p>
+                </div>
+
+                {/* Step 3 */}
+                <div className="p-4 bg-[var(--color-surface-muted)]/30 border border-[var(--color-border)]/60 rounded-2xl space-y-2.5 relative">
+                  <div className="flex items-center justify-between text-xs font-black text-emerald-400">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-5 w-5 rounded-full bg-emerald-500 text-white text-[10px] flex items-center justify-center">3</span>
+                      Önizleme & Onay
+                    </span>
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                  </div>
+                  <div className="p-3 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-xl space-y-1.5 text-center">
+                    <div className="text-xs font-black text-emerald-400">✓ 128 Geçerli Satır Hazır</div>
+                    <div className="text-[10px] text-[var(--color-muted)]">0 Hatalı Kayıt · Çift Kayıt Koruması</div>
+                    <span className="inline-block px-3 py-1 bg-emerald-500 text-white font-extrabold text-[10px] rounded-lg shadow-xs">
+                      Portföye İşle
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[var(--color-muted)] leading-relaxed font-medium">
+                    Siz onay vermeden hiçbir kayıt yazılmaz. İşlem sonrası geçmiş ve getiriler otomatik güncellenir.
+                  </p>
+                </div>
+              </div>
+
+              {/* Supported Brokerages / Banks Badges */}
+              <div className="pt-2 space-y-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] block">
+                  Doğrudan Desteklenen Başlıca Kurum & Ekstreler:
+                </span>
+                <div className="flex flex-wrap gap-2 text-xs font-bold">
+                  {["Midas", "İş Bankası (İşCep)", "Garanti BBVA", "Yapı Kredi", "Ziraat Yatırım", "Akbank", "TEB", "Binance", "QNB Finansinvest", "DenizBank", "Gedik Yatırım", "Özel Excel Dosyaları"].map((item, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 rounded-xl bg-[var(--color-surface-muted)] text-[var(--color-foreground)] border border-[var(--color-border)]/60 text-[11px] flex items-center gap-1.5 font-bold"
+                    >
+                      <Check size={12} className="text-emerald-500" />
+                      {item}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
