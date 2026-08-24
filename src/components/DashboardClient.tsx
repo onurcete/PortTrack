@@ -1502,21 +1502,20 @@ function PositionsTable({
                               onClick={() => onSelectPosition?.(p)}
                               className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
-                              {/* Col 1: Sembol, Adet & Gün */}
+                              {/* Col 1: Sembol, Gün & Adet */}
                               <div className="min-w-0">
-                                <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
-                                  <span className="truncate">{p.symbol}</span>
-                                </p>
-                                <div className="flex items-center gap-1 text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
-                                  <span>{formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)} ad.</span>
+                                <div className="flex items-center gap-1.5 leading-tight">
+                                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                                  <span className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate">{p.symbol}</span>
                                   {holdingDays !== "-" && (
-                                    <>
-                                      <span className="opacity-40">•</span>
-                                      <span className="font-bold text-[var(--color-foreground)]/80">{holdingDays}</span>
-                                    </>
+                                    <span className="text-[9px] font-bold text-[var(--color-muted)] px-1 py-0.2 rounded bg-[var(--color-surface-muted)] border border-[var(--color-border)]/50 tabular-nums shrink-0">
+                                      {holdingDays}
+                                    </span>
                                   )}
                                 </div>
+                                <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate font-medium mt-0.5">
+                                  {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)} adet
+                                </p>
                               </div>
 
                               {/* Col 2: Değer Rakamı (0 Basamak Yuvarlama, Virgül Sonrası Yok) */}
@@ -1557,7 +1556,7 @@ function PositionsTable({
                             className="hidden md:grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/30 theme-surface-hover transition-colors cursor-pointer"
                             style={gridStyle}
                           >
-                            {/* Sembol, Adet ve Gün (Bütünleşik Özel Hücre) */}
+                            {/* Sembol, Gün ve Adet (Bütünleşik Özel Hücre) */}
                             <div className="flex items-center gap-3 min-w-0">
                               <div
                                 className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0 shadow-2xs border transition-transform group-hover:scale-105"
@@ -1571,27 +1570,26 @@ function PositionsTable({
                                 <AssetTypeIcon assetType={p.assetType} size={15} />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="font-extrabold text-xs sm:text-[13px] text-[var(--color-foreground)] tracking-tight truncate leading-tight">
-                                  {p.symbol}
-                                </p>
-                                <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-muted)] mt-0.5 leading-none">
-                                  <span className="font-semibold tabular-nums text-[var(--color-foreground)]/80">
-                                    {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)}
+                                <div className="flex items-center gap-2 leading-tight">
+                                  <span className="font-extrabold text-xs sm:text-[13px] text-[var(--color-foreground)] tracking-tight truncate">
+                                    {p.symbol}
                                   </span>
-                                  <span className="text-[10px] text-[var(--color-muted)]">adet</span>
                                   {holdingDays !== "-" && (
-                                    <>
-                                      <span className="text-[var(--color-border)] font-bold select-none">•</span>
-                                      <span
-                                        className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-foreground)]/80 font-bold tabular-nums border border-[var(--color-border)]/60 cursor-help whitespace-nowrap text-[10px]"
-                                        title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
-                                      >
-                                        <Calendar size={10} className="text-[var(--color-brand)]" />
-                                        {holdingDays}
-                                      </span>
-                                    </>
+                                    <span
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-foreground)]/80 font-bold tabular-nums border border-[var(--color-border)]/60 cursor-help whitespace-nowrap text-[10px]"
+                                      title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
+                                    >
+                                      <Calendar size={10} className="text-[var(--color-brand)]" />
+                                      {holdingDays}
+                                    </span>
                                   )}
                                 </div>
+                                <p className="text-[11px] text-[var(--color-muted)] mt-0.5 leading-none font-medium tabular-nums">
+                                  <span className="font-semibold text-[var(--color-foreground)]/80">
+                                    {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)}
+                                  </span>{" "}
+                                  adet
+                                </p>
                               </div>
                             </div>
 
