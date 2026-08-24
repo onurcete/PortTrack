@@ -39,6 +39,14 @@ import {
 } from "lucide-react";
 import { formatMoney, formatPercent, cn } from "@/lib/utils";
 
+function XIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={cn("fill-current", className)}>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 // Mock Market Instruments for Animated Ticker
 const MARKET_TICKER = [
   { symbol: "BIST 100", price: "9.845,20", change: "+1,42%", positive: true },
@@ -203,6 +211,16 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2">
+            <a
+              href="https://x.com/porttrackx"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] hover:border-[var(--color-brand)]/50 text-[var(--color-foreground)] transition-all flex items-center justify-center shadow-2xs hover:scale-105"
+              title="PortTrack Resmi X (Twitter) Hesabı @porttrackx"
+            >
+              <XIcon className="w-3.5 h-3.5" />
+            </a>
+
             {!isLoggedIn && (
               <a
                 href="/api/auth/demo"
@@ -1269,11 +1287,28 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/50 py-10 px-4 sm:px-6 text-center text-xs text-[var(--color-muted)] space-y-3">
-        <div className="flex items-center justify-center gap-2 font-black text-sm text-[var(--color-foreground)]">
-          <TrendingUp size={16} className="text-[var(--color-brand)]" />
-          <span>PortTrack</span>
+      <footer className="border-t border-[var(--color-border)]/60 bg-[var(--color-surface)]/50 py-10 px-4 sm:px-6 text-center text-xs text-[var(--color-muted)] space-y-4">
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex items-center gap-2 font-black text-sm text-[var(--color-foreground)]">
+            <TrendingUp size={16} className="text-[var(--color-brand)]" />
+            <span>PortTrack</span>
+          </div>
+
+          <span className="text-[var(--color-border)] hidden sm:inline">•</span>
+
+          <a
+            href="https://x.com/porttrackx"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] border border-[var(--color-border)] text-xs font-bold text-[var(--color-foreground)] hover:text-[var(--color-brand-strong)] transition-all hover:scale-105 shadow-2xs"
+            title="PortTrack Resmi X Hesabı @porttrackx"
+          >
+            <XIcon className="w-3.5 h-3.5 text-[var(--color-brand-strong)]" />
+            <span>Bizi X'te Takip Edin (@porttrackx)</span>
+            <ArrowUpRight size={13} className="text-[var(--color-muted)]" />
+          </a>
         </div>
+
         <p className="font-medium text-[11px]">
           © {new Date().getFullYear()} PortTrack. Tüm hakları saklıdır. Yatırım tavsiyesi içermez.
         </p>
