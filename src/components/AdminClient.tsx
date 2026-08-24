@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { deleteUser } from "@/app/admin/actions";
 import {
@@ -32,6 +32,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   ExternalLink,
   MessageSquare,
   Lightbulb,
@@ -168,6 +170,42 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedLogDetails, setSelectedLogDetails] = useState<SystemLogDTO | null>(null);
+
+  // User Stats Sorting State (Girilen işlem, son aktif görülme, üye olma tarihi vb.)
+  const [userSortField, setUserSortField] = useState<"transactions" | "lastActive" | "createdAt" | "sessions" | "name">("lastActive");
+  const [userSortOrder, setUserSortOrder] = useState<"asc" | "desc">("desc");
+
+  const sortedUserStats = useMemo(() => {
+    if (!logsData?.userStats) return [];
+    return [...logsData.userStats].sort((a, b) => {
+      let cmp = 0;
+      if (userSortField === "transactions") {
+        cmp = (a.transactionCount ?? 0) - (b.transactionCount ?? 0);
+      } else if (userSortField === "sessions") {
+        cmp = (a.totalSessions ?? 0) - (b.totalSessions ?? 0);
+      } else if (userSortField === "lastActive") {
+        const timeA = a.lastActive ? new Date(a.lastActive).getTime() : 0;
+        const timeB = b.lastActive ? new Date(b.lastActive).getTime() : 0;
+        cmp = timeA - timeB;
+      } else if (userSortField === "createdAt") {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        cmp = timeA - timeB;
+      } else if (userSortField === "name") {
+        cmp = (a.name || a.email).localeCompare(b.name || b.email, "tr");
+      }
+      return userSortOrder === "desc" ? -cmp : cmp;
+    });
+  }, [logsData?.userStats, userSortField, userSortOrder]);
+
+  function handleToggleUserSort(field: "transactions" | "lastActive" | "createdAt" | "sessions" | "name") {
+    if (userSortField === field) {
+      setUserSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setUserSortField(field);
+      setUserSortOrder("desc");
+    }
+  }
 
   // States for running long server operations
   const [runningAction, setRunningAction] = useState<string | null>(null);
@@ -615,51 +653,185 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
               </div>
 
               {/* Kullanıcı Giriş & Aktif Ziyaret İstatistik Tablosu */}
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h3 className="text-base font-semibold text-[var(--color-text)] flex items-center gap-2">
                       <Users size={18} className="text-[var(--color-brand)]" />
                       Kullanıcı Aktivite & Oturum İstatistikleri
                     </h3>
-                    <p className="text-xs text-[var(--color-muted)] mt-0.5">Kullanıcıların toplam oturumları, girdikleri işlem sayıları ve son görülme zamanları</p>
+                    <p className="text-xs text-[var(--color-muted)] mt-0.5">
+                      Kullanıcıların toplam oturumları, girdikleri işlem sayıları, üyelik ve son görülme zamanları
+                    </p>
+                  </div>
+
+                  {/* Sıralama Hızlı Seçim Butonları */}
+                  <div className="flex flex-wrap items-center gap-1.5 bg-[var(--color-bg)] p-1 rounded-xl border border-[var(--color-border)] text-xs">
+                    <span className="text-[10px] font-bold uppercase text-[var(--color-muted)] px-1.5">Sırala:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleUserSort("transactions")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer",
+                        userSortField === "transactions"
+                          ? "bg-[var(--color-brand)] text-white shadow-xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      )}
+                    >
+                      <span>İşlem</span>
+                      {userSortField === "transactions" && (
+                        userSortOrder === "desc" ? <ArrowDown size={12} /> : <ArrowUp size={12} />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleUserSort("lastActive")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer",
+                        userSortField === "lastActive"
+                          ? "bg-[var(--color-brand)] text-white shadow-xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      )}
+                    >
+                      <span>Son Aktif</span>
+                      {userSortField === "lastActive" && (
+                        userSortOrder === "desc" ? <ArrowDown size={12} /> : <ArrowUp size={12} />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleUserSort("createdAt")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer",
+                        userSortField === "createdAt"
+                          ? "bg-[var(--color-brand)] text-white shadow-xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      )}
+                    >
+                      <span>Üyelik</span>
+                      {userSortField === "createdAt" && (
+                        userSortOrder === "desc" ? <ArrowDown size={12} /> : <ArrowUp size={12} />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleUserSort("sessions")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer",
+                        userSortField === "sessions"
+                          ? "bg-[var(--color-brand)] text-white shadow-xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                      )}
+                    >
+                      <span>Oturum</span>
+                      {userSortField === "sessions" && (
+                        userSortOrder === "desc" ? <ArrowDown size={12} /> : <ArrowUp size={12} />
+                      )}
+                    </button>
                   </div>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)] font-semibold uppercase">
-                        <th className="py-3 px-3">Kullanıcı</th>
-                        <th className="py-3 px-3">E-Posta</th>
+                      <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)] font-semibold uppercase text-[10px]">
+                        <th
+                          className="py-3 px-3 cursor-pointer hover:text-[var(--color-text)] transition-colors select-none"
+                          onClick={() => handleToggleUserSort("name")}
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>Kullanıcı & E-Posta</span>
+                            {userSortField === "name" && (userSortOrder === "desc" ? <ArrowDown size={11} /> : <ArrowUp size={11} />)}
+                          </div>
+                        </th>
                         <th className="py-3 px-3">Rol</th>
-                        <th className="py-3 px-3 text-center">Girilen İşlem</th>
-                        <th className="py-3 px-3 text-center">Toplam Oturum</th>
-                        <th className="py-3 px-3 text-right">Son Aktif Görülme</th>
+                        <th
+                          className="py-3 px-3 text-center cursor-pointer hover:text-[var(--color-text)] transition-colors select-none"
+                          onClick={() => handleToggleUserSort("transactions")}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Girilen İşlem</span>
+                            {userSortField === "transactions" ? (
+                              userSortOrder === "desc" ? <ArrowDown size={11} className="text-emerald-400" /> : <ArrowUp size={11} className="text-emerald-400" />
+                            ) : (
+                              <ArrowUpDown size={11} className="opacity-40" />
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          className="py-3 px-3 text-center cursor-pointer hover:text-[var(--color-text)] transition-colors select-none"
+                          onClick={() => handleToggleUserSort("sessions")}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Toplam Oturum</span>
+                            {userSortField === "sessions" ? (
+                              userSortOrder === "desc" ? <ArrowDown size={11} className="text-[var(--color-brand)]" /> : <ArrowUp size={11} className="text-[var(--color-brand)]" />
+                            ) : (
+                              <ArrowUpDown size={11} className="opacity-40" />
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          className="py-3 px-3 text-center cursor-pointer hover:text-[var(--color-text)] transition-colors select-none"
+                          onClick={() => handleToggleUserSort("createdAt")}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Üye Olma Tarihi</span>
+                            {userSortField === "createdAt" ? (
+                              userSortOrder === "desc" ? <ArrowDown size={11} className="text-cyan-400" /> : <ArrowUp size={11} className="text-cyan-400" />
+                            ) : (
+                              <ArrowUpDown size={11} className="opacity-40" />
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          className="py-3 px-3 text-right cursor-pointer hover:text-[var(--color-text)] transition-colors select-none"
+                          onClick={() => handleToggleUserSort("lastActive")}
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <span>Son Aktif Görülme</span>
+                            {userSortField === "lastActive" ? (
+                              userSortOrder === "desc" ? <ArrowDown size={11} className="text-purple-400" /> : <ArrowUp size={11} className="text-purple-400" />
+                            ) : (
+                              <ArrowUpDown size={11} className="opacity-40" />
+                            )}
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-border)]">
-                      {logsData?.userStats.map((u) => (
-                        <tr key={u.id} className="hover:bg-[var(--color-surface-hover)]">
-                          <td className="py-3 px-3 font-semibold text-[var(--color-text)]">{u.name}</td>
-                          <td className="py-3 px-3 text-[var(--color-muted)]">{u.email}</td>
+                      {sortedUserStats.map((u) => (
+                        <tr key={u.id} className="hover:bg-[var(--color-surface-hover)] transition-colors">
+                          <td className="py-3 px-3">
+                            <div className="font-semibold text-[var(--color-text)]">{u.name}</div>
+                            <div className="text-[11px] text-[var(--color-muted)]">{u.email}</div>
+                          </td>
                           <td className="py-3 px-3">
                             <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded-md uppercase", u.role === "ADMIN" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "bg-slate-500/10 text-slate-400 border border-slate-500/20")}>
                               {u.role}
                             </span>
                           </td>
                           <td className="py-3 px-3 text-center">
-                            <span className="inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tabular-nums">
                               {u.transactionCount ?? 0} İşlem
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-center font-bold text-[var(--color-text)]">
+                          <td className="py-3 px-3 text-center font-bold text-[var(--color-text)] tabular-nums">
                             {u.totalSessions} Oturum
                           </td>
-                          <td className="py-3 px-3 text-right text-[var(--color-muted)]">
-                            {u.lastActive
-                              ? new Date(u.lastActive).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                              : "Henüz aktifleşmedi"}
+                          <td className="py-3 px-3 text-center text-[var(--color-muted)] tabular-nums">
+                            {u.createdAt
+                              ? new Date(u.createdAt).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                              : "-"}
+                          </td>
+                          <td className="py-3 px-3 text-right text-[var(--color-muted)] tabular-nums">
+                            {u.lastActive ? (
+                              <span className="font-medium text-[var(--color-text)]">
+                                {new Date(u.lastActive).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-[var(--color-muted)] italic">Henüz aktifleşmedi</span>
+                            )}
                           </td>
                         </tr>
                       ))}
