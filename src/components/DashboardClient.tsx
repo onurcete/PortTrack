@@ -1571,20 +1571,9 @@ function PositionsTable({
                                 <AssetTypeIcon assetType={p.assetType} size={15} />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 leading-tight">
-                                  <span className="font-extrabold text-xs sm:text-[13px] text-[var(--color-foreground)] tracking-tight truncate">
-                                    {p.symbol}
-                                  </span>
-                                  <span
-                                    className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md uppercase tracking-wider shrink-0"
-                                    style={{
-                                      backgroundColor: `${meta.color}12`,
-                                      color: meta.color,
-                                    }}
-                                  >
-                                    {meta.label}
-                                  </span>
-                                </div>
+                                <p className="font-extrabold text-xs sm:text-[13px] text-[var(--color-foreground)] tracking-tight truncate leading-tight">
+                                  {p.symbol}
+                                </p>
                                 <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-muted)] mt-0.5 leading-none">
                                   <span className="font-semibold tabular-nums text-[var(--color-foreground)]/80">
                                     {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)}
