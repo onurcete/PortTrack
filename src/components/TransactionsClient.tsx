@@ -230,8 +230,16 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
-      setUploadError("Lütfen geçerli bir CSV dosyası (.csv) seçin.");
+    const lowerName = file.name.toLowerCase();
+    const isCsv = lowerName.endsWith(".csv") || file.type === "text/csv";
+    const isExcel =
+      lowerName.endsWith(".xlsx") ||
+      lowerName.endsWith(".xls") ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.type === "application/vnd.ms-excel";
+
+    if (!isCsv && !isExcel) {
+      setUploadError("Lütfen geçerli bir CSV (.csv) veya Excel (.xlsx, .xls) dosyası seçin.");
       setSelectedFile(null);
       return;
     }
@@ -242,30 +250,82 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
   const handleUploadAndPreview = () => {
     if (!selectedFile) return;
     setImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      if (!text) {
-        setUploadError("Dosya içeriği boş veya okunamadı.");
+    const lowerName = selectedFile.name.toLowerCase();
+    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const buffer = e.target?.result as ArrayBuffer;
+          if (!buffer) {
+            setUploadError("Excel dosyası içeriği boş veya okunamadı.");
+            setImporting(false);
+            return;
+          }
+          const workbook = XLSX.read(buffer, {
+            type: "array",
+            cellDates: true,
+            dateNF: "dd.mm.yyyy",
+          });
+          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            throw new Error("Excel dosyasında sayfa bulunamadı.");
+          }
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const text = XLSX.utils.sheet_to_csv(worksheet);
+
+          if (!text || text.trim().length === 0) {
+            setUploadError("Excel sayfası boş.");
+            setImporting(false);
+            return;
+          }
+
+          startTransition(async () => {
+            const preview = await previewCsvImport(text);
+            setImporting(false);
+            setCsvContent(text);
+            setCsvPreview(preview);
+            setTypeOverrides({});
+            setImportMode("replace");
+            setUploadError(null);
+            setImportStep("preview");
+          });
+        } catch (err: any) {
+          setUploadError(err?.message || "Excel dosyası işlenirken bir hata oluştu.");
+          setImporting(false);
+        }
+      };
+      reader.onerror = () => {
+        setUploadError("Excel dosyası okunurken bir hata oluştu.");
         setImporting(false);
-        return;
-      }
-      startTransition(async () => {
-        const preview = await previewCsvImport(text);
+      };
+      reader.readAsArrayBuffer(selectedFile);
+    } else {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        if (!text) {
+          setUploadError("Dosya içeriği boş veya okunamadı.");
+          setImporting(false);
+          return;
+        }
+        startTransition(async () => {
+          const preview = await previewCsvImport(text);
+          setImporting(false);
+          setCsvContent(text);
+          setCsvPreview(preview);
+          setTypeOverrides({});
+          setImportMode("replace");
+          setUploadError(null);
+          setImportStep("preview");
+        });
+      };
+      reader.onerror = () => {
+        setUploadError("Dosya okunurken bir hata oluştu.");
         setImporting(false);
-        setCsvContent(text);
-        setCsvPreview(preview);
-        setTypeOverrides({});
-        setImportMode("replace");
-        setUploadError(null);
-        setImportStep("preview");
-      });
-    };
-    reader.onerror = () => {
-      setUploadError("Dosya okunurken bir hata oluştu.");
-      setImporting(false);
-    };
-    reader.readAsText(selectedFile, "utf-8");
+      };
+      reader.readAsText(selectedFile, "utf-8");
+    }
   };
 
   function handleConfirmImport() {
@@ -280,7 +340,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
       setImporting(false);
       if (result.ok) {
         setImportModalOpen(false);
-        setToast(result.message ?? "CSV başarıyla içe aktarıldı.");
+        setToast(result.message ?? "İşlemler başarıyla içe aktarıldı.");
         triggerBackfillBanner();
         fetch("/api/history/backfill?mode=smart", { method: "POST" })
           .then((r) => r.json())
@@ -326,7 +386,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             className="btn btn-outline"
           >
             <Upload size={15} />
-            <span className="hidden sm:inline">CSV İçe Aktar</span>
+            <span className="hidden sm:inline">CSV / Excel İçe Aktar</span>
           </button>
           <button onClick={openNew} className="btn btn-primary">
             <Plus size={16} />
@@ -616,18 +676,18 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         onClose={() => !importing && setImportModalOpen(false)}
         title={
           importStep === "select"
-            ? "CSV İçe Aktarma"
+            ? "CSV / Excel İçe Aktarma"
             : importStep === "format_info"
             ? "Veri Formatı ve Kurallar"
             : importStep === "upload"
-              ? "Yeni CSV Yükle"
-              : "CSV Önizleme ve Onay"
+              ? "CSV veya Excel Dosyası Yükle"
+              : "İçe Aktarma Önizleme ve Onay"
         }
       >
         {importStep === "select" && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-muted)]">
-              Dosyanız veritabanına yazılmadan önce satır satır analiz edilir.
+              CSV veya Excel (.xlsx, .xls) dosyanız veritabanına yazılmadan önce satır satır analiz edilir.
               Tür eşleşmelerini kontrol edip kayıt yöntemini siz seçersiniz.
             </p>
 
@@ -708,7 +768,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
                   ))}
                 </div>
                 <p className="mt-2.5 text-[11px] leading-relaxed text-[var(--color-muted)]">
-                  CSV’deki tür etiketleri PortTrack varlık türlerine eşlenir;
+                  Dosyadaki tür etiketleri PortTrack varlık türlerine eşlenir;
                   belirsiz olanları siz seçersiniz.
                 </p>
               </div>
@@ -745,7 +805,7 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-semibold text-xs text-[var(--color-foreground)]">Gerekli CSV Sütun Yapısı ve Örnek Satır:</h4>
+              <h4 className="font-semibold text-xs text-[var(--color-foreground)]">Gerekli Sütun Yapısı ve Örnek Satır:</h4>
               <div className="overflow-x-auto text-[11px] font-mono theme-inset border border-[var(--color-border)] p-2.5 rounded-lg text-[var(--color-muted)] whitespace-nowrap">
                 <div className="text-[var(--color-foreground)] font-semibold mb-1">
                   Tarih,Tür,Sembol,İşlem Tipi,Birim Fiyat (₺),Adet,Toplam (₺)
@@ -804,30 +864,34 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-[var(--color-foreground)]">
-                CSV Dosyası Seçin
+                CSV veya Excel Dosyası Seçin (.csv, .xlsx, .xls)
               </label>
               
               <div className="relative border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-brand)] rounded-xl p-6 transition-all theme-inset text-center">
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
                   onChange={handleFileChange}
                   disabled={importing}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <div className="flex flex-col items-center justify-center space-y-2">
-                  <div className="rounded-full p-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)]">
-                    <FileText size={24} />
+                  <div className="rounded-full p-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)]">
+                    {selectedFile?.name.toLowerCase().endsWith(".xlsx") || selectedFile?.name.toLowerCase().endsWith(".xls") ? (
+                      <FileSpreadsheet size={24} className="text-emerald-500" />
+                    ) : (
+                      <FileText size={24} className="text-[var(--color-brand)]" />
+                    )}
                   </div>
                   {selectedFile ? (
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-[var(--color-foreground)]">{selectedFile.name}</p>
+                      <p className="text-sm font-bold text-[var(--color-foreground)]">{selectedFile.name}</p>
                       <p className="text-xs text-[var(--color-muted)]">{(selectedFile.size / 1024).toFixed(1)} KB</p>
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm text-[var(--color-foreground)]">Tıklayın veya dosyanızı buraya sürükleyin</p>
-                      <p className="text-xs text-[var(--color-muted)] mt-1">Yalnızca .csv dosyaları</p>
+                      <p className="text-sm font-semibold text-[var(--color-foreground)]">Tıklayın veya dosyanızı buraya sürükleyin</p>
+                      <p className="text-xs text-[var(--color-muted)] mt-1">Desteklenen formatlar: .csv, .xlsx, .xls</p>
                     </div>
                   )}
                 </div>
