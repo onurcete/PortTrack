@@ -200,17 +200,19 @@ export async function updateTransaction(
     return { ok: false, message: msg };
   }
   const d = parsed.data;
+  const symbol = d.symbol.trim().toUpperCase();
+  const calculatedTotal = Number((d.unitPrice * d.quantity).toFixed(4));
   const total =
     d.total && Number.isFinite(d.total) && d.total > 0
       ? d.total
-      : d.unitPrice * d.quantity;
+      : calculatedTotal;
 
   await prisma.transaction.updateMany({
     where: { id, userId },
     data: {
       date: new Date(d.date),
       assetType: d.assetType,
-      symbol: d.symbol.trim().toUpperCase(),
+      symbol,
       side: d.side,
       unitPrice: d.unitPrice,
       quantity: d.quantity,
@@ -219,6 +221,16 @@ export async function updateTransaction(
       note: d.note || null,
     },
   });
+
+  await upsertImportedInstruments(
+    [{
+      assetType: d.assetType,
+      symbol,
+      currency: d.currency,
+    }],
+    userId,
+  ).catch(() => null);
+
   revalidateAll();
   return { ok: true };
 }

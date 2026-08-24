@@ -1619,10 +1619,18 @@ function TransactionForm({
       setError("Birim fiyat 0'dan büyük olmalıdır.");
       return;
     }
-    if (dateInput > todayStr) {
-      setError("Gelecek bir tarih seçilemez.");
-      return;
-    }
+    const finalTotal = customTotalInput.trim() && parseFloat(customTotalInput) > 0
+      ? parseFloat(customTotalInput)
+      : Number((parsedQty * parsedPrice).toFixed(4));
+
+    formData.set("quantity", String(parsedQty));
+    formData.set("unitPrice", String(parsedPrice));
+    formData.set("total", String(finalTotal));
+    formData.set("symbol", symbol.trim().toUpperCase());
+    formData.set("assetType", assetType);
+    formData.set("currency", currency);
+    formData.set("side", side);
+    formData.set("date", dateInput);
 
     startTransition(async () => {
       const res = editing
@@ -1639,6 +1647,7 @@ function TransactionForm({
     });
   }
 
+  const [customTotalInput, setCustomTotalInput] = useState<string>("");
   const currentQty = getCurrentHoldingQty(symbol);
   const parsedQty = parseFloat(qtyInput) || 0;
   const parsedPrice = parseFloat(priceInput) || 0;
@@ -1975,8 +1984,9 @@ function TransactionForm({
                   name="total"
                   type="number"
                   step="any"
-                  defaultValue={editing?.total ?? ""}
-                  placeholder={computedTotal > 0 ? String(computedTotal) : "Otomatik hesaplanır"}
+                  value={customTotalInput}
+                  onChange={(e) => setCustomTotalInput(e.target.value)}
+                  placeholder={computedTotal > 0 ? String(computedTotal.toFixed(2)) : "Otomatik hesaplanır"}
                   className="w-full rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-surface)] px-3.5 py-2 text-xs font-medium tabular-nums outline-none focus:border-[var(--color-brand)]"
                 />
               </div>
