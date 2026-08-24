@@ -955,8 +955,7 @@ function PositionsTable({
       };
     } else {
       const cols = [
-        "minmax(110px, 1.3fr)", // Sembol
-        "minmax(60px, 70px)",   // Gün
+        "minmax(140px, 1.8fr)", // Sembol (Adet ve Gün dahil)
         "minmax(90px, 0.9fr)",  // Ort. Maliyet
         "minmax(90px, 0.9fr)",  // Güncel Fiyat
         "minmax(95px, 1.1fr)",  // Değer
@@ -1242,14 +1241,6 @@ function PositionsTable({
                             align="left"
                           />
                           <SortHeader
-                            field="days"
-                            label="Gün"
-                            activeField={sortField}
-                            order={sortOrder}
-                            onSort={handleSort}
-                            align="right"
-                          />
-                          <SortHeader
                             field="avgCost"
                             label="Ort. Maliyet"
                             activeField={sortField}
@@ -1479,15 +1470,21 @@ function PositionsTable({
                               onClick={() => onSelectPosition?.(p)}
                               className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
-                              {/* Col 1: Sembol & Adet */}
+                              {/* Col 1: Sembol, Adet & Gün */}
                               <div className="min-w-0">
                                 <p className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate flex items-center gap-1">
                                   <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
                                   <span className="truncate">{p.symbol}</span>
                                 </p>
-                                <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
-                                  {formatNumber(p.quantity, 2)} adet
-                                </p>
+                                <div className="flex items-center gap-1 text-[10px] text-[var(--color-muted)] pl-2.5 truncate">
+                                  <span>{formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)} ad.</span>
+                                  {holdingDays !== "-" && (
+                                    <>
+                                      <span className="opacity-40">•</span>
+                                      <span className="font-bold text-[var(--color-foreground)]/80">{holdingDays}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
 
                               {/* Col 2: Değer Rakamı (0 Basamak Yuvarlama, Virgül Sonrası Yok) */}
@@ -1525,38 +1522,49 @@ function PositionsTable({
                           {/* Masaüstü Tablo Satırı */}
                           <div
                             onClick={() => onSelectPosition?.(p)}
-                            className="hidden md:grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 theme-surface-hover transition-colors cursor-pointer"
+                            className="hidden md:grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/30 theme-surface-hover transition-colors cursor-pointer"
                             style={gridStyle}
                           >
-                            {/* Sembol */}
-                            <div className="flex items-center gap-3 min-w-0">
+                            {/* Sembol, Adet ve Gün (Bütünleşik Özel Tasarım) */}
+                            <div className="flex items-center gap-2.5 min-w-0">
                               <span
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-[10px] font-black tracking-tight shrink-0 shadow-2xs border"
                                 style={{
-                                  backgroundColor: `${meta.color}12`,
+                                  backgroundColor: `${meta.color}15`,
+                                  borderColor: `${meta.color}30`,
                                   color: meta.color,
                                 }}
                               >
                                 {p.symbol.slice(0, 3)}
                               </span>
-                              <div className="min-w-0">
-                                <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
-                                  <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: meta.color }} />
-                                  {p.symbol}
-                                </p>
-                                <p className="text-[10px] text-[var(--color-muted)] leading-tight">
-                                  {formatNumber(p.quantity, 4)} adet
-                                </p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 leading-tight">
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse"
+                                    style={{ backgroundColor: meta.color }}
+                                  />
+                                  <span className="font-extrabold text-xs text-[var(--color-foreground)] truncate">
+                                    {p.symbol}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-muted)] mt-0.5 leading-none">
+                                  <span className="font-medium tabular-nums">
+                                    {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)} adet
+                                  </span>
+                                  {holdingDays !== "-" && (
+                                    <>
+                                      <span className="text-[var(--color-border)] font-bold select-none">•</span>
+                                      <span
+                                        className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-foreground)]/80 font-bold tabular-nums border border-[var(--color-border)]/60 cursor-help whitespace-nowrap text-[9px]"
+                                        title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
+                                      >
+                                        {holdingDays}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
-
-                            {/* Gün */}
-                            <p
-                              className="text-xs font-medium text-[var(--color-muted)] tabular-nums text-right cursor-help"
-                              title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
-                            >
-                              {holdingDays}
-                            </p>
 
                             {/* Ortalama Fiyat */}
                             <p className="text-xs font-semibold tabular-nums text-right">
