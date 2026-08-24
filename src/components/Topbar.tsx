@@ -14,6 +14,7 @@ import {
   Activity,
   Shield,
   Settings,
+  Brain,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
@@ -115,6 +116,17 @@ export function Topbar() {
 
           {/* Sağ Taraf: Butonlar */}
           <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            {/* AI Portföy Zekâsı Butonu (Mobilde sadece ikon, masaüstünde yazı + ikon) */}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("open-ai-modal"))}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 h-9 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white font-extrabold text-xs shadow-xs hover:shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer select-none ring-1 ring-white/20"
+              title="Portföy Zekâsı (AI Asistan)"
+            >
+              <Brain size={15} className="animate-pulse text-cyan-200" />
+              <span className="hidden sm:inline">Portföy Zekâsı</span>
+            </button>
+
             <button
               type="button"
               onClick={handleRefresh}

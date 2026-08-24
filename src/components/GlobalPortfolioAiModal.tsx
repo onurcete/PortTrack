@@ -87,8 +87,17 @@ export function GlobalPortfolioAiModal() {
         setIsOpen(false);
       }
     }
+
+    function handleOpenEvent() {
+      setIsOpen(true);
+    }
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("open-ai-modal", handleOpenEvent);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-ai-modal", handleOpenEvent);
+    };
   }, [isOpen]);
 
   async function handleAsk(customQuery?: string) {
@@ -135,11 +144,11 @@ export function GlobalPortfolioAiModal() {
 
   return (
     <>
-      {/* Global Floating AI Trigger Button */}
+      {/* Desktop Global Floating AI Trigger Button (Mobilde üst menüye taşındı) */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-5 right-5 z-40 group flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white font-black text-xs shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer select-none ring-2 ring-indigo-500/40 active:scale-95 animate-in fade-in"
+        className="hidden md:flex fixed bottom-5 right-5 z-40 group items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white font-black text-xs shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer select-none ring-2 ring-indigo-500/40 active:scale-95 animate-in fade-in"
         title="Portföy Zekâsı (Ctrl+J)"
       >
         <div className="relative">
