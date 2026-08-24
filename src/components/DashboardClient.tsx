@@ -16,6 +16,11 @@ import {
   Flame,
   Activity,
   Layers,
+  Globe,
+  Sparkles,
+  Zap,
+  ShieldCheck,
+  Calendar,
 } from "lucide-react";
 import { useCurrency } from "@/context/currency";
 import { Card, Badge } from "@/components/ui";
@@ -766,6 +771,27 @@ function PnlBadge({
   );
 }
 
+function AssetTypeIcon({ assetType, size = 14 }: { assetType: AssetType; size?: number }) {
+  switch (assetType) {
+    case "BIST":
+      return <TrendingUp size={size} />;
+    case "TEFAS":
+      return <Layers size={size} />;
+    case "FOREIGN":
+      return <Globe size={size} />;
+    case "FX":
+      return <Coins size={size} />;
+    case "METAL":
+      return <Sparkles size={size} />;
+    case "CRYPTO":
+      return <Zap size={size} />;
+    case "BES":
+      return <PiggyBank size={size} />;
+    default:
+      return <Wallet size={size} />;
+  }
+}
+
 function PositionsTable({
   openPositions,
   closedPositions,
@@ -1377,24 +1403,30 @@ function PositionsTable({
                               className="hidden md:grid gap-2 items-center px-6 py-2 border-t border-[var(--color-border)]/30 theme-surface-hover transition-colors cursor-pointer"
                               style={gridStyle}
                             >
-                              {/* Sembol */}
-                              <div className="flex items-center gap-3 min-w-0">
-                                <span
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[9px] font-bold shrink-0"
+                              {/* Closed Position Sembol */}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0 shadow-2xs border opacity-75"
                                   style={{
-                                    backgroundColor: `${meta.color}12`,
+                                    backgroundColor: `${meta.color}15`,
+                                    borderColor: `${meta.color}30`,
                                     color: meta.color,
                                   }}
+                                  title={meta.label}
                                 >
-                                  {p.symbol.slice(0, 3)}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-xs truncate leading-tight inline-flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                                    {p.symbol}
-                                  </p>
-                                  <p className="text-[10px] text-[var(--color-muted)] leading-tight">
-                                    Kapalı Pozisyon
+                                  <AssetTypeIcon assetType={p.assetType} size={15} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 leading-tight">
+                                    <span className="font-extrabold text-xs text-[var(--color-foreground)] truncate">
+                                      {p.symbol}
+                                    </span>
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                      Kapalı
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-[var(--color-muted)] mt-0.5 leading-none">
+                                    {meta.label}
                                   </p>
                                 </div>
                               </div>
@@ -1525,39 +1557,47 @@ function PositionsTable({
                             className="hidden md:grid gap-2 items-center px-6 py-2.5 border-t border-[var(--color-border)]/30 theme-surface-hover transition-colors cursor-pointer"
                             style={gridStyle}
                           >
-                            {/* Sembol, Adet ve Gün (Bütünleşik Özel Tasarım) */}
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-[10px] font-black tracking-tight shrink-0 shadow-2xs border"
+                            {/* Sembol, Adet ve Gün (Bütünleşik Özel Hücre) */}
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0 shadow-2xs border transition-transform group-hover:scale-105"
                                 style={{
                                   backgroundColor: `${meta.color}15`,
                                   borderColor: `${meta.color}30`,
                                   color: meta.color,
                                 }}
+                                title={meta.label}
                               >
-                                {p.symbol.slice(0, 3)}
-                              </span>
+                                <AssetTypeIcon assetType={p.assetType} size={15} />
+                              </div>
                               <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 leading-tight">
-                                  <span
-                                    className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse"
-                                    style={{ backgroundColor: meta.color }}
-                                  />
-                                  <span className="font-extrabold text-xs text-[var(--color-foreground)] truncate">
+                                <div className="flex items-center gap-2 leading-tight">
+                                  <span className="font-extrabold text-xs sm:text-[13px] text-[var(--color-foreground)] tracking-tight truncate">
                                     {p.symbol}
                                   </span>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-muted)] mt-0.5 leading-none">
-                                  <span className="font-medium tabular-nums">
-                                    {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)} adet
+                                  <span
+                                    className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md uppercase tracking-wider shrink-0"
+                                    style={{
+                                      backgroundColor: `${meta.color}12`,
+                                      color: meta.color,
+                                    }}
+                                  >
+                                    {meta.label}
                                   </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-muted)] mt-0.5 leading-none">
+                                  <span className="font-semibold tabular-nums text-[var(--color-foreground)]/80">
+                                    {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)}
+                                  </span>
+                                  <span className="text-[10px] text-[var(--color-muted)]">adet</span>
                                   {holdingDays !== "-" && (
                                     <>
                                       <span className="text-[var(--color-border)] font-bold select-none">•</span>
                                       <span
-                                        className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-foreground)]/80 font-bold tabular-nums border border-[var(--color-border)]/60 cursor-help whitespace-nowrap text-[9px]"
+                                        className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-[var(--color-surface-muted)] text-[var(--color-foreground)]/80 font-bold tabular-nums border border-[var(--color-border)]/60 cursor-help whitespace-nowrap text-[10px]"
                                         title={p.firstBuyDate ? `İlk Alım: ${formattedFirstBuy}` : undefined}
                                       >
+                                        <Calendar size={10} className="text-[var(--color-brand)]" />
                                         {holdingDays}
                                       </span>
                                     </>
