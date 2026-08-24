@@ -144,21 +144,21 @@ export function GlobalPortfolioAiModal() {
 
   return (
     <>
-      {/* Desktop Global Floating AI Trigger Button (Mobilde üst menüye taşındı) */}
+      {/* Global Floating AI Trigger Button (Mobilde alt menünün üstünde sadece ikon, masaüstünde tam buton) */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="hidden md:flex fixed bottom-5 right-5 z-40 group items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white font-black text-xs shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer select-none ring-2 ring-indigo-500/40 active:scale-95 animate-in fade-in"
+        className="fixed bottom-20 right-4 md:bottom-5 md:right-5 z-40 group flex items-center justify-center gap-2.5 p-3 md:px-4 md:py-3 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white font-black text-xs shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer select-none ring-2 ring-indigo-500/40 active:scale-95 animate-in fade-in"
         title="Portföy Zekâsı (Ctrl+J)"
       >
-        <div className="relative">
+        <div className="relative flex items-center justify-center">
           <Brain size={18} className="animate-pulse text-cyan-200" />
           <span className="absolute -top-1 -right-1 flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-300"></span>
           </span>
         </div>
-        <span className="tracking-tight font-black">Portföy Zekâsı</span>
+        <span className="tracking-tight font-black hidden md:inline">Portföy Zekâsı</span>
         <span className="hidden md:inline-block px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-extrabold text-white/90">
           ⌘K
         </span>
