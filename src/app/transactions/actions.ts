@@ -89,8 +89,18 @@ export async function createTransaction(
     },
   });
 
-  // İşlem veritabanına kaydedildi, sayfa verileri yenileniyor.
-  // Fiyat ve geçmiş veri güncellemeleri istemci tarafından asenkron arka planda tetiklenecek.
+  await upsertImportedInstruments(
+    [{
+      assetType: d.assetType,
+      symbol,
+      currency: d.currency,
+    }],
+    userId,
+  ).catch(() => null);
+
+  // Yeni eklenen enstrüman için saat kaç olursa olsun arka planda anında fiyat güncellemesi başlat
+  refreshPrices({ userId, force: true }).catch((err) => console.error("Auto refreshPrices in createTransaction error:", err));
+
   revalidateAll();
   return { ok: true };
 }
@@ -184,6 +194,8 @@ export async function createBulkTransactions(
     userId,
   ).catch((err) => console.error("Error upserting bulk instruments:", err));
 
+  refreshPrices({ userId, force: true }).catch((err) => console.error("Auto refreshPrices in bulk error:", err));
+
   revalidateAll();
   return { ok: true, count: validTransactions.length };
 }
@@ -230,6 +242,9 @@ export async function updateTransaction(
     }],
     userId,
   ).catch(() => null);
+
+  // Güncellenen enstrüman için saat kısıtı olmadan anında fiyat yenilemesi başlat
+  refreshPrices({ userId, force: true }).catch((err) => console.error("Auto refreshPrices in updateTransaction error:", err));
 
   revalidateAll();
   return { ok: true };

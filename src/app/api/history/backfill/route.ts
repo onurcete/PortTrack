@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       // Anlık fiyatları ve geçmiş verileri arka planda eşzamanlı yenile
       const [res] = await Promise.all([
         smartBackfillUserSymbols(userId),
-        refreshPrices().catch((err) => console.error("Auto refreshPrices in backfill error:", err)),
+        refreshPrices({ userId, force: true }).catch((err) => console.error("Auto refreshPrices in backfill error:", err)),
       ]);
 
       return NextResponse.json({

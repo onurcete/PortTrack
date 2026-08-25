@@ -85,11 +85,11 @@ export async function refreshPrices(options?: {
   const tefasSymbols = symbols.filter((s) => s.assetType === "TEFAS");
   const otherSymbols = symbols.filter((s) => s.assetType !== "TEFAS");
 
-  // SADECE TEFAS İÇİN AKILLI KONTROL:
-  // 1. Bugünün TEFAS fiyatı veritabanında eksikse (geç giriş / günün ilk yenilemesi) -> ÇEK
-  // 2. Saat 07:00 - 10:00 arasındaysa (aktif açıklanma penceresi) -> ÇEK
-  // 3. Saat 10:00 sonrası ve bugün zaten çekilmişse -> ATLA (0 ms)
-  // (Diğer tüm varlıklar BİST, Yabancı Borsa, Kripto her basışta CANLI çekilir)
+  // TEFAS İÇİN AKILLI KONTROL:
+  // 1. force=true ise (kullanıcı manuel "Fiyatları Güncelle"ye bastığında veya yeni işlem eklendiğinde) -> SAAT KAÇ OLURSA OLSUN ÇEK!
+  // 2. Bugünün TEFAS fiyatı veritabanında eksik olan herhangi bir sembol varsa -> HER ZAMAN ÇEK!
+  // 3. Sabah 07:00 - 10:00 penceresindeyse (günlük fiyatların yayınlanma saati) -> ÇEK!
+  // 4. Yalnızca otomatik arka plan rutinlerinde (force=false), 10:00 sonrası ve tüm fonlar zaten çekilmişse atla.
   let shouldFetchTefas = false;
 
   if (tefasSymbols.length > 0) {
@@ -108,7 +108,7 @@ export async function refreshPrices(options?: {
     const trHour = (now.getUTCHours() + 3) % 24;
     const isTefasWindow = trHour >= 7 && trHour < 10;
 
-    shouldFetchTefas = isMissingToday || isTefasWindow;
+    shouldFetchTefas = force || isMissingToday || isTefasWindow;
 
     if (!shouldFetchTefas) {
       console.log(
