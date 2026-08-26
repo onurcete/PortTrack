@@ -41,6 +41,11 @@ import {
   HelpCircle,
   Upload,
   AlertTriangle,
+  Sparkles,
+  Send,
+  CheckSquare,
+  Square,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -301,6 +306,87 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
     }
   }
 
+  // Feedback Prompt Trigger Modal State
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+  const [promptTargetType, setPromptTargetType] = useState<"ALL" | "SELECTED">("ALL");
+  const [promptSelectedUserIds, setPromptSelectedUserIds] = useState<string[]>([]);
+  const [promptUserSearch, setPromptUserSearch] = useState<string>("");
+  const [promptTitle, setPromptTitle] = useState<string>("PortTrack'i Birlikte Geliştirelim! 💡");
+  const [promptMessage, setPromptMessage] = useState<string>(
+    "Görüşleriniz bizim için çok değerli. Sitede görmek istediğiniz yeni özellikler, öneri veya karşılaştığınız sorunları bizimle paylaşabilirsiniz."
+  );
+  const [triggeringPrompt, setTriggeringPrompt] = useState(false);
+  const [promptTriggerResult, setPromptTriggerResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [promptStats, setPromptStats] = useState<{ pending: number; completed: number; dismissed: number; total: number } | null>(null);
+  const [recentPromptsList, setRecentPromptsList] = useState<any[]>([]);
+  const [loadingPromptStats, setLoadingPromptStats] = useState(false);
+
+  async function fetchPromptStats() {
+    setLoadingPromptStats(true);
+    try {
+      const res = await fetch("/api/admin/feedback/trigger");
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setPromptStats(data.stats);
+        setRecentPromptsList(data.prompts || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingPromptStats(false);
+    }
+  }
+
+  async function handleTriggerPrompt() {
+    if (promptTargetType === "SELECTED" && promptSelectedUserIds.length === 0) {
+      setPromptTriggerResult({
+        type: "error",
+        message: "Lütfen en az bir kullanıcı seçiniz.",
+      });
+      return;
+    }
+
+    setTriggeringPrompt(true);
+    setPromptTriggerResult(null);
+
+    try {
+      const res = await fetch("/api/admin/feedback/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetType: promptTargetType,
+          userIds: promptTargetType === "SELECTED" ? promptSelectedUserIds : undefined,
+          title: promptTitle.trim(),
+          message: promptMessage.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setPromptTriggerResult({
+          type: "success",
+          message: data.message || "Geri bildirim pop-up'ı başarıyla tetiklendi!",
+        });
+        fetchPromptStats();
+        if (promptTargetType === "SELECTED") {
+          setPromptSelectedUserIds([]);
+        }
+      } else {
+        setPromptTriggerResult({
+          type: "error",
+          message: data.error || "Tetikleme sırasında hata oluştu.",
+        });
+      }
+    } catch (err: any) {
+      setPromptTriggerResult({
+        type: "error",
+        message: err?.message || "Sunucuyla bağlantı kurulamadı.",
+      });
+    } finally {
+      setTriggeringPrompt(false);
+    }
+  }
+
   // Data Browser State
   const [browse, setBrowse] = useState<BrowseState>({
     table: "",
@@ -456,6 +542,10 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
         return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20"><Zap size={11} /> Cron Fiyat</span>;
       case "CRON_DAILY_DIGEST":
         return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><Mail size={11} /> Bülten Maili</span>;
+      case "FEEDBACK_PROMPT_TRIGGERED":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"><Sparkles size={11} /> Pop-up Tetiklendi</span>;
+      case "FEEDBACK_SUBMITTED":
+        return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"><MessageSquare size={11} /> Geri Bildirim Geldi</span>;
       default:
         return <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/20">{action}</span>;
     }
@@ -1334,6 +1424,60 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                     )}
                   </div>
                 </div>
+
+                {/* Action 5: Kullanıcı Geri Bildirim & İstek-Öneri Pop-up'ı Tetikle */}
+                <div className="rounded-2xl border border-[var(--color-brand)]/40 bg-gradient-to-br from-[var(--color-surface)] to-[var(--color-brand-soft)]/20 p-6 flex flex-col justify-between shadow-sm md:col-span-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1.5 max-w-2xl">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--color-brand)]/15 text-[var(--color-brand)] text-[11px] font-extrabold mb-1">
+                        <Sparkles size={12} />
+                        <span>Kullanıcı Etkileşim Aracı</span>
+                      </div>
+                      <h3 className="font-black text-base text-[var(--color-foreground)] flex items-center gap-2">
+                        <MessageSquare size={18} className="text-[var(--color-brand)]" /> Geri Bildirim & İstek-Öneri Pop-up'ı Tetikle
+                      </h3>
+                      <p className="text-xs text-[var(--color-muted)] leading-relaxed font-medium">
+                        Kullanıcıların bir sonraki siteye girişlerinde karşılarına <strong>tek seferlik</strong> zarif bir anket ve istek/öneri/yorum penceresi çıkarır. Tüm kullanıcılara veya seçtiğiniz özel kullanıcılara gönderebilirsiniz.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPromptModalOpen(true);
+                          setPromptTriggerResult(null);
+                          fetchPromptStats();
+                        }}
+                        className="py-3 px-5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-black transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95 whitespace-nowrap"
+                      >
+                        <Sparkles size={16} />
+                        <span>Pop-up Yönet & Tetikle</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {promptStats && (
+                    <div className="mt-5 pt-4 border-t border-[var(--color-border)]/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="p-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]/50">
+                        <span className="text-[10px] text-[var(--color-muted)] font-bold block">Toplam Tetiklenen</span>
+                        <span className="text-sm font-black text-[var(--color-foreground)]">{promptStats.total}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                        <span className="text-[10px] font-bold block">Giriş Bekleyen</span>
+                        <span className="text-sm font-black">{promptStats.pending}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                        <span className="text-[10px] font-bold block">Yanıtlanan / Alınan</span>
+                        <span className="text-sm font-black">{promptStats.completed}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-400">
+                        <span className="text-[10px] font-bold block">Kapatılan</span>
+                        <span className="text-sm font-black">{promptStats.dismissed}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1567,14 +1711,29 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                   </p>
                 </div>
 
-                <button
-                  onClick={fetchFeedbacks}
-                  disabled={loadingFeedbacks}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[var(--color-border)] text-xs font-extrabold hover:bg-[var(--color-surface-hover)] transition-all shrink-0 cursor-pointer"
-                >
-                  <RefreshCw size={14} className={cn(loadingFeedbacks && "animate-spin")} />
-                  Yenile
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPromptModalOpen(true);
+                      setPromptTriggerResult(null);
+                      fetchPromptStats();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-black shadow-xs transition-all cursor-pointer"
+                  >
+                    <Sparkles size={14} />
+                    <span>Pop-up Tetikle</span>
+                  </button>
+
+                  <button
+                    onClick={fetchFeedbacks}
+                    disabled={loadingFeedbacks}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[var(--color-border)] text-xs font-extrabold hover:bg-[var(--color-surface-hover)] transition-all shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw size={14} className={cn(loadingFeedbacks && "animate-spin")} />
+                    Yenile
+                  </button>
+                </div>
               </div>
 
               {/* Type Filter Tabs */}
@@ -1915,6 +2074,243 @@ export function AdminClient({ initialUsers, dbStats, dbTables, dbEngine }: Admin
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* GERİ BİLDİRİM & İSTEK-ÖNERİ POP-UP TETİKLEYİCİ MODALI */}
+      {isPromptModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl max-h-[90vh] rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface-muted)]/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[var(--color-foreground)]">
+                    Geri Bildirim & İstek-Öneri Pop-up Tetikleyici
+                  </h3>
+                  <p className="text-xs text-[var(--color-muted)] font-medium">
+                    Kullanıcıların bir sonraki girişlerinde tek seferlik gösterilecek pop-up penceresi
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsPromptModalOpen(false)}
+                className="p-2 rounded-xl text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* Target Selector */}
+              <div className="space-y-2">
+                <label className="font-extrabold uppercase tracking-wider text-[var(--color-muted)] text-[10px] block">
+                  1. Hedef Kitle
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPromptTargetType("ALL")}
+                    className={cn(
+                      "p-4 rounded-2xl border text-left transition-all cursor-pointer space-y-1.5",
+                      promptTargetType === "ALL"
+                        ? "border-[var(--color-brand)] bg-[var(--color-brand-soft)]/40 text-[var(--color-brand-strong)] shadow-xs"
+                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] text-[var(--color-foreground)]"
+                    )}
+                  >
+                    <div className="flex items-center justify-between font-black text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <Users size={15} /> Tüm Kullanıcılar
+                      </span>
+                      {promptTargetType === "ALL" ? <CheckSquare size={16} /> : <Square size={16} className="text-[var(--color-muted)]" />}
+                    </div>
+                    <p className="text-[11px] text-[var(--color-muted)] font-medium leading-relaxed">
+                      Sistemdeki tüm kayıtlı kullanıcılara ({users.filter(u => u.id !== "default-user-id").length} kullanıcı) bir sonraki oturumlarında gösterilir.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPromptTargetType("SELECTED")}
+                    className={cn(
+                      "p-4 rounded-2xl border text-left transition-all cursor-pointer space-y-1.5",
+                      promptTargetType === "SELECTED"
+                        ? "border-[var(--color-brand)] bg-[var(--color-brand-soft)]/40 text-[var(--color-brand-strong)] shadow-xs"
+                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] text-[var(--color-foreground)]"
+                    )}
+                  >
+                    <div className="flex items-center justify-between font-black text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <UserCheck size={15} /> Seçili Kullanıcılar
+                      </span>
+                      {promptTargetType === "SELECTED" ? <CheckSquare size={16} /> : <Square size={16} className="text-[var(--color-muted)]" />}
+                    </div>
+                    <p className="text-[11px] text-[var(--color-muted)] font-medium leading-relaxed">
+                      Yalnızca aşağıda arayarak işaretleyeceğiniz özel kullanıcılara ({promptSelectedUserIds.length} seçili) gösterilir.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* User Selection Multi-Select List (if SELECTED) */}
+              {promptTargetType === "SELECTED" && (
+                <div className="space-y-2 p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/20 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="relative flex-1">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
+                      <input
+                        type="text"
+                        placeholder="Kullanıcı adı veya e-posta ile filtrele..."
+                        value={promptUserSearch}
+                        onChange={(e) => setPromptUserSearch(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-brand)]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const filteredIds = users
+                          .filter(u => u.name?.toLowerCase().includes(promptUserSearch.toLowerCase()) || u.email?.toLowerCase().includes(promptUserSearch.toLowerCase()))
+                          .map(u => u.id);
+                        if (promptSelectedUserIds.length === filteredIds.length) {
+                          setPromptSelectedUserIds([]);
+                        } else {
+                          setPromptSelectedUserIds(filteredIds);
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-xs font-bold hover:bg-[var(--color-surface-hover)] whitespace-nowrap cursor-pointer"
+                    >
+                      {promptSelectedUserIds.length > 0 ? "Tümünü Temizle" : "Listelenenleri Seç"}
+                    </button>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto space-y-1 divide-y divide-[var(--color-border)]/40 border border-[var(--color-border)] rounded-xl bg-[var(--color-bg)] p-2">
+                    {users
+                      .filter(u => u.name?.toLowerCase().includes(promptUserSearch.toLowerCase()) || u.email?.toLowerCase().includes(promptUserSearch.toLowerCase()))
+                      .map(u => {
+                        const isSelected = promptSelectedUserIds.includes(u.id);
+                        return (
+                          <label
+                            key={u.id}
+                            className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-surface-hover)] cursor-pointer select-none transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setPromptSelectedUserIds([...promptSelectedUserIds, u.id]);
+                                  } else {
+                                    setPromptSelectedUserIds(promptSelectedUserIds.filter(id => id !== u.id));
+                                  }
+                                }}
+                                className="rounded text-[var(--color-brand)] focus:ring-0 cursor-pointer"
+                              />
+                              <div>
+                                <span className="font-bold text-[var(--color-foreground)] block">
+                                  {u.name || "Kullanıcı"}
+                                </span>
+                                <span className="text-[10px] text-[var(--color-muted)]">
+                                  {u.email}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold text-[var(--color-muted)]">
+                              {u.transactionCount} işlem
+                            </span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* Title & Message Inputs */}
+              <div className="space-y-4">
+                <label className="font-extrabold uppercase tracking-wider text-[var(--color-muted)] text-[10px] block">
+                  2. Pop-up Başlık & Açıklama
+                </label>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[var(--color-foreground)] block">
+                    Pop-up Başlığı:
+                  </label>
+                  <input
+                    type="text"
+                    value={promptTitle}
+                    onChange={(e) => setPromptTitle(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-foreground)] font-bold focus:outline-none focus:border-[var(--color-brand)]"
+                    placeholder="Pop-up başlığı giriniz..."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[var(--color-foreground)] block">
+                    Pop-up Açıklama Metni:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={promptMessage}
+                    onChange={(e) => setPromptMessage(e.target.value)}
+                    className="w-full p-3.5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-xs text-[var(--color-foreground)] focus:outline-none focus:border-[var(--color-brand)] resize-none leading-relaxed"
+                    placeholder="Pop-up açıklama metnini giriniz..."
+                  />
+                </div>
+              </div>
+
+              {/* Result Notification */}
+              {promptTriggerResult && (
+                <div
+                  className={cn(
+                    "p-4 rounded-2xl border text-xs font-bold flex items-center gap-2.5 animate-in fade-in duration-200",
+                    promptTriggerResult.type === "success"
+                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                      : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                  )}
+                >
+                  {promptTriggerResult.type === "success" ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                  <span>{promptTriggerResult.message}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-6 border-t border-[var(--color-border)] bg-[var(--color-surface-muted)]/30 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setIsPromptModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-all cursor-pointer"
+              >
+                Kapat
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTriggerPrompt}
+                disabled={triggeringPrompt}
+                className="btn btn-primary px-6 py-2.5 rounded-xl text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+              >
+                {triggeringPrompt ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Tetikleniyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={15} />
+                    <span>Pop-up'ı Tetikle ve Yayınla</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

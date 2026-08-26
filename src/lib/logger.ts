@@ -14,7 +14,8 @@ export type SystemAction =
   | "TRANSACTION_ADD"
   | "TRANSACTION_DELETE"
   | "NOTE_ADD"
-  | "FEEDBACK_SUBMITTED";
+  | "FEEDBACK_SUBMITTED"
+  | "FEEDBACK_PROMPT_TRIGGERED";
 
 export interface LogEventOptions {
   userId?: string | null;

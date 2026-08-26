@@ -7,6 +7,7 @@ import { Topbar } from "@/components/Topbar";
 import { CookieBanner } from "@/components/CookieBanner";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { GlobalPortfolioAiModal } from "@/components/GlobalPortfolioAiModal";
+import { FeedbackPromptModal } from "@/components/FeedbackPromptModal";
 
 function XIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -103,6 +104,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       <CookieBanner />
       <FeedbackWidget />
       <GlobalPortfolioAiModal />
+      <FeedbackPromptModal />
     </div>
   );
 }

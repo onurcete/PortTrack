@@ -31,6 +31,7 @@ model User {
   notes                   Note[]
   analysisBriefings       AnalysisBriefing[]
   feedbacks               Feedback[]
+  feedbackPrompts         FeedbackPrompt[]
 }
 
 /// Her alis/satis islemi (kendi para biriminde saklanir)
@@ -222,5 +223,23 @@ model Feedback {
   @@index([userId])
   @@index([type])
   @@index([status])
+  @@index([createdAt])
+}
+
+/// Admin tarafından tetiklenen tek seferlik istek/öneri/geri bildirim popup kayıtları
+model FeedbackPrompt {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String?   // Pop-up başlığı
+  message     String?   // Pop-up açıklama metni
+  status      String    @default("PENDING") // PENDING | COMPLETED | DISMISSED
+  shownAt     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
   @@index([createdAt])
 }
