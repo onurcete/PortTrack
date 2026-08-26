@@ -2,32 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserIdOptional } from "@/lib/auth";
 
-export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   const userId = await getSessionUserIdOptional();
   if (!userId) {
-    return NextResponse.json({ ok: false, prompt: null });
+    return NextResponse.json({ ok: false, prompt: null }, {
+      headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" },
+    });
   }
 
   try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+
+    const targetUserId = user ? user.id : userId;
+
     const prompt = await (prisma as any).feedbackPrompt.findFirst({
       where: {
-        userId,
+        userId: targetUserId,
         status: "PENDING",
       },
       orderBy: { createdAt: "desc" },
     });
 
     if (!prompt) {
-      return NextResponse.json({ ok: true, prompt: null });
-    }
-
-    // İlk kez gösteriliyorsa shownAt tarihini kaydet
-    if (!prompt.shownAt) {
-      await (prisma as any).feedbackPrompt.update({
-        where: { id: prompt.id },
-        data: { shownAt: new Date() },
+      return NextResponse.json({ ok: true, prompt: null }, {
+        headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" },
       });
     }
 
@@ -39,9 +43,13 @@ export async function GET(req: NextRequest) {
         message: prompt.message || "Görüş, öneri ve isteklerinizle platformu mükemmelleştirmemize yardımcı olun.",
         createdAt: prompt.createdAt,
       },
+    }, {
+      headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" },
     });
   } catch (err: any) {
     console.error("Error fetching user feedback prompt:", err);
-    return NextResponse.json({ ok: false, prompt: null });
+    return NextResponse.json({ ok: false, prompt: null }, {
+      headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" },
+    });
   }
 }

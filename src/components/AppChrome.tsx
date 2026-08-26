@@ -43,6 +43,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       <>
         {children}
         <CookieBanner />
+        <FeedbackPromptModal />
       </>
     );
   }

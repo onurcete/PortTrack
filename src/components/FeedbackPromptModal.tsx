@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   Sparkles,
   Lightbulb,
@@ -24,8 +25,10 @@ interface PendingPrompt {
 }
 
 export function FeedbackPromptModal() {
+  const pathname = usePathname();
   const [prompt, setPrompt] = useState<PendingPrompt | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [dismissedInSession, setDismissedInSession] = useState(false);
   const [feedbackType, setFeedbackType] = useState<"REQUEST" | "SUGGESTION" | "OTHER" | "BUG">("REQUEST");
   const [message, setMessage] = useState("");
   const [rating, setRating] = useState<number>(5);
@@ -35,17 +38,14 @@ export function FeedbackPromptModal() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Sayfa açıldığında bekleyen geri bildirim prompt'u var mı kontrol et
+    if (dismissedInSession) return;
     let isMounted = true;
-    fetch("/api/feedback/prompt")
+    fetch("/api/feedback/prompt", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (isMounted && data.ok && data.prompt) {
           setPrompt(data.prompt);
-          // Kullanıcı sayfaya girdikten 1.2 saniye sonra zarifçe aç
-          setTimeout(() => {
-            if (isMounted) setIsOpen(true);
-          }, 1200);
+          setIsOpen(true);
         }
       })
       .catch(() => {});
@@ -53,10 +53,11 @@ export function FeedbackPromptModal() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname, dismissedInSession]);
 
   async function handleDismiss() {
     if (!prompt) return;
+    setDismissedInSession(true);
     setIsOpen(false);
     try {
       await fetch("/api/feedback/prompt/respond", {
@@ -98,6 +99,7 @@ export function FeedbackPromptModal() {
 
       const data = await res.json();
       if (res.ok && data.ok) {
+        setDismissedInSession(true);
         setSuccess(true);
         setTimeout(() => {
           setIsOpen(false);
