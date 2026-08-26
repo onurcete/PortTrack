@@ -211,16 +211,6 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2">
-            <a
-              href="https://x.com/porttrackx"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] hover:border-[var(--color-brand)]/50 text-[var(--color-foreground)] transition-all flex items-center justify-center shadow-2xs hover:scale-105"
-              title="PortTrack Resmi X (Twitter) Hesabı @porttrackx"
-            >
-              <XIcon className="w-3.5 h-3.5" />
-            </a>
-
             {!isLoggedIn && (
               <a
                 href="/api/auth/demo"

@@ -19,14 +19,6 @@ import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 
-function XIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={cn("fill-current", className)}>
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
-
 const NAV = [
   { href: "/", label: "Genel Bakış", shortLabel: "Genel", icon: LayoutDashboard },
   { href: "/transactions", label: "İşlemler", shortLabel: "İşlemler", icon: ArrowLeftRight },
@@ -138,16 +130,6 @@ export function Topbar() {
             
             <CurrencyToggle />
             <ThemeToggle />
-
-            <a
-              href="https://x.com/porttrackx"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-ghost py-1.5 px-2 sm:px-2.5 h-9 text-xs flex items-center gap-1.5 text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-              title="PortTrack X (@porttrackx)"
-            >
-              <XIcon className="w-3.5 h-3.5" />
-            </a>
 
             <button
               onClick={logout}
