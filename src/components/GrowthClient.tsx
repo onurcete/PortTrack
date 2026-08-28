@@ -280,6 +280,8 @@ export interface PeriodReturnsDTO {
   monthlyUSD: number | null;
   ytdTRY: number | null;
   ytdUSD: number | null;
+  oneYearTRY?: number | null;
+  oneYearUSD?: number | null;
 }
 
 export function GrowthClient({

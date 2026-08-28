@@ -147,6 +147,10 @@ export interface PeriodReturnsDTO {
   ytdUSD: number | null;
   ytdAmtTRY: number | null;
   ytdAmtUSD: number | null;
+  oneYearTRY?: number | null;
+  oneYearUSD?: number | null;
+  oneYearAmtTRY?: number | null;
+  oneYearAmtUSD?: number | null;
   allTimeTRY: number | null;
   allTimeUSD: number | null;
   allTimeAmtTRY: number | null;
@@ -155,6 +159,7 @@ export interface PeriodReturnsDTO {
     weekly: Record<string, { TRY: number | null; USD: number | null }>;
     mtd: Record<string, { TRY: number | null; USD: number | null }>;
     ytd: Record<string, { TRY: number | null; USD: number | null }>;
+    oneYear?: Record<string, { TRY: number | null; USD: number | null }>;
   };
 }
 
@@ -214,12 +219,12 @@ function ProfitValue({
 }
 
 function getAssetTypePeriodReturnsList(
-  period: "1W" | "1M" | "YTD",
+  period: "1W" | "1M" | "YTD" | "1Y",
   isTRY: boolean,
   periodReturns?: PeriodReturnsDTO
 ): { label: string; pct: number }[] {
   if (!periodReturns?.assetTypeReturns) return [];
-  const key = period === "1W" ? "weekly" : period === "1M" ? "mtd" : "ytd";
+  const key = period === "1W" ? "weekly" : period === "1M" ? "mtd" : period === "YTD" ? "ytd" : "oneYear";
   const returns = periodReturns.assetTypeReturns[key];
   if (!returns) return [];
 
@@ -401,6 +406,9 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
 
   const ytdPct = isTRY ? data.periodReturns?.ytdTRY : data.periodReturns?.ytdUSD;
   const ytdAmt = isTRY ? data.periodReturns?.ytdAmtTRY : data.periodReturns?.ytdAmtUSD;
+
+  const oneYearPct = isTRY ? data.periodReturns?.oneYearTRY : data.periodReturns?.oneYearUSD;
+  const oneYearAmt = isTRY ? data.periodReturns?.oneYearAmtTRY : data.periodReturns?.oneYearAmtUSD;
 
   const allTimePct = isTRY ? data.periodReturns?.allTimeTRY : data.periodReturns?.allTimeUSD;
   const allTimeAmt = isTRY ? data.periodReturns?.allTimeAmtTRY : data.periodReturns?.allTimeAmtUSD;
@@ -588,9 +596,9 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             borderClasses="sm:border-r border-[var(--color-border)]/70 sm:border-b-0 border-b"
           />
           <CombinedReturnCell
-            label="ALL TIME - TÜM ZAMANLAR"
-            pct={allTimePct ?? null}
-            amt={allTimeAmt ?? null}
+            label="1 YIL (SON 365 GÜN)"
+            pct={oneYearPct ?? null}
+            amt={oneYearAmt ?? null}
             currency={currency}
             borderClasses=""
             xirrTRY={data.portfolioXirrTRY}

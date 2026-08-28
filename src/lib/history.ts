@@ -681,6 +681,10 @@ export interface PeriodReturnsDTO {
   ytdUSD: number | null;
   ytdAmtTRY: number | null;
   ytdAmtUSD: number | null;
+  oneYearTRY: number | null;
+  oneYearUSD: number | null;
+  oneYearAmtTRY: number | null;
+  oneYearAmtUSD: number | null;
   allTimeTRY: number | null;
   allTimeUSD: number | null;
   allTimeAmtTRY: number | null;
@@ -689,6 +693,7 @@ export interface PeriodReturnsDTO {
     weekly: Record<string, { TRY: number | null; USD: number | null }>;
     mtd: Record<string, { TRY: number | null; USD: number | null }>;
     ytd: Record<string, { TRY: number | null; USD: number | null }>;
+    oneYear?: Record<string, { TRY: number | null; USD: number | null }>;
   };
 }
 
@@ -710,6 +715,7 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
       mtdTRY: null, mtdUSD: null, mtdAmtTRY: null, mtdAmtUSD: null,
       monthlyTRY: null, monthlyUSD: null, monthlyAmtTRY: null, monthlyAmtUSD: null,
       ytdTRY: null, ytdUSD: null, ytdAmtTRY: null, ytdAmtUSD: null,
+      oneYearTRY: null, oneYearUSD: null, oneYearAmtTRY: null, oneYearAmtUSD: null,
       allTimeTRY: null, allTimeUSD: null, allTimeAmtTRY: null, allTimeAmtUSD: null,
     };
   }
@@ -785,6 +791,7 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
   const dMtd = new Date(Date.UTC(trYear(today), trMonth(today), 0, 12, 0, 0));
   const d30 = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
   const dYtd = new Date(Date.UTC(trYear(today) - 1, 11, 31, 12, 0, 0));
+  const d1Y = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
 
   const t0 = getValAt(d0);
   const t1 = getValAt(d1);
@@ -792,6 +799,7 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
   const tMtd = getValAt(dMtd);
   const t30 = getValAt(d30);
   const tYtd = getValAt(dYtd);
+  const t1Y = getValAt(d1Y);
 
   function calcPct(cur: number, prev: number) {
     if (cur == null || prev == null || prev <= 0) return null;
@@ -862,6 +870,9 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
   const firstPoint =
     series.find((p) => !p.partialData) ?? (series.length > 0 ? series[0] : null);
 
+  const prev1Y_TRY = t1Y.valueTRY > 0 ? t1Y.valueTRY : (firstPoint && firstPoint.valueTRY > 0 ? firstPoint.valueTRY : 0);
+  const prev1Y_USD = t1Y.valueUSD > 0 ? t1Y.valueUSD : (firstPoint && firstPoint.valueUSD > 0 ? firstPoint.valueUSD : 0);
+
   return {
     dailyTRY: calcPct(t0.valueTRY, t1.valueTRY),
     dailyUSD: calcPct(t0.valueUSD, t1.valueUSD),
@@ -883,6 +894,10 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
     ytdUSD: calcPct(t0.valueUSD, tYtd.valueUSD),
     ytdAmtTRY: calcAmt(t0.valueTRY, tYtd.valueTRY),
     ytdAmtUSD: calcAmt(t0.valueUSD, tYtd.valueUSD),
+    oneYearTRY: prev1Y_TRY > 0 ? calcPct(t0.valueTRY, prev1Y_TRY) : null,
+    oneYearUSD: prev1Y_USD > 0 ? calcPct(t0.valueUSD, prev1Y_USD) : null,
+    oneYearAmtTRY: prev1Y_TRY > 0 ? calcAmt(t0.valueTRY, prev1Y_TRY) : null,
+    oneYearAmtUSD: prev1Y_USD > 0 ? calcAmt(t0.valueUSD, prev1Y_USD) : null,
     allTimeTRY: firstPoint ? calcPct(t0.valueTRY, firstPoint.valueTRY) : null,
     allTimeUSD: firstPoint ? calcPct(t0.valueUSD, firstPoint.valueUSD) : null,
     allTimeAmtTRY: firstPoint ? calcAmt(t0.valueTRY, firstPoint.valueTRY) : null,
@@ -891,6 +906,7 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
       weekly: getAssetReturns(d7, d0),
       mtd: getAssetReturns(dMtd, d0),
       ytd: getAssetReturns(dYtd, d0),
+      oneYear: getAssetReturns(d1Y, d0),
     },
   };
 }
