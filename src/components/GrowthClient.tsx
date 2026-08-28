@@ -673,7 +673,10 @@ export function GrowthClient({
   const plotData = showReturnMetric ? returnChartMeta.plot : chartData;
   const chartYDomain = showReturnMetric
     ? returnChartMeta.domain
-    : ([0, "auto"] as [number, string]);
+    : ([
+        (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.94)),
+        (dataMax: number) => Math.ceil(dataMax * 1.04),
+      ] as any);
   const returnAxisCap = showReturnMetric ? returnChartMeta.cap : 0;
   const hasClampedReturns = showReturnMetric && returnChartMeta.hasClamped;
 
