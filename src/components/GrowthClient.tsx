@@ -671,7 +671,9 @@ export function GrowthClient({
   }, [chartData]);
 
   const plotData = showReturnMetric ? returnChartMeta.plot : chartData;
-  const returnYDomain = showReturnMetric ? returnChartMeta.domain : undefined;
+  const chartYDomain = showReturnMetric
+    ? returnChartMeta.domain
+    : ([0, "auto"] as [number, string]);
   const returnAxisCap = showReturnMetric ? returnChartMeta.cap : 0;
   const hasClampedReturns = showReturnMetric && returnChartMeta.hasClamped;
 
@@ -1123,7 +1125,7 @@ export function GrowthClient({
                         tickLine={false}
                         axisLine={false}
                         width={showReturnMetric ? 56 : 70}
-                        domain={returnYDomain}
+                        domain={chartYDomain}
                         tickFormatter={(v) =>
                           showReturnMetric
                             ? formatPercent(Number(v), 1)
@@ -1223,7 +1225,7 @@ export function GrowthClient({
                         tickLine={false}
                         axisLine={false}
                         width={showReturnMetric ? 56 : 70}
-                        domain={returnYDomain}
+                        domain={chartYDomain}
                         tickFormatter={(v) =>
                           showReturnMetric
                             ? formatPercent(Number(v), 1)
