@@ -443,9 +443,9 @@ export function GrowthClient({
           </div>
           <div className="grid grid-cols-1 gap-1">
             {activeTypes.map((t) => {
-              const val = row[t];
-              if (!val || val <= 0) return null;
-              const share = row.value > 0 ? (val / row.value) * 100 : 0;
+              const rawVal = row[`${t}_raw`] ?? (chartMetric === "allocation" ? (row.value > 0 ? (row[t] * row.value) / 100 : 0) : row[t]);
+              if (!rawVal || rawVal <= 0) return null;
+              const share = row.value > 0 ? (rawVal / row.value) * 100 : 0;
               return (
                 <div key={t} className="flex justify-between items-center text-[var(--color-foreground)]">
                   <div className="flex items-center gap-1.5">
@@ -453,7 +453,7 @@ export function GrowthClient({
                     <span className="text-[var(--color-muted)]">{ASSET_META[t].label}</span>
                   </div>
                   <div className="space-x-1.5 tabular-nums">
-                    <span className="font-semibold">{formatMoney(val, currency)}</span>
+                    <span className="font-semibold">{formatMoney(rawVal, currency)}</span>
                     <span className="text-[10px] text-[var(--color-muted)]">({share.toFixed(1)}%)</span>
                   </div>
                 </div>
@@ -624,10 +624,14 @@ export function GrowthClient({
       const returnPct =
         prevVal != null && prevVal > 0 ? ((value / prevVal) - 1) * 100 : null;
 
-      // Her bir varlık türünün güncel değerini ekle (Dağılım modu ve detaylı tooltip için)
+      // Her bir varlık türünün güncel değerini ekle (Dağılım modu için %0-100 oransal değer)
       const allocationValues: Record<string, number> = {};
       for (const t of TABLE_TYPES) {
-        allocationValues[t] = typeValue(p, t, currency);
+        const rawVal = typeValue(p, t, currency);
+        allocationValues[t] = chartMetric === "allocation"
+          ? (value > 0 ? Number(((rawVal / value) * 100).toFixed(2)) : 0)
+          : rawVal;
+        allocationValues[`${t}_raw`] = rawVal;
       }
 
       return {
@@ -639,13 +643,13 @@ export function GrowthClient({
         originalPoint: p,
       };
     });
-  }, [displaySeries, chartYearValue, isTRY, currency, seriesByMonth]);
+  }, [displaySeries, chartYearValue, isTRY, currency, seriesByMonth, chartMetric]);
 
   const chartTitle =
     chartMetric === "value"
       ? "Aylık Değer ve Maliyet"
       : chartMetric === "allocation"
-        ? "Varlık Dağılımı ve Portföy Yapısı"
+        ? "Varlık Dağılımı ve Portföy Yapısı (% Pay)"
         : "Aylık Portföy Getirisi (%)";
 
   const showReturnMetric = chartMetric === "return";
@@ -671,12 +675,18 @@ export function GrowthClient({
   }, [chartData]);
 
   const plotData = showReturnMetric ? returnChartMeta.plot : chartData;
-  const chartYDomain = showReturnMetric
-    ? returnChartMeta.domain
-    : ([
-        (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.94)),
-        (dataMax: number) => Math.ceil(dataMax * 1.04),
-      ] as any);
+  const chartYDomain = useMemo(() => {
+    if (showReturnMetric) {
+      return returnChartMeta.domain;
+    }
+    if (chartMetric === "allocation") {
+      return [0, 100] as [number, number];
+    }
+    return [
+      (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.94)),
+      (dataMax: number) => Math.ceil(dataMax * 1.04),
+    ] as any;
+  }, [showReturnMetric, chartMetric, returnChartMeta.domain]);
   const returnAxisCap = showReturnMetric ? returnChartMeta.cap : 0;
   const hasClampedReturns = showReturnMetric && returnChartMeta.hasClamped;
 
@@ -892,7 +902,7 @@ export function GrowthClient({
                   <p className="text-[11px] text-[var(--color-muted)] font-medium">
                     {chartMetric === "return" && "Her ayın yüzde kâr/zarar getiri oranları"}
                     {chartMetric === "value" && "Zaman içindeki toplam portföy tutarı ve maliyet gelişimi"}
-                    {chartMetric === "allocation" && "Varlık türlerine (TEFAS, BES, BIST vb.) göre dağılım yığılımı"}
+                    {chartMetric === "allocation" && "Varlık türlerinin (TEFAS, BES, BIST vb.) portföy içerisindeki oransal ağırlıkları (%0 - %100)"}
                   </p>
                 </div>
               </div>
@@ -1127,12 +1137,14 @@ export function GrowthClient({
                         tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={false}
-                        width={showReturnMetric ? 56 : 70}
+                        width={showReturnMetric ? 56 : chartMetric === "allocation" ? 48 : 70}
                         domain={chartYDomain}
                         tickFormatter={(v) =>
                           showReturnMetric
                             ? formatPercent(Number(v), 1)
-                            : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
+                            : chartMetric === "allocation"
+                              ? `%${Number(v).toFixed(0)}`
+                              : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
                         }
                       />
                       {showReturnMetric && (
@@ -1227,12 +1239,14 @@ export function GrowthClient({
                         tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={false}
-                        width={showReturnMetric ? 56 : 70}
+                        width={showReturnMetric ? 56 : chartMetric === "allocation" ? 48 : 70}
                         domain={chartYDomain}
                         tickFormatter={(v) =>
                           showReturnMetric
                             ? formatPercent(Number(v), 1)
-                            : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
+                            : chartMetric === "allocation"
+                              ? `%${Number(v).toFixed(0)}`
+                              : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
                         }
                       />
                       {showReturnMetric && (
