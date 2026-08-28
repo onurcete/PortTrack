@@ -213,57 +213,79 @@ function changeVsPrevious(
 
 const tdClsStatic = "px-4 py-2 text-xs tabular-nums whitespace-nowrap";
 
-/** Tutar + altinda onceki aya gore % degisim rozeti (Aylik Dagilim). */
-function CombinedAmountCell({
+/** Aylik Dagilim Tablosu Hucre Bileseni (Tutar, Degisim % ve Pay % Modlari). */
+function MonthlyBreakdownCell({
   current,
   previous,
+  total,
   currency,
+  mode,
   bold,
   className,
 }: {
   current: number;
   previous: number | null | undefined;
+  total: number;
   currency: "TRY" | "USD";
+  mode: "amount" | "return" | "share";
   bold?: boolean;
   className?: string;
 }) {
   const hasValue = current > 0;
-  const pct = hasValue ? changeVsPrevious(current, previous) : null;
-  const neutral = pct != null && Math.abs(pct) < 0.05;
 
-  return (
-    <td className={cn(tdClsStatic, "py-1.5 text-right align-middle", className)}>
-      <div
-        className={cn(
-          "leading-tight",
-          bold && "font-semibold",
-          !hasValue && "text-[var(--color-muted)]",
-        )}
-      >
-        {hasValue ? formatMoney(current, currency) : "—"}
-      </div>
-      {pct != null && (
-        <div
+  if (mode === "amount") {
+    return (
+      <td className={cn(tdClsStatic, "py-2.5 text-right align-middle", className)}>
+        <span
           className={cn(
-            "mt-0.5 text-[10px] font-semibold leading-tight tabular-nums",
-            neutral
-              ? "text-[var(--color-muted)]"
-              : pct > 0
-                ? "text-[var(--color-profit)]"
-                : "text-[var(--color-loss)]",
+            "tabular-nums text-xs",
+            bold ? "font-black text-[var(--color-foreground)]" : "font-semibold text-[var(--color-foreground)]/90",
+            !hasValue && "text-[var(--color-muted)] font-normal"
           )}
         >
-          {neutral ? (
-            "%0,0"
-          ) : (
-            <>
-              <span className="text-[8px] align-middle">
-                {pct > 0 ? "▲" : "▼"}
-              </span>{" "}
-              {formatPercent(pct, 1)}
-            </>
-          )}
-        </div>
+          {hasValue ? formatMoney(current, currency) : "—"}
+        </span>
+      </td>
+    );
+  }
+
+  if (mode === "return") {
+    const pct = hasValue ? changeVsPrevious(current, previous) : null;
+    const neutral = pct != null && Math.abs(pct) < 0.05;
+
+    return (
+      <td className={cn(tdClsStatic, "py-2 text-right align-middle", className)}>
+        {pct != null ? (
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-bold tabular-nums border shadow-2xs whitespace-nowrap",
+              neutral
+                ? "text-[var(--color-muted)] bg-[var(--color-surface-muted)]/50 border-transparent"
+                : pct > 0
+                  ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-emerald-500/20"
+                  : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-rose-500/20"
+            )}
+          >
+            <span className="text-[8px] select-none">{neutral ? "" : pct > 0 ? "▲" : "▼"}</span>
+            <span>{neutral ? "%0,0" : formatPercent(pct, 1)}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-[var(--color-muted)] font-normal">—</span>
+        )}
+      </td>
+    );
+  }
+
+  // mode === "share" (Portföy Payı)
+  const sharePct = hasValue && total > 0 ? (current / total) * 100 : 0;
+  return (
+    <td className={cn(tdClsStatic, "py-2.5 text-right align-middle", className)}>
+      {hasValue && sharePct > 0 ? (
+        <span className={cn("tabular-nums text-xs", bold ? "font-black text-[var(--color-foreground)]" : "font-semibold text-[var(--color-foreground)]/90")}>
+          %{sharePct.toFixed(1)}
+        </span>
+      ) : (
+        <span className="text-xs text-[var(--color-muted)] font-normal">—</span>
       )}
     </td>
   );
@@ -322,6 +344,7 @@ export function GrowthClient({
   const [chartYearFilter, setChartYearFilter] = useState<string>(YEAR_FILTER_ALL);
   const [chartType, setChartType] = useState<"area" | "bar">("bar");
   const [chartMetric, setChartMetric] = useState<ChartMetric>("return");
+  const [monthlyViewMode, setMonthlyViewMode] = useState<"amount" | "return" | "share">("amount");
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload || !payload.length) return null;
@@ -687,13 +710,37 @@ export function GrowthClient({
       >
         <td className="px-4 py-2.5 font-bold whitespace-nowrap sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/20">
           <span className="inline-flex items-center gap-1.5">
-            {year} Getiri %
+            {year} {monthlyViewMode === "return" ? "Getiri %" : monthlyViewMode === "share" ? "Yıl Sonu Payı %" : "Yıllık Değişim"}
           </span>
         </td>
         {activeTypes.map((t) => {
           const startVal = typeValue(startMonth, t, currency);
           const endVal = typeValue(lastMonth, t, currency);
+          const valChange = endVal - startVal;
           const pct = (startVal > 0 && endVal > 0) ? periodReturnPct(startVal, endVal) : null;
+          const share = totalEnd > 0 && endVal > 0 ? (endVal / totalEnd) * 100 : 0;
+
+          if (monthlyViewMode === "amount") {
+            return (
+              <td key={t} className={cn(tdClsStatic, "text-right font-bold")}>
+                {valChange !== 0 ? (
+                  <span className={valChange > 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}>
+                    {valChange > 0 ? "+" : ""}
+                    {formatMoney(valChange, currency)}
+                  </span>
+                ) : endVal > 0 ? formatMoney(endVal, currency) : "—"}
+              </td>
+            );
+          }
+
+          if (monthlyViewMode === "share") {
+            return (
+              <td key={t} className={cn(tdClsStatic, "text-right font-bold")}>
+                {share > 0 ? `%{share.toFixed(1)}` : "—"}
+              </td>
+            );
+          }
+
           return (
             <td
               key={t}
@@ -722,7 +769,13 @@ export function GrowthClient({
           ) : "—"}
         </td>
         <td className="px-4 py-2.5 text-right font-bold border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/30">
-          {totalReturn != null ? <ReturnCell pct={totalReturn} /> : "—"}
+          {monthlyViewMode === "amount" ? (
+            formatMoney(totalEnd, currency)
+          ) : monthlyViewMode === "share" ? (
+            "%100,0"
+          ) : (
+            totalReturn != null ? <ReturnCell pct={totalReturn} /> : "—"
+          )}
         </td>
       </tr>
     );
@@ -1397,12 +1450,56 @@ export function GrowthClient({
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-[var(--color-border)]">
               <div>
-                <h2 className="font-semibold text-sm">Aylık Dağılım</h2>
-                <p className="text-xs text-[var(--color-muted)] mt-0.5">
-                  Tutar ve önceki aya göre değişim (%)
+                <h2 className="font-bold text-sm text-[var(--color-foreground)]">Aylık Dağılım</h2>
+                <p className="text-xs text-[var(--color-muted)] mt-0.5 font-medium">
+                  {monthlyViewMode === "amount" && `Ay sonu net varlık bakiyeleri (${currency === "TRY" ? "₺" : "$"})`}
+                  {monthlyViewMode === "return" && "Varlıkların bir önceki aya göre getiri yüzdesi (%)"}
+                  {monthlyViewMode === "share" && "Varlıkların toplam portföy içerisindeki yüzde ağırlığı (% Pay)"}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
+                {/* Görünüm Modu Seçici (Toggle Switch) */}
+                <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setMonthlyViewMode("amount")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-extrabold transition-all duration-200 cursor-pointer select-none",
+                      monthlyViewMode === "amount"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    )}
+                  >
+                    <span>💰 Tutar ({currency === "TRY" ? "₺" : "$"})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMonthlyViewMode("return")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-extrabold transition-all duration-200 cursor-pointer select-none",
+                      monthlyViewMode === "return"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    )}
+                  >
+                    <span>📈 Değişim (%)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMonthlyViewMode("share")}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-extrabold transition-all duration-200 cursor-pointer select-none",
+                      monthlyViewMode === "share"
+                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    )}
+                  >
+                    <span>📊 Portföy Payı (%)</span>
+                  </button>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="growth-year"
@@ -1445,6 +1542,7 @@ export function GrowthClient({
                   const total = totalValue(p, currency);
                   const prevTotal = prevPoint ? totalValue(prevPoint, currency) : null;
                   const momChange = prevTotal !== null ? total - prevTotal : null;
+                  const momPct = (prevTotal !== null && prevTotal > 0) ? periodReturnPct(prevTotal, total) : null;
 
                   return (
                     <div key={p.month} className="p-4 space-y-3 hover:bg-[var(--color-surface-muted)]/20 transition-colors">
@@ -1455,15 +1553,25 @@ export function GrowthClient({
                             {monthTableLabel(p.month)}
                           </span>
                           <span className="text-[10px] text-[var(--color-muted)] font-semibold">
-                            Aylık Portföy Durumu
+                            {monthlyViewMode === "amount" ? "Aylık Portföy Değeri" : monthlyViewMode === "return" ? "Aylık Portföy Getirisi" : "Aylık Varlık Payları"}
                           </span>
                         </div>
 
                         <div className="text-right">
                           <div className="font-black text-sm tabular-nums text-[var(--color-foreground)]">
-                            {formatMoney(total, currency)}
+                            {monthlyViewMode === "share" ? "%100,0" : formatMoney(total, currency)}
                           </div>
-                          {momChange !== null && (
+                          {monthlyViewMode === "return" && momPct !== null && (
+                            <span
+                              className={cn(
+                                "text-[10px] font-extrabold tabular-nums block",
+                                momPct > 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"
+                              )}
+                            >
+                              {momPct > 0 ? "▲ +" : momPct < 0 ? "▼ " : ""}{formatPercent(momPct, 1)}
+                            </span>
+                          )}
+                          {monthlyViewMode === "amount" && momChange !== null && (
                             <span
                               className={cn(
                                 "text-[10px] font-extrabold tabular-nums block",
@@ -1484,11 +1592,12 @@ export function GrowthClient({
                           if (val <= 0) return null;
                           const prevVal = prevPoint ? typeValue(prevPoint, t, currency) : null;
                           const pctChange = (val > 0 && prevVal != null && prevVal > 0) ? periodReturnPct(prevVal, val) : null;
+                          const sharePct = total > 0 ? (val / total) * 100 : 0;
 
                           return (
                             <div
                               key={t}
-                              className="p-2 rounded-xl bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/40 flex flex-col justify-between"
+                              className="p-2.5 rounded-xl bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/40 flex flex-col justify-between"
                             >
                               <div className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ASSET_META[t].color }} />
@@ -1496,13 +1605,20 @@ export function GrowthClient({
                                   {ASSET_META[t].label}
                                 </span>
                               </div>
-                              <div className="flex items-baseline justify-between mt-1 gap-1">
-                                <span className="text-xs font-black tabular-nums text-[var(--color-foreground)]">
-                                  {formatMoney(val, currency)}
-                                </span>
-                                {pctChange != null && (
-                                  <span className={cn("text-[9px] font-extrabold tabular-nums shrink-0", pctChange >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                                    {pctChange >= 0 ? "+" : ""}{pctChange.toFixed(1)}%
+                              <div className="mt-1 flex items-baseline justify-between gap-1">
+                                {monthlyViewMode === "amount" && (
+                                  <span className="text-xs font-black tabular-nums text-[var(--color-foreground)]">
+                                    {formatMoney(val, currency)}
+                                  </span>
+                                )}
+                                {monthlyViewMode === "return" && (
+                                  <span className={cn("text-xs font-black tabular-nums", pctChange == null ? "text-[var(--color-muted)]" : pctChange >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
+                                    {pctChange != null ? `${pctChange >= 0 ? "▲ +" : "▼ "}${formatPercent(pctChange, 1)}` : "—"}
+                                  </span>
+                                )}
+                                {monthlyViewMode === "share" && (
+                                  <span className="text-xs font-black tabular-nums text-[var(--color-foreground)]">
+                                    %{sharePct.toFixed(1)}
                                   </span>
                                 )}
                               </div>
@@ -1532,8 +1648,12 @@ export function GrowthClient({
                         </span>
                       </th>
                     ))}
-                    <th className={cn(thCls, "text-right border-l border-[var(--color-border)]/40 bg-[var(--color-table-header)]")}>Değişim</th>
-                    <th className={cn(thCls, "text-right border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40")}>Toplam</th>
+                    <th className={cn(thCls, "text-right border-l border-[var(--color-border)]/40 bg-[var(--color-table-header)]")}>
+                      {monthlyViewMode === "return" ? "Portföy Getirisi" : monthlyViewMode === "share" ? "—" : "Değişim"}
+                    </th>
+                    <th className={cn(thCls, "text-right border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/40")}>
+                      {monthlyViewMode === "share" ? "Toplam Pay" : "Toplam"}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1585,11 +1705,11 @@ export function GrowthClient({
                         <tr
                           className="theme-surface-hover border-b border-[var(--color-border)]/40 last:border-0 transition-colors duration-150"
                         >
-                          <td className="px-4 py-2 font-semibold whitespace-nowrap sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/20">
+                          <td className="px-4 py-2.5 font-bold text-xs whitespace-nowrap sticky left-0 bg-[var(--color-surface)] z-10 border-r border-[var(--color-border)]/20 text-[var(--color-foreground)]">
                             {monthTableLabel(p.month)}
                           </td>
                           {activeTypes.map((t) => (
-                            <CombinedAmountCell
+                            <MonthlyBreakdownCell
                               key={t}
                               current={typeValue(p, t, currency)}
                               previous={
@@ -1597,11 +1717,14 @@ export function GrowthClient({
                                   ? typeValue(prevPoint, t, currency)
                                   : null
                               }
+                              total={total}
                               currency={currency}
+                              mode={monthlyViewMode}
                             />
                           ))}
                           {(() => {
                             const momChange = prevTotal !== null ? total - prevTotal : null;
+                            const momPct = (prevTotal !== null && prevTotal > 0) ? periodReturnPct(prevTotal, total) : null;
                             return (
                               <td className={cn(
                                 tdClsStatic,
@@ -1610,19 +1733,40 @@ export function GrowthClient({
                                 momChange !== null && momChange > 0 && "text-[var(--color-profit)]",
                                 momChange !== null && momChange < 0 && "text-[var(--color-loss)]",
                               )}>
-                                {momChange !== null ? (
-                                  <span>
-                                    {momChange > 0.01 ? "+" : ""}
-                                    {formatMoney(momChange, currency)}
-                                  </span>
-                                ) : "—"}
+                                {monthlyViewMode === "amount" && (
+                                  momChange !== null ? (
+                                    <span>
+                                      {momChange > 0.01 ? "+" : ""}
+                                      {formatMoney(momChange, currency)}
+                                    </span>
+                                  ) : "—"
+                                )}
+                                {monthlyViewMode === "return" && (
+                                  momPct !== null ? (
+                                    <span
+                                      className={cn(
+                                        "inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-bold tabular-nums border shadow-2xs",
+                                        momPct >= 0
+                                          ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-emerald-500/20"
+                                          : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-rose-500/20"
+                                      )}
+                                    >
+                                      <span>{momPct >= 0 ? "▲ +" : "▼ "}{formatPercent(momPct, 1)}</span>
+                                    </span>
+                                  ) : "—"
+                                )}
+                                {monthlyViewMode === "share" && (
+                                  <span className="text-xs text-[var(--color-muted)]">—</span>
+                                )}
                               </td>
                             );
                           })()}
-                          <CombinedAmountCell
+                          <MonthlyBreakdownCell
                             current={total}
                             previous={prevTotal}
+                            total={total}
                             currency={currency}
+                            mode={monthlyViewMode}
                             bold
                             className="border-l-2 border-[var(--color-border)]/60 bg-[var(--color-brand-soft)]/20"
                           />
