@@ -278,7 +278,7 @@ function CombinedReturnCell({
     <div className={cn("p-5 flex justify-between items-center gap-4", borderClasses)}>
       {/* Sol Kısım: Ana İstatistikler */}
       <div className="flex flex-col justify-between flex-1 min-w-0">
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)] truncate block">
+        <span className="text-xs font-black uppercase tracking-wider text-[var(--color-foreground)]/80 truncate block">
           {label}
         </span>
         <div className="mt-2.5">
@@ -318,7 +318,7 @@ function CombinedReturnCell({
         </div>
       ) : (xirrTRY !== undefined || xirrUSD !== undefined) && (
         <div className="flex flex-col justify-center pl-4 border-l border-[var(--color-border)]/45 shrink-0 select-none min-w-[110px]">
-          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--color-muted)] mb-1.5 text-right block">
+          <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-foreground)]/80 mb-1.5 text-right block">
             XIRR (YILLIK)
           </span>
           <div className="flex flex-col gap-1 text-[11px] sm:text-xs font-medium">
@@ -511,7 +511,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
         {/* Sol Kısım: Toplam Portföy Değeri ve Günlük Getiri */}
         <div className="lg:col-span-2 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--color-border)]/70">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+            <span className="text-xs font-black uppercase tracking-wider text-[var(--color-foreground)]/80">
               TOPLAM PORTFÖY
             </span>
             <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[var(--color-foreground)] mt-2 tabular-nums">
@@ -543,7 +543,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             {/* Varlık Sınıfı Günlük Değişimleri */}
             {assetDailyChanges.length > 0 && (
               <div className="mt-5 pt-4 border-t border-[var(--color-border)]/40 space-y-2.5 max-w-sm">
-                <p className="text-[9px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">
+                <p className="text-[11px] font-black uppercase tracking-wider text-[var(--color-foreground)]/80">
                   GÜNLÜK VARLIK DEĞİŞİMLERİ
                 </p>
                 <div className="flex flex-col gap-2">
