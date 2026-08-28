@@ -95,8 +95,19 @@ function RegisterForm() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.ok) {
+        if (typeof window !== "undefined") {
+          if (typeof (window as any).gtag === "function") {
+            (window as any).gtag("event", "conversion", {
+              send_to: "AW-987323960/KnsxCKCZqukcELi85dYD",
+            });
+            sessionStorage.setItem("pt_registered_conversion_fired", "true");
+          }
+        }
         const next = params.get("next") || "/";
-        router.replace(next);
+        const redirectTarget = next.includes("?")
+          ? `${next}&registered=true`
+          : `${next === "/" ? "/?registered=true" : `${next}?registered=true`}`;
+        router.replace(redirectTarget);
         router.refresh();
       } else {
         setError(data.error || "Doğrulama kodu hatalı veya süresi dolmuş.");

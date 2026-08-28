@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    let isNewUser = false;
     if (user) {
       // Update googleId or name if missing
       if (!user.googleId) {
@@ -82,11 +83,13 @@ export async function GET(req: NextRequest) {
           role: "USER",
         },
       });
+      isNewUser = true;
     }
 
     // 4. Create Session and Set Cookie
     const token = await createSession(user.id);
-    const response = NextResponse.redirect(`${origin}/`);
+    const redirectUrl = isNewUser ? `${origin}/?registered=true` : `${origin}/`;
+    const response = NextResponse.redirect(redirectUrl);
 
     response.cookies.set(AUTH_COOKIE, token, {
       httpOnly: true,

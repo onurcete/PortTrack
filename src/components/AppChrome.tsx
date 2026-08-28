@@ -8,6 +8,7 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { GlobalPortfolioAiModal } from "@/components/GlobalPortfolioAiModal";
 import { FeedbackPromptModal } from "@/components/FeedbackPromptModal";
+import { GoogleAdsRegisterTracker } from "@/components/GoogleAdsRegisterTracker";
 
 function XIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -44,6 +45,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         {children}
         <CookieBanner />
         <FeedbackPromptModal />
+        <GoogleAdsRegisterTracker />
       </>
     );
   }
@@ -106,6 +108,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       <FeedbackWidget />
       <GlobalPortfolioAiModal />
       <FeedbackPromptModal />
+      <GoogleAdsRegisterTracker />
     </div>
   );
 }
