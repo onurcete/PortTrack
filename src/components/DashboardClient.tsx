@@ -1116,9 +1116,9 @@ function PositionsTable({
             )}
           </div>
 
-          {/* Özelleştir Açılır Menüsü */}
+          {/* Özelleştir Açılır Menüsü (Sadece Masaüstünde Görünür) */}
           {!showClosed && (
-            <div className="relative">
+            <div className="relative hidden md:block">
               <button
                 onClick={() => setShowCustomizeMenu(!showCustomizeMenu)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)] transition-all cursor-pointer select-none"
@@ -1526,16 +1526,11 @@ function PositionsTable({
                               onClick={() => onSelectPosition?.(p)}
                               className="grid grid-cols-[1.1fr_1.1fr_0.8fr_1fr] items-center gap-1.5 md:hidden px-4 py-2.5 border-t border-[var(--color-border)]/30 hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer select-none active:bg-[var(--color-surface-muted)]/60"
                             >
-                              {/* Col 1: Sembol, Gün & Adet */}
+                              {/* Col 1: Sembol & Adet */}
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5 leading-tight">
                                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
                                   <span className="font-extrabold text-xs tracking-tight text-[var(--color-foreground)] truncate">{p.symbol}</span>
-                                  {holdingDays !== "-" && (
-                                    <span className="text-[9px] font-bold text-[var(--color-muted)] px-1 py-0.2 rounded bg-[var(--color-surface-muted)] border border-[var(--color-border)]/50 tabular-nums shrink-0">
-                                      {holdingDays}
-                                    </span>
-                                  )}
                                 </div>
                                 <p className="text-[10px] text-[var(--color-muted)] pl-2.5 truncate font-medium mt-0.5">
                                   {formatNumber(p.quantity, p.quantity < 1 ? 4 : 2)} adet
