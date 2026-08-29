@@ -7,9 +7,8 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'porttrack_session_token';
 
-// API Adresi: .env içerisinden veya varsayılan Vercel adresinden okunur
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://port-track-ten.vercel.app/api';
+// API Adresi: Canlı Vercel Prod URL'si
+const API_BASE_URL = 'https://port-track-ten.vercel.app/api';
 
 class ApiService {
   private baseUrl: string;
@@ -75,12 +74,14 @@ class ApiService {
     }
 
     try {
+      console.log(`🌐 [API Request] ${options.method || 'GET'} -> ${url}`);
       const response = await fetch(url, {
         ...options,
         headers,
       });
 
       const status = response.status;
+      console.log(`📡 [API Response] ${status} from ${url}`);
 
       // 401 Unauthorized durumunda oturumu temizle
       if (status === 401) {
