@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolvePriceMapping, type AssetType } from "@/lib/assets";
 import { fetchYahooHistory, fetchTefasHistory, currencyToTryRate } from "@/lib/prices";
 import { buildFxLookup } from "@/lib/portfolio";
-import { requireUser } from "@/lib/auth";
+import { getSessionUser, AUTH_COOKIE } from "@/lib/auth";
 import { computeIndicators, type TechnicalIndicators } from "@/lib/technical";
 import { generateAnalysis } from "@/lib/commentary";
 
@@ -20,8 +20,21 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  try {
-    const userId = await requireUser();
+    const rawCookie = req.cookies.get(AUTH_COOKIE)?.value;
+    const authHeader = req.headers.get("authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.replace("Bearer ", "").trim()
+      : null;
+    const token = rawCookie || bearerToken;
+
+    let userId: string | null = req.headers.get("x-user-id");
+    if (!userId && token) {
+      userId = await getSessionUser(token);
+    }
+
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Yetkisiz erişim." }, { status: 401 });
+    }
 
     // 1. İlgili sembole ait tüm işlemleri çek
     const transactions = await prisma.transaction.findMany({
