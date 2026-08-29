@@ -9,7 +9,7 @@ const TOKEN_KEY = 'porttrack_session_token';
 
 // API Adresi: .env içerisinden veya varsayılan Vercel adresinden okunur
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://porttrack-app.vercel.app/api';
+  process.env.EXPO_PUBLIC_API_URL || 'https://port-track-ten.vercel.app/api';
 
 class ApiService {
   private baseUrl: string;
