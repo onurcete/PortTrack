@@ -114,7 +114,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loginDemo: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.post<{ ok?: boolean; user?: User; token?: string }>('/auth/demo');
+      const res = await api.get<{ ok?: boolean; user?: User; token?: string }>('/auth/demo');
       if (res.data?.user || res.data?.ok) {
         if (res.data.token) {
           await api.setToken(res.data.token);
