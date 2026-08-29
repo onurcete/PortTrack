@@ -1,0 +1,97 @@
+/**
+ * PortTrack Android Veri Tipleri
+ * Web projesinin Prisma şeması ve API modelleriyle senkronizedir.
+ */
+
+export type AssetType =
+  | 'BIST'
+  | 'TEFAS'
+  | 'FOREIGN'
+  | 'FX'
+  | 'METAL'
+  | 'CRYPTO'
+  | 'BES';
+
+export type TransactionSide = 'BUY' | 'SELL';
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  isDemo: boolean;
+  theme: string;
+  defaultCurrency: string;
+  dailyDigestEnabled: boolean;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  date: string;
+  assetType: AssetType;
+  symbol: string;
+  side: TransactionSide;
+  unitPrice: number;
+  quantity: number;
+  total: number;
+  currency: string;
+  note?: string | null;
+}
+
+export interface PortfolioPosition {
+  symbol: string;
+  name?: string;
+  assetType: AssetType;
+  quantity: number;
+  avgCostTRY: number;
+  avgCostNative: number;
+  currentPriceTRY: number;
+  currentPriceNative: number;
+  totalCostTRY: number;
+  currentValueTRY: number;
+  profitTRY: number;
+  profitRate: number;
+  currency: string;
+  weightPercent: number;
+}
+
+export interface PortfolioSummary {
+  totalValueTRY: number;
+  totalCostTRY: number;
+  totalProfitTRY: number;
+  totalProfitPercent: number;
+  dailyChangeTRY: number;
+  dailyChangePercent: number;
+  positions: PortfolioPosition[];
+  assetBreakdown: {
+    type: AssetType;
+    label: string;
+    valueTRY: number;
+    percent: number;
+    color: string;
+  }[];
+}
+
+export interface TechnicalSignal {
+  symbol: string;
+  assetType: string;
+  score: number;
+  trendSignal: 'STRONG_UP' | 'UP' | 'DOWN' | 'STRONG_DOWN';
+  macdSignal: 'POSITIVE' | 'NEGATIVE' | 'BUY_CROSS' | 'SELL_CROSS';
+  rsiZone: 'OVERSOLD' | 'NEUTRAL' | 'OVERBOUGHT';
+  commentary: string;
+  alerts: string[];
+}
+
+export interface AnalysisBriefing {
+  id: string;
+  date: string;
+  payload: {
+    summary?: string;
+    highlights?: string[];
+    sentiment?: 'POSITIVE' | 'NEUTRAL' | 'CAUTIOUS';
+    marketOutlook?: string;
+    risks?: string[];
+  };
+}
