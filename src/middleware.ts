@@ -35,9 +35,15 @@ export async function middleware(req: NextRequest) {
   }
 
   const rawCookie = req.cookies.get(AUTH_COOKIE)?.value;
+  const authHeader = req.headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.replace("Bearer ", "").trim()
+    : null;
+  const token = rawCookie || bearerToken;
+
   let userId: string | null = null;
-  if (rawCookie) {
-    userId = await getSessionUser(rawCookie);
+  if (token) {
+    userId = await getSessionUser(token);
   }
 
   if (userId) {

@@ -32,6 +32,35 @@ export async function GET(req: NextRequest) {
 
     const token = await createSession(demoUser.id, 24 * 60 * 60 * 1000); // 24 saat
 
+    const isJsonRequest =
+      req.headers.get("accept")?.includes("application/json") ||
+      req.headers.get("content-type")?.includes("application/json");
+
+    if (isJsonRequest) {
+      const res = NextResponse.json({
+        ok: true,
+        token,
+        user: {
+          id: demoUser.id,
+          email: demoUser.email,
+          name: demoUser.name,
+          isDemo: demoUser.isDemo,
+          role: "USER",
+          theme: "dark",
+          defaultCurrency: "TRY",
+          dailyDigestEnabled: false,
+        },
+      });
+      res.cookies.set(AUTH_COOKIE, token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 24,
+      });
+      return res;
+    }
+
     const res = NextResponse.redirect(new URL("/", req.url));
     res.cookies.set(AUTH_COOKIE, token, {
       httpOnly: true,
@@ -45,8 +74,18 @@ export async function GET(req: NextRequest) {
     return res;
   } catch (err: any) {
     console.error("❌ Demo Login Error:", err?.message ?? err);
+    if (req.headers.get("accept")?.includes("application/json")) {
+      return NextResponse.json(
+        { ok: false, error: "Demo girişi yapılamadı. Lütfen tekrar deneyin." },
+        { status: 500 }
+      );
+    }
     return NextResponse.redirect(
       new URL(`/login?error=demo_failed&msg=${encodeURIComponent(err?.message ?? "unknown")}`, req.url)
     );
   }
+}
+
+export async function POST(req: NextRequest) {
+  return GET(req);
 }

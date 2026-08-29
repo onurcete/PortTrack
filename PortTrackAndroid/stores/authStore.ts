@@ -59,34 +59,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email: string, password?: string) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.post<{ user: User; token?: string }>('/auth/login', {
+      const res = await api.post<{ ok?: boolean; user?: User; token?: string }>('/auth/login', {
         email,
         password,
       });
 
-      if (res.data?.user) {
-        // Eğer backend token döndürdüyse kaydet
+      if (res.data?.user || res.data?.ok) {
         if (res.data.token) {
           await api.setToken(res.data.token);
         }
+
+        // Eğer user objesi dönmediyse /auth/me'den çek
+        let currentUser = res.data.user;
+        if (!currentUser) {
+          const meRes = await api.get<{ user: User }>('/auth/me');
+          currentUser = meRes.data?.user;
+        }
+
         set({
-          user: res.data.user,
+          user: currentUser || {
+            id: 'current-user',
+            email,
+            role: 'USER',
+            isDemo: false,
+            theme: 'dark',
+            defaultCurrency: 'TRY',
+            dailyDigestEnabled: false,
+          },
           token: res.data.token || 'logged-in',
           isLoading: false,
           error: null,
         });
         return true;
       } else {
+        const errorText =
+          typeof res.error === 'string'
+            ? res.error
+            : (res.error as any)?.message || 'Giriş yapılamadı. Bilgilerinizi kontrol edin.';
         set({
           isLoading: false,
-          error: res.error || 'Giriş yapılamadı. Bilgilerinizi kontrol edin.',
+          error: errorText,
         });
         return false;
       }
     } catch (err: any) {
       set({
         isLoading: false,
-        error: 'Bir hata oluştu. Lütfen tekrar deneyin.',
+        error: typeof err?.message === 'string' ? err.message : 'Giriş sırasında hata oluştu.',
       });
       return false;
     }
@@ -95,29 +114,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loginDemo: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.post<{ user: User; token?: string }>('/auth/demo');
-      if (res.data?.user) {
+      const res = await api.post<{ ok?: boolean; user?: User; token?: string }>('/auth/demo');
+      if (res.data?.user || res.data?.ok) {
         if (res.data.token) {
           await api.setToken(res.data.token);
         }
+
+        let currentUser = res.data.user;
+        if (!currentUser) {
+          const meRes = await api.get<{ user: User }>('/auth/me');
+          currentUser = meRes.data?.user;
+        }
+
         set({
-          user: res.data.user,
+          user: currentUser || {
+            id: 'demo-user',
+            email: 'demo@porttrack.app',
+            name: 'Demo Kullanıcı',
+            role: 'USER',
+            isDemo: true,
+            theme: 'dark',
+            defaultCurrency: 'TRY',
+            dailyDigestEnabled: false,
+          },
           token: res.data.token || 'demo-token',
           isLoading: false,
           error: null,
         });
         return true;
       } else {
+        const errorText =
+          typeof res.error === 'string'
+            ? res.error
+            : (res.error as any)?.message || 'Demo girişi yapılamadı.';
         set({
           isLoading: false,
-          error: res.error || 'Demo girişi yapılamadı.',
+          error: errorText,
         });
         return false;
       }
-    } catch {
+    } catch (err: any) {
       set({
         isLoading: false,
-        error: 'Demo girişi sırasında bağlantı hatası oluştu.',
+        error: typeof err?.message === 'string' ? err.message : 'Demo girişi sırasında bağlantı hatası oluştu.',
       });
       return false;
     }

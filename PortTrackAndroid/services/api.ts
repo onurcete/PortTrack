@@ -95,11 +95,27 @@ class ApiService {
       const json = await response.json().catch(() => null);
 
       if (!response.ok) {
+        let errorMsg = `Sunucu hatası (${status})`;
+        if (typeof json?.error === 'string') {
+          errorMsg = json.error;
+        } else if (typeof json?.error?.message === 'string') {
+          errorMsg = json.error.message;
+        } else if (typeof json?.message === 'string') {
+          errorMsg = json.message;
+        } else if (json?.error && typeof json.error === 'object') {
+          errorMsg = JSON.stringify(json.error);
+        }
+
         return {
           data: null,
-          error: json?.error || json?.message || `Sunucu hatası (${status})`,
+          error: errorMsg,
           status,
         };
+      }
+
+      // Eğer response içinde token veya set-cookie geldiyse yakala
+      if (json?.token && typeof json.token === 'string') {
+        await this.setToken(json.token);
       }
 
       return {
@@ -109,9 +125,10 @@ class ApiService {
       };
     } catch (err: any) {
       console.error(`API Error [${endpoint}]:`, err);
+      const msg = typeof err?.message === 'string' ? err.message : 'Bağlantı hatası oluştu.';
       return {
         data: null,
-        error: 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.',
+        error: `Sunucuya bağlanılamadı: ${msg}`,
         status: 0,
       };
     }

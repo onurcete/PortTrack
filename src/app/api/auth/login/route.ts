@@ -51,7 +51,20 @@ export async function POST(req: NextRequest) {
     });
 
     const token = await createSession(user.id);
-    const res = NextResponse.json({ ok: true });
+    const res = NextResponse.json({
+      ok: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isDemo: user.isDemo,
+        theme: user.theme || "dark",
+        defaultCurrency: user.defaultCurrency || "TRY",
+        dailyDigestEnabled: user.dailyDigestEnabled || false,
+      },
+    });
     res.cookies.set(AUTH_COOKIE, token, {
       httpOnly: true,
       sameSite: "lax",

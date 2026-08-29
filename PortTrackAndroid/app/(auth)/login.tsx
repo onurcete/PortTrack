@@ -60,9 +60,11 @@ export default function LoginScreen() {
           </View>
 
           {/* Hata Mesajı */}
-          {error && (
+          {Boolean(error) && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>
+                {typeof error === 'string' ? error : (error as any)?.message || 'Giriş yapılamadı.'}
+              </Text>
             </View>
           )}
 
