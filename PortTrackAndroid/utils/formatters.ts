@@ -1,5 +1,6 @@
 /**
  * PortTrack Para Birimi, Yüzde ve Tarih Formatlayıcıları
+ * Hermes / Android motoru ile %100 uyumlu, asla boş dönmeyen yardımcılar.
  */
 
 export function formatCurrency(
@@ -7,10 +8,12 @@ export function formatCurrency(
   currency: string = 'TRY',
   decimals: number = 2
 ): string {
-  if (value === null || value === undefined || isNaN(value)) {
-    return '0,00 ₺';
+  if (value === null || value === undefined || isNaN(Number(value))) {
+    const symbolMap: Record<string, string> = { TRY: '₺', USD: '$', EUR: '€' };
+    return `0,00 ${symbolMap[currency.toUpperCase()] || currency}`;
   }
 
+  const num = Number(value);
   const symbolMap: Record<string, string> = {
     TRY: '₺',
     USD: '$',
@@ -20,29 +23,35 @@ export function formatCurrency(
   };
 
   const symbol = symbolMap[currency.toUpperCase()] || currency;
-  const isNegative = value < 0;
-  const absoluteValue = Math.abs(value);
+  const isNegative = num < 0;
+  const parts = Math.abs(num).toFixed(decimals).split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const decimalPart = parts[1] !== undefined ? `,${parts[1]}` : '';
 
-  const formatted = absoluteValue.toLocaleString('tr-TR', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-
-  return `${isNegative ? '-' : ''}${formatted} ${symbol}`;
+  return `${isNegative ? '-' : ''}${integerPart}${decimalPart} ${symbol}`;
 }
 
 export function formatPercent(value: number | null | undefined, showSign = true): string {
-  if (value === null || value === undefined || isNaN(value)) {
+  if (value === null || value === undefined || isNaN(Number(value))) {
     return '%0,00';
   }
 
-  const sign = showSign && value > 0 ? '+' : '';
-  const formatted = value.toLocaleString('tr-TR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const num = Number(value);
+  const sign = showSign && num > 0 ? '+' : num < 0 ? '-' : '';
+  const abs = Math.abs(num).toFixed(2).replace('.', ',');
 
-  return `${sign}%${formatted}`;
+  return `${sign}%${abs}`;
+}
+
+export function formatQuantity(value: number | null | undefined): string {
+  if (value === null || value === undefined || isNaN(Number(value))) return '0';
+  const num = Number(value);
+  if (Number.isInteger(num)) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  const parts = num.toString().split('.');
+  const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${intPart},${parts[1]}`;
 }
 
 export function formatDate(dateInput: string | Date | null | undefined): string {
@@ -50,11 +59,11 @@ export function formatDate(dateInput: string | Date | null | undefined): string 
   const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
   if (isNaN(d.getTime())) return '-';
 
-  return d.toLocaleDateString('tr-TR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+
+  return `${day}.${month}.${year}`;
 }
 
 export function getAssetTypeLabel(type: string): string {

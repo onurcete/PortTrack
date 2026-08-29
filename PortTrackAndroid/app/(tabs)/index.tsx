@@ -24,7 +24,7 @@ import {
   TrendingDown,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
-import { formatCurrency, formatPercent, getAssetTypeLabel, getAssetTypeBadgeColor } from '../../utils/formatters';
+import { formatCurrency, formatPercent, formatQuantity, getAssetTypeLabel, getAssetTypeBadgeColor } from '../../utils/formatters';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { PortfolioSummary, PortfolioPosition, AssetType } from '../../types';
@@ -131,7 +131,7 @@ export default function DashboardScreen() {
       key: '1y',
       label: 'Son 1 Yıl',
       pct: isTRY ? pReturns?.oneYearTRY : pReturns?.oneYearUSD,
-      amt: null,
+      amt: isTRY ? pReturns?.oneYearAmtTRY : pReturns?.oneYearAmtUSD,
     },
   ];
 
@@ -473,7 +473,7 @@ export default function DashboardScreen() {
                                 )}
                               </View>
                               <Text style={[styles.qtyText, { color: theme.text.muted }]}>
-                                {pos.quantity.toLocaleString('tr-TR')} Adet
+                                {formatQuantity(pos.quantity)} Adet
                               </Text>
                             </View>
 
