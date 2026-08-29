@@ -6,7 +6,7 @@ import { resolvePriceMapping, type AssetType } from "@/lib/assets";
 import { fetchYahooHistory, fetchTefasHistory, currencyToTryRate } from "@/lib/prices";
 import { buildFxLookup } from "@/lib/portfolio";
 import { computeFundInvestorStats } from "@/lib/tefasInvestors";
-import { trYear, trMonth, monthLabel } from "@/lib/utils";
+import { monthLabel } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Sembol belirtilmedi." }, { status: 400 });
     }
 
-    const thirteenMonthsAgo = new Date();
-    thirteenMonthsAgo.setMonth(thirteenMonthsAgo.getMonth() - 13);
+    const fourteenMonthsAgo = new Date();
+    fourteenMonthsAgo.setMonth(fourteenMonthsAgo.getMonth() - 14);
 
     const [portfolio, transactions, technical, fxRates] = await Promise.all([
       getPortfolio(userId),
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
         orderBy: { date: "desc" },
       }),
       prisma.fxRate.findMany({
-        where: { pair: "USDTRY", date: { gte: thirteenMonthsAgo } },
+        where: { pair: "USDTRY", date: { gte: fourteenMonthsAgo } },
         orderBy: { date: "asc" },
       }),
     ]);
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
 
     if (mapping.source === "yahoo" || mapping.source === "yahoo-fx") {
       if (mapping.yahooSymbol) {
-        const nativePoints = await fetchYahooHistory(mapping.yahooSymbol, thirteenMonthsAgo);
+        const nativePoints = await fetchYahooHistory(mapping.yahooSymbol, fourteenMonthsAgo);
         const nativeCurrency = mapping.currency || "USD";
         const isCross = nativeCurrency !== "TRY" && nativeCurrency !== "USD";
         const crossRate = isCross ? await currencyToTryRate(nativeCurrency, currentUsdTry) : 1;
@@ -128,12 +128,12 @@ export async function GET(req: NextRequest) {
     } else {
       // TEFAS / DB
       let snaps = await prisma.priceSnapshot.findMany({
-        where: { symbol, date: { gte: thirteenMonthsAgo } },
+        where: { symbol, date: { gte: fourteenMonthsAgo } },
         orderBy: { date: "asc" },
       });
 
       if (mapping.source === "tefas" && snaps.length < 10) {
-        const tefasHistory = await fetchTefasHistory(symbol, thirteenMonthsAgo, new Date());
+        const tefasHistory = await fetchTefasHistory(symbol, fourteenMonthsAgo, new Date());
         if (tefasHistory.length > 0) {
           for (const item of tefasHistory) {
             await prisma.priceSnapshot.upsert({
@@ -152,7 +152,7 @@ export async function GET(req: NextRequest) {
             }).catch(() => null);
           }
           snaps = await prisma.priceSnapshot.findMany({
-            where: { symbol, date: { gte: thirteenMonthsAgo } },
+            where: { symbol, date: { gte: fourteenMonthsAgo } },
             orderBy: { date: "asc" },
           });
         }
@@ -171,52 +171,75 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Son 1 Yıllık Aylık Performans Hesaplaması (12 Ayın % Getirisi)
-    const monthlyMap = new Map<string, { first: number; last: number; firstUSD: number; lastUSD: number }>();
-    for (const h of history) {
-      const d = new Date(h.date);
-      const y = trYear(d);
-      const m = trMonth(d);
-      const key = `${y}-${String(m).padStart(2, "0")}`;
+    // Son 1 Yıllık Aylık Performans Hesaplaması (Web İle %100 Birebir Mantık)
+    const targetMonths: string[] = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      targetMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
 
-      const item = monthlyMap.get(key);
-      if (!item) {
-        monthlyMap.set(key, { first: h.closeTRY, last: h.closeTRY, firstUSD: h.closeUSD, lastUSD: h.closeUSD });
-      } else {
-        item.last = h.closeTRY;
-        item.lastUSD = h.closeUSD;
+    const byMonth = new Map<string, { closeTRY: number; closeUSD: number; date: string }>();
+    for (const h of history) {
+      const mKey = h.date.slice(0, 7);
+      const existing = byMonth.get(mKey);
+      if (!existing || h.date > existing.date) {
+        byMonth.set(mKey, { closeTRY: h.closeTRY, closeUSD: h.closeUSD, date: h.date });
       }
     }
 
-    const monthlyPerformance: {
-      month: string;
-      label: string;
-      returnTRY: number;
-      returnUSD: number;
-    }[] = [];
+    const monthlyPerformance = targetMonths.map((mCurr) => {
+      const [yearNum, monthNum] = mCurr.split("-").map(Number);
+      let prevMonthNum = monthNum - 1;
+      let prevYearNum = yearNum;
+      if (prevMonthNum < 1) {
+        prevMonthNum = 12;
+        prevYearNum--;
+      }
+      const mPrev = `${prevYearNum}-${String(prevMonthNum).padStart(2, "0")}`;
 
-    const monthKeys = Array.from(monthlyMap.keys()).sort().slice(-12);
-    for (const k of monthKeys) {
-      const data = monthlyMap.get(k)!;
-      const retTRY = data.first > 0 ? ((data.last - data.first) / data.first) * 100 : 0;
-      const retUSD = data.firstUSD > 0 ? ((data.lastUSD - data.firstUSD) / data.firstUSD) * 100 : 0;
+      const pPrev = byMonth.get(mPrev);
+      const pCurr = byMonth.get(mCurr);
 
-      monthlyPerformance.push({
-        month: k,
-        label: monthLabel(k),
-        returnTRY: retTRY,
-        returnUSD: retUSD,
-      });
-    }
+      let returnTRY: number | null = null;
+      let returnUSD: number | null = null;
 
-    // TEFAS Yatırımcı Metrikleri
+      if (pPrev && pCurr && pPrev.closeTRY > 0) {
+        returnTRY = ((pCurr.closeTRY / pPrev.closeTRY) - 1) * 100;
+      }
+      if (pPrev && pCurr && pPrev.closeUSD > 0) {
+        returnUSD = ((pCurr.closeUSD / pPrev.closeUSD) - 1) * 100;
+      }
+
+      return {
+        month: mCurr,
+        label: monthLabel(mCurr),
+        returnTRY: returnTRY ?? 0,
+        returnUSD: returnUSD ?? 0,
+      };
+    });
+
+    // TEFAS Yatırımcı Metrikleri ve Son 7 Gün Bar Chart Verisi
     let tefasStats: any = null;
-    const tefasSnapshots = history.filter((h) => h.investors != null).map((h) => ({
-      date: new Date(h.date),
-      investors: h.investors!,
-    }));
+    let lastWeekInvestors: { date: string; investors: number; label: string }[] = [];
+
+    const tefasSnapshots = history
+      .filter((h) => h.investors != null && h.investors > 0)
+      .map((h) => ({
+        date: new Date(h.date),
+        investors: h.investors!,
+      }));
+
     if (tefasSnapshots.length > 0) {
       tefasStats = computeFundInvestorStats(symbol, tefasSnapshots as any);
+
+      // Son 7 günün günlük bar chart verisi
+      const sortedInv = [...tefasSnapshots].sort((a, b) => a.date.getTime() - b.date.getTime());
+      lastWeekInvestors = sortedInv.slice(-7).map((item) => ({
+        date: item.date.toISOString(),
+        investors: item.investors,
+        label: item.date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }),
+      }));
     }
 
     return NextResponse.json({
@@ -236,6 +259,7 @@ export async function GET(req: NextRequest) {
       history,
       monthlyPerformance,
       tefasStats,
+      lastWeekInvestors,
     });
   } catch (err: any) {
     console.error("❌ Asset Detail API Error:", err);

@@ -47,6 +47,12 @@ interface MonthlyPerformanceItem {
   returnUSD: number;
 }
 
+interface InvestorBarItem {
+  date: string;
+  investors: number;
+  label: string;
+}
+
 interface TefasStats {
   latest: number | null;
   priorWeek: number | null;
@@ -70,6 +76,7 @@ export default function AssetDetailScreen() {
   const [history, setHistory] = useState<PricePoint[]>([]);
   const [monthlyPerformance, setMonthlyPerformance] = useState<MonthlyPerformanceItem[]>([]);
   const [tefasStats, setTefasStats] = useState<TefasStats | null>(null);
+  const [lastWeekInvestors, setLastWeekInvestors] = useState<InvestorBarItem[]>([]);
 
   const fetchAssetData = useCallback(async () => {
     if (!symbol) return;
@@ -81,6 +88,7 @@ export default function AssetDetailScreen() {
         history: PricePoint[];
         monthlyPerformance: MonthlyPerformanceItem[];
         tefasStats: TefasStats | null;
+        lastWeekInvestors?: InvestorBarItem[];
       }>(`/portfolio/asset?symbol=${symbol}`);
 
       if (res.data) {
@@ -90,6 +98,7 @@ export default function AssetDetailScreen() {
         if (res.data.history) setHistory(res.data.history);
         if (res.data.monthlyPerformance) setMonthlyPerformance(res.data.monthlyPerformance);
         if (res.data.tefasStats) setTefasStats(res.data.tefasStats);
+        if (res.data.lastWeekInvestors) setLastWeekInvestors(res.data.lastWeekInvestors);
       }
     } catch (err) {
       console.error('Varlık detayı hatası:', err);
@@ -136,6 +145,16 @@ export default function AssetDetailScreen() {
       prices,
     };
   }, [filteredHistory]);
+
+  // Yatırımcı Bar Chart Min/Max
+  const investorChartStats = useMemo(() => {
+    if (!lastWeekInvestors || lastWeekInvestors.length === 0) return null;
+    const counts = lastWeekInvestors.map((i) => i.investors);
+    const min = Math.min(...counts);
+    const max = Math.max(...counts);
+    const range = max - min || 1;
+    return { min, max, range };
+  }, [lastWeekInvestors]);
 
   const badge = position ? getAssetTypeBadgeColor(position.assetType) : null;
   const isProfit = (position?.profitTRY ?? 0) >= 0;
@@ -438,14 +457,14 @@ export default function AssetDetailScreen() {
                 )}
               </View>
 
-              {/* 6. FON YATIRIMCI SAYISI (TEFAS) */}
-              {tefasStats?.latest != null && (
+              {/* 6. YATIRIMCI SAYISI (SON 1 HAFTA / BAR CHART GÖRÜNÜMÜ) */}
+              {position?.assetType === 'TEFAS' && lastWeekInvestors.length > 0 && (
                 <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                   <View style={styles.sectionHeaderRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Users size={16} color={theme.brand.primary} />
                       <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-                        Fon Yatırımcı Sayısı
+                        Yatırımcı Sayısı (Son 1 Hafta)
                       </Text>
                     </View>
                     <View
@@ -453,9 +472,9 @@ export default function AssetDetailScreen() {
                         styles.trendTag,
                         {
                           backgroundColor:
-                            tefasStats.trend4w === 'up'
+                            tefasStats?.trend4w === 'up'
                               ? theme.profit.soft
-                              : tefasStats.trend4w === 'down'
+                              : tefasStats?.trend4w === 'down'
                               ? theme.loss.soft
                               : theme.surfaceMuted,
                         },
@@ -466,30 +485,72 @@ export default function AssetDetailScreen() {
                           styles.trendTagText,
                           {
                             color:
-                              tefasStats.trend4w === 'up'
+                              tefasStats?.trend4w === 'up'
                                 ? theme.profit.main
-                                : tefasStats.trend4w === 'down'
+                                : tefasStats?.trend4w === 'down'
                                 ? theme.loss.main
                                 : theme.text.muted,
                           },
                         ]}
                       >
-                        {tefasStats.trend4w === 'up'
+                        {tefasStats?.trend4w === 'up'
                           ? 'Yükseliş Trendi'
-                          : tefasStats.trend4w === 'down'
+                          : tefasStats?.trend4w === 'down'
                           ? 'Düşüş Trendi'
                           : 'Yatay'}
                       </Text>
                     </View>
                   </View>
 
-                  <View style={styles.investorStatsRow}>
+                  {/* Yatırımcı Sayısı Çubuk Grafiği (Bar Chart) */}
+                  <View style={styles.investorBarChartWrapper}>
+                    <View style={styles.investorBarsRow}>
+                      {lastWeekInvestors.map((item, idx) => {
+                        const count = item.investors;
+                        const min = investorChartStats?.min ?? 0;
+                        const range = investorChartStats?.range ?? 1;
+                        const normalizedHeight = Math.max(
+                          18,
+                          Math.min(70, ((count - min) / range) * 55 + 15)
+                        );
+
+                        return (
+                          <View key={`inv-bar-${idx}`} style={styles.investorBarColumn}>
+                            {/* Bar Üstündeki Kişi Sayısı */}
+                            <Text style={[styles.invCountTopLabel, { color: theme.text.secondary }]}>
+                              {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}
+                            </Text>
+
+                            {/* Çubuk */}
+                            <View
+                              style={[
+                                styles.investorBarFill,
+                                {
+                                  height: normalizedHeight,
+                                  backgroundColor: theme.brand.primary,
+                                  opacity: 0.65 + (idx / lastWeekInvestors.length) * 0.35,
+                                },
+                              ]}
+                            />
+
+                            {/* Tarih Etiketi */}
+                            <Text style={[styles.invDateBottomLabel, { color: theme.text.muted }]}>
+                              {item.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Özet Metrikler */}
+                  <View style={[styles.investorStatsRow, { borderTopColor: theme.borderSubtle, borderTopWidth: 1, paddingTop: 10, marginTop: 10 }]}>
                     <View style={[styles.investorStatCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
                       <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>
-                        Toplam Yatırımcı
+                        Güncel Toplam
                       </Text>
                       <Text style={[styles.investorBigNum, { color: theme.text.primary }]}>
-                        {formatQuantity(tefasStats.latest)} <Text style={{ fontSize: 11, color: theme.text.muted }}>Kişi</Text>
+                        {formatQuantity(tefasStats?.latest)} <Text style={{ fontSize: 11, color: theme.text.muted }}>Kişi</Text>
                       </Text>
                     </View>
 
@@ -502,14 +563,14 @@ export default function AssetDetailScreen() {
                           styles.investorDeltaNum,
                           {
                             color:
-                              (tefasStats.weekDelta ?? 0) >= 0
+                              (tefasStats?.weekDelta ?? 0) >= 0
                                 ? theme.profit.main
                                 : theme.loss.main,
                           },
                         ]}
                       >
-                        {(tefasStats.weekDelta ?? 0) >= 0 ? '+' : ''}
-                        {formatQuantity(tefasStats.weekDelta)} ({formatPercent(tefasStats.weekDeltaPct)})
+                        {(tefasStats?.weekDelta ?? 0) >= 0 ? '+' : ''}
+                        {formatQuantity(tefasStats?.weekDelta)} ({formatPercent(tefasStats?.weekDeltaPct)})
                       </Text>
                     </View>
                   </View>
@@ -560,7 +621,7 @@ export default function AssetDetailScreen() {
                 </View>
               )}
 
-              {/* 8. İŞLEM GEÇMİŞİ TABLOSU */}
+              {/* 8. İŞLEM GEÇMİŞİ TABLOSU (ŞIK VE NET FİNANS TASARIMI) */}
               <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>İşlem Geçmişi</Text>
@@ -578,12 +639,19 @@ export default function AssetDetailScreen() {
                       return (
                         <View
                           key={tx.id || `tx-${idx}`}
-                          style={[styles.txRow, { borderBottomColor: theme.borderSubtle }]}
+                          style={[
+                            styles.cleanTxCard,
+                            {
+                              backgroundColor: theme.surfaceMuted,
+                              borderColor: theme.borderSubtle,
+                            },
+                          ]}
                         >
-                          <View style={styles.txLeft}>
+                          {/* Sol Bölüm: İşlem Rozeti ve Tarih */}
+                          <View style={styles.cleanTxLeft}>
                             <View
                               style={[
-                                styles.sideBadge,
+                                styles.cleanSideBadge,
                                 {
                                   backgroundColor: isBuy ? theme.profit.soft : theme.loss.soft,
                                 },
@@ -591,26 +659,37 @@ export default function AssetDetailScreen() {
                             >
                               <Text
                                 style={[
-                                  styles.sideBadgeText,
+                                  styles.cleanSideBadgeText,
                                   { color: isBuy ? theme.profit.main : theme.loss.main },
                                 ]}
                               >
                                 {isBuy ? 'ALIŞ' : 'SATIŞ'}
                               </Text>
                             </View>
-                            <View>
-                              <Text style={[styles.txQtyPrice, { color: theme.text.primary }]}>
-                                {formatQuantity(tx.quantity)} @ {formatCurrency(tx.unitPrice, tx.currency)}
-                              </Text>
-                              <Text style={[styles.txDate, { color: theme.text.muted }]}>
-                                {formatDate(tx.date)}
-                              </Text>
-                            </View>
+                            <Text style={[styles.cleanTxDate, { color: theme.text.muted }]}>
+                              {formatDate(tx.date)}
+                            </Text>
                           </View>
 
-                          <Text style={[styles.txTotal, { color: theme.text.primary }]}>
-                            {formatCurrency(tx.total, tx.currency)}
-                          </Text>
+                          {/* Orta Bölüm: Miktar & Birim Fiyat */}
+                          <View style={styles.cleanTxCenter}>
+                            <Text style={[styles.cleanTxQty, { color: theme.text.primary }]}>
+                              {formatQuantity(tx.quantity)} Adet
+                            </Text>
+                            <Text style={[styles.cleanTxUnitPrice, { color: theme.text.muted }]}>
+                              Birim: {formatCurrency(tx.unitPrice, tx.currency)}
+                            </Text>
+                          </View>
+
+                          {/* Sağ Bölüm: Toplam Tutar */}
+                          <View style={styles.cleanTxRight}>
+                            <Text style={[styles.cleanTxTotalLabel, { color: theme.text.muted }]}>
+                              Toplam Tutar
+                            </Text>
+                            <Text style={[styles.cleanTxTotalVal, { color: theme.text.primary }]}>
+                              {formatCurrency(tx.total, tx.currency)}
+                            </Text>
+                          </View>
                         </View>
                       );
                     })}
@@ -942,10 +1021,40 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  investorBarChartWrapper: {
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  investorBarsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    height: 95,
+    paddingHorizontal: 4,
+  },
+  investorBarColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    height: '100%',
+  },
+  invCountTopLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  investorBarFill: {
+    width: '58%',
+    borderRadius: 3,
+  },
+  invDateBottomLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 6,
+  },
   investorStatsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 4,
   },
   investorStatCell: {
     flex: 1,
@@ -954,7 +1063,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   investorBigNum: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '900',
     marginTop: 2,
   },
@@ -991,38 +1100,56 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   txList: {
-    gap: 2,
+    gap: 8,
   },
-  txRow: {
+  cleanTxCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 9,
-    borderBottomWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 9,
+    borderWidth: 1,
   },
-  txLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  cleanTxLeft: {
+    gap: 3,
+    minWidth: 70,
   },
-  sideBadge: {
+  cleanSideBadge: {
     paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
-  sideBadgeText: {
+  cleanSideBadgeText: {
     fontSize: 9,
     fontWeight: '800',
   },
-  txQtyPrice: {
+  cleanTxDate: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  cleanTxCenter: {
+    alignItems: 'flex-start',
+    gap: 1,
+  },
+  cleanTxQty: {
     fontSize: 12,
     fontWeight: '700',
   },
-  txDate: {
+  cleanTxUnitPrice: {
     fontSize: 10,
-    marginTop: 1,
+    fontWeight: '500',
   },
-  txTotal: {
+  cleanTxRight: {
+    alignItems: 'flex-end',
+    gap: 1,
+  },
+  cleanTxTotalLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+  },
+  cleanTxTotalVal: {
     fontSize: 13,
     fontWeight: '800',
   },
