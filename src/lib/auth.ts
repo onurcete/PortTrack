@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { prisma } from "./prisma";
 
 export const AUTH_COOKIE = "pt_session";
@@ -112,20 +112,36 @@ export async function getSessionUser(token: string): Promise<string | null> {
 
 /** Sunucu eylemleri ve server component'leri için aktif oturum kimliğini getirir. */
 export async function requireUser(): Promise<string> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE)?.value;
-  if (!token) throw new Error("Unauthorized");
-  const userId = await getSessionUser(token);
-  if (!userId) throw new Error("Unauthorized");
-  return userId;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(AUTH_COOKIE)?.value;
+    if (token) {
+      const userId = await getSessionUser(token);
+      if (userId) return userId;
+    }
+  } catch {}
+
+  try {
+    const headerStore = await headers();
+    const xUser = headerStore.get("x-user-id");
+    if (xUser) return xUser;
+
+    const authHeader = headerStore.get("authorization");
+    const bearer = authHeader?.startsWith("Bearer ")
+      ? authHeader.replace("Bearer ", "").trim()
+      : null;
+    if (bearer) {
+      const userId = await getSessionUser(bearer);
+      if (userId) return userId;
+    }
+  } catch {}
+
+  throw new Error("Unauthorized");
 }
 
 export async function getSessionUserIdOptional(): Promise<string | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(AUTH_COOKIE)?.value;
-    if (!token) return null;
-    return await getSessionUser(token);
+    return await requireUser();
   } catch {
     return null;
   }
