@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, AUTH_COOKIE } from "@/lib/auth";
 import { getPortfolio } from "@/lib/data";
 import { getPeriodReturns } from "@/lib/history";
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
       currentValueTRY: pos.valueTRY,
       profitTRY: pos.unrealizedTRY,
       profitRate: pos.unrealizedPctTRY,
+      dailyChangePct: pos.dailyChangePct ?? 0,
       currency: pos.nativeCurrency || "TRY",
       weightPercent: totalValueTRY > 0 ? pos.valueTRY / totalValueTRY : 0,
     }));

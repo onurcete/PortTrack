@@ -52,6 +52,7 @@ export interface PortfolioPosition {
   currentValueTRY: number;
   profitTRY: number;
   profitRate: number;
+  dailyChangePct?: number | null;
   currency: string;
   weightPercent: number;
 }

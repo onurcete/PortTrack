@@ -99,11 +99,10 @@ export default function DashboardScreen() {
 
   const totalValue = portfolio?.totalValueTRY ?? 0;
   const pReturns = portfolio?.periodReturns;
-
   const isTRY = currency === 'TRY';
 
   // Dönemsel Kart Listesi
-  const periodCards = [
+  const periodMetrics = [
     {
       key: '5d',
       label: 'Son 5 Gün',
@@ -158,7 +157,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Sağ Butonlar: Para Birimi, Tema Değiştirici, Gizle/Göster, Yenile */}
+        {/* Sağ Butonlar */}
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={[
@@ -218,7 +217,7 @@ export default function DashboardScreen() {
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={theme.brand.primary} />
-          <Text style={[styles.loadingText, { color: theme.text.muted }]}>Yükleniyor...</Text>
+          <Text style={[styles.loadingText, { color: theme.text.muted }]}>Portföy yükleniyor...</Text>
         </View>
       ) : (
         <ScrollView
@@ -233,84 +232,91 @@ export default function DashboardScreen() {
             />
           }
         >
-          {/* 2. TOPLAM PORTFÖY DEĞERİ (NET WORTH) */}
+          {/* 2. BİRLEŞİK TEK BÜTÜN HERO KART (TOPLAM PORTFÖY + DÖNEMSEL GETİRİLER) */}
           <View
             style={[
-              styles.netWorthCard,
+              styles.unifiedHeroCard,
               {
                 backgroundColor: theme.surface,
                 borderColor: theme.border,
               },
             ]}
           >
-            <Text style={[styles.netWorthLabel, { color: theme.text.muted }]}>
-              TOPLAM PORTFÖY DEĞERİ
-            </Text>
-            <Text style={[styles.netWorthValue, { color: theme.text.primary }]}>
-              {showValues ? formatCurrency(totalValue, currency) : '•••••••• ₺'}
-            </Text>
-          </View>
+            {/* Üst Kısım: Toplam Portföy Değeri */}
+            <View style={styles.heroTop}>
+              <View style={styles.heroHeaderRow}>
+                <Text style={[styles.heroLabel, { color: theme.text.muted }]}>
+                  TOPLAM PORTFÖY DEĞERİ
+                </Text>
+                <Text style={[styles.heroDate, { color: theme.text.muted }]}>
+                  {portfolio?.lastUpdated
+                    ? new Date(portfolio.lastUpdated).toLocaleTimeString('tr-TR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''}
+                </Text>
+              </View>
 
-          {/* 3. DÖNEMSEL GETİRİLER (PERIOD RETURNS) */}
-          <View style={styles.periodReturnsSection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.periodScroll}
-            >
-              {periodCards.map((card) => {
-                const hasPct = card.pct !== null && card.pct !== undefined;
-                const isPos = (card.pct ?? 0) >= 0;
-                const profitColor = isPos ? theme.profit.main : theme.loss.main;
-                const profitBg = isPos ? theme.profit.soft : theme.loss.soft;
+              <Text style={[styles.heroMainValue, { color: theme.text.primary }]}>
+                {showValues ? formatCurrency(totalValue, currency) : '•••••••• ₺'}
+              </Text>
+            </View>
 
-                return (
-                  <View
-                    key={card.key}
-                    style={[
-                      styles.periodCard,
-                      {
-                        backgroundColor: theme.surface,
-                        borderColor: theme.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.periodLabel, { color: theme.text.muted }]}>
-                      {card.label}
-                    </Text>
+            {/* Alt Kısım: Dönemsel Getiriler (Son 5 Gün, MTD, 1 Ay, YTD, 1 Yıl) */}
+            <View style={[styles.heroBottom, { borderTopColor: theme.borderSubtle }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.heroPeriodScroll}
+              >
+                {periodMetrics.map((item) => {
+                  const hasPct = item.pct !== null && item.pct !== undefined;
+                  const isPos = (item.pct ?? 0) >= 0;
+                  const color = hasPct ? (isPos ? theme.profit.main : theme.loss.main) : theme.text.muted;
+                  const bg = hasPct ? (isPos ? theme.profit.soft : theme.loss.soft) : theme.surfaceMuted;
 
-                    <View style={styles.periodRow}>
-                      {hasPct && (
-                        <View
-                          style={[
-                            styles.periodBadge,
-                            { backgroundColor: profitBg },
-                          ]}
-                        >
-                          {isPos ? (
-                            <TrendingUp size={12} color={profitColor} />
+                  return (
+                    <View
+                      key={item.key}
+                      style={[
+                        styles.heroPeriodItem,
+                        {
+                          backgroundColor: theme.surfaceMuted,
+                          borderColor: theme.borderSubtle,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.heroPeriodLabel, { color: theme.text.muted }]}>
+                        {item.label}
+                      </Text>
+
+                      <View style={[styles.heroPeriodBadge, { backgroundColor: bg }]}>
+                        {hasPct && (
+                          isPos ? (
+                            <TrendingUp size={11} color={color} style={{ marginRight: 2 }} />
                           ) : (
-                            <TrendingDown size={12} color={profitColor} />
-                          )}
-                          <Text style={[styles.periodPct, { color: profitColor }]}>
-                            {showValues ? formatPercent(card.pct) : '••••'}
-                          </Text>
-                        </View>
+                            <TrendingDown size={11} color={color} style={{ marginRight: 2 }} />
+                          )
+                        )}
+                        <Text style={[styles.heroPeriodPct, { color }]}>
+                          {hasPct && showValues ? formatPercent(item.pct) : (hasPct ? '••••' : '%0.00')}
+                        </Text>
+                      </View>
+
+                      {item.amt !== null && item.amt !== undefined && (
+                        <Text style={[styles.heroPeriodAmt, { color: theme.text.muted }]}>
+                          {showValues ? formatCurrency(item.amt, currency) : '••••'}
+                        </Text>
                       )}
                     </View>
-
-                    {card.amt !== null && card.amt !== undefined && (
-                      <Text style={[styles.periodAmt, { color: theme.text.secondary }]}>
-                        {showValues ? formatCurrency(card.amt, currency) : '••••'}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
-            </ScrollView>
+                  );
+                })}
+              </ScrollView>
+            </View>
           </View>
 
-          {/* 4. VARLIK DAĞILIMI (ASSET ALLOCATION) */}
+          {/* 3. VARLIK DAĞILIMI (ASSET ALLOCATION) */}
           <View
             style={[
               styles.sectionCard,
@@ -377,7 +383,7 @@ export default function DashboardScreen() {
             )}
           </View>
 
-          {/* 5. TEK SATIR KOMPAKT AÇIK POZİSYONLAR */}
+          {/* 4. AÇIK POZİSYONLAR (GÜNCEL FİYAT, GÜNLÜK %, ADET SEMBOL ALTINDA) */}
           <View style={styles.categoriesContainer}>
             <Text style={[styles.categoriesMainTitle, { color: theme.text.primary }]}>
               Açık Pozisyonlar
@@ -389,7 +395,6 @@ export default function DashboardScreen() {
 
               const isCollapsed = collapsedSections[section.type];
               const sectionTotalValue = items.reduce((acc, p) => acc + p.currentValueTRY, 0);
-              const sectionTotalProfit = items.reduce((acc, p) => acc + p.profitTRY, 0);
               const badge = getAssetTypeBadgeColor(section.type);
 
               return (
@@ -435,12 +440,13 @@ export default function DashboardScreen() {
                     </View>
                   </TouchableOpacity>
 
-                  {/* Kategori İçi Tek Satır Varlık Listesi */}
+                  {/* Kategori İçi Varlık Listesi (Tek Satır: Sol: Sembol+Adet, Orta: Güncel Fiyat, Sağ: Değer+Günlük %) */}
                   {!isCollapsed && (
                     <View style={[styles.itemsList, { borderTopColor: theme.borderSubtle }]}>
                       {items.map((pos, pIdx) => {
-                        const isPosProfit = pos.profitTRY >= 0;
-                        const profitColor = isPosProfit ? theme.profit.main : theme.loss.main;
+                        const dailyPct = pos.dailyChangePct ?? 0;
+                        const isDailyPos = dailyPct >= 0;
+                        const dailyColor = isDailyPos ? theme.profit.main : theme.loss.main;
 
                         return (
                           <TouchableOpacity
@@ -452,35 +458,47 @@ export default function DashboardScreen() {
                             onPress={() => router.push(`/asset/${pos.symbol}` as any)}
                             activeOpacity={0.7}
                           >
-                            {/* Sol: Sembol */}
-                            <View style={styles.rowLeft}>
-                              <Text style={[styles.rowSymbol, { color: theme.text.primary }]}>
-                                {pos.symbol}
-                              </Text>
-                              {pos.currency !== 'TRY' && (
-                                <View style={[styles.currencyTag, { backgroundColor: theme.surfaceMuted }]}>
-                                  <Text style={[styles.currencyTagText, { color: theme.text.muted }]}>
-                                    {pos.currency}
-                                  </Text>
-                                </View>
-                              )}
-                            </View>
-
-                            {/* Orta: Adet @ Güncel Fiyat */}
-                            <View style={styles.rowCenter}>
-                              <Text style={[styles.rowQtyPrice, { color: theme.text.muted }]}>
-                                {pos.quantity.toLocaleString('tr-TR')} adet @ {formatCurrency(pos.currentPriceTRY, currency)}
+                            {/* Sol: Üstte Sembol, Altta Adet */}
+                            <View style={styles.colLeft}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Text style={[styles.symbolText, { color: theme.text.primary }]}>
+                                  {pos.symbol}
+                                </Text>
+                                {pos.currency !== 'TRY' && (
+                                  <View style={[styles.currencyTag, { backgroundColor: theme.surfaceMuted }]}>
+                                    <Text style={[styles.currencyTagText, { color: theme.text.muted }]}>
+                                      {pos.currency}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                              <Text style={[styles.qtyText, { color: theme.text.muted }]}>
+                                {pos.quantity.toLocaleString('tr-TR')} Adet
                               </Text>
                             </View>
 
-                            {/* Sağ: Toplam Değer & Kâr/Zarar % */}
-                            <View style={styles.rowRight}>
-                              <Text style={[styles.rowValue, { color: theme.text.primary }]}>
+                            {/* Orta: Güncel Fiyat */}
+                            <View style={styles.colCenter}>
+                              <Text style={[styles.centerPrice, { color: theme.text.secondary }]}>
+                                {formatCurrency(pos.currentPriceTRY, currency)}
+                              </Text>
+                            </View>
+
+                            {/* Sağ: Üstte Toplam Değer, Altta Günlük % Değişim */}
+                            <View style={styles.colRight}>
+                              <Text style={[styles.rightValue, { color: theme.text.primary }]}>
                                 {showValues ? formatCurrency(pos.currentValueTRY, currency) : '••••••'}
                               </Text>
-                              <Text style={[styles.rowProfit, { color: profitColor }]}>
-                                {showValues ? formatPercent(pos.profitRate) : '••••'}
-                              </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 1 }}>
+                                {isDailyPos ? (
+                                  <TrendingUp size={10} color={dailyColor} />
+                                ) : (
+                                  <TrendingDown size={10} color={dailyColor} />
+                                )}
+                                <Text style={[styles.dailyPctText, { color: dailyColor }]}>
+                                  {showValues ? formatPercent(dailyPct) : '••••'}
+                                </Text>
+                              </View>
                             </View>
                           </TouchableOpacity>
                         );
@@ -560,62 +578,71 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    paddingBottom: 32,
+    paddingBottom: 36,
     gap: 12,
   },
-  netWorthCard: {
+  unifiedHeroCard: {
     borderRadius: 14,
-    padding: 16,
     borderWidth: 1,
+    overflow: 'hidden',
   },
-  netWorthLabel: {
+  heroTop: {
+    padding: 16,
+    paddingBottom: 14,
+  },
+  heroHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroLabel: {
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.6,
   },
-  netWorthValue: {
-    fontSize: 26,
+  heroDate: {
+    fontSize: 10,
+  },
+  heroMainValue: {
+    fontSize: 28,
     fontWeight: '900',
-    marginTop: 4,
+    marginTop: 6,
     letterSpacing: -0.5,
   },
-  periodReturnsSection: {
-    marginHorizontal: -14,
+  heroBottom: {
+    borderTopWidth: 1,
+    paddingVertical: 10,
   },
-  periodScroll: {
-    paddingHorizontal: 14,
+  heroPeriodScroll: {
+    paddingHorizontal: 12,
     gap: 8,
   },
-  periodCard: {
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+  heroPeriodItem: {
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderWidth: 1,
-    minWidth: 105,
+    minWidth: 95,
   },
-  periodLabel: {
+  heroPeriodLabel: {
     fontSize: 10,
     fontWeight: '600',
     marginBottom: 4,
   },
-  periodRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  periodBadge: {
+  heroPeriodBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
-    gap: 3,
+    alignSelf: 'flex-start',
   },
-  periodPct: {
+  heroPeriodPct: {
     fontSize: 11,
     fontWeight: '800',
   },
-  periodAmt: {
-    fontSize: 10,
+  heroPeriodAmt: {
+    fontSize: 9,
     fontWeight: '500',
     marginTop: 3,
   },
@@ -733,15 +760,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    width: '28%',
+  colLeft: {
+    width: '32%',
   },
-  rowSymbol: {
-    fontSize: 13,
+  symbolText: {
+    fontSize: 14,
     fontWeight: '800',
+  },
+  qtyText: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
   },
   currencyTag: {
     paddingHorizontal: 4,
@@ -752,26 +781,25 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '700',
   },
-  rowCenter: {
+  colCenter: {
     flex: 1,
-    paddingHorizontal: 4,
+    alignItems: 'center',
   },
-  rowQtyPrice: {
-    fontSize: 11,
-    fontWeight: '500',
+  centerPrice: {
+    fontSize: 12,
+    fontWeight: '600',
   },
-  rowRight: {
+  colRight: {
     alignItems: 'flex-end',
-    width: '32%',
+    width: '34%',
   },
-  rowValue: {
+  rightValue: {
     fontSize: 13,
     fontWeight: '800',
   },
-  rowProfit: {
+  dailyPctText: {
     fontSize: 10,
     fontWeight: '700',
-    marginTop: 1,
   },
   centerLoading: {
     flex: 1,
