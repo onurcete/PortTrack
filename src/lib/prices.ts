@@ -222,10 +222,16 @@ export async function fetchYahooHistory(
 ): Promise<PricePoint[]> {
   const period1 = Math.floor(from.getTime() / 1000);
   const period2 = Math.floor(Date.now() / 1000);
-  const r = await yahooChart(
+  let r = await yahooChart(
     symbol,
     `interval=1d&period1=${period1}&period2=${period2}`,
   );
+  if (!r?.timestamp || r.timestamp.length === 0) {
+    r = await yahooChart(symbol, `interval=1d&range=1y`);
+  }
+  if (!r?.timestamp || r.timestamp.length === 0) {
+    r = await yahooChart(symbol, `interval=1d&range=2y`);
+  }
   if (!r?.timestamp) return [];
   const closes =
     r.indicators?.quote?.[0]?.close ??
