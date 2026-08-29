@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,9 +18,10 @@ import {
   Layers,
   Activity,
   Calendar,
+  Users,
   Sparkles,
-  ShieldCheck,
-  Zap,
+  BarChart2,
+  ChevronRight,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
@@ -33,17 +35,44 @@ import {
 import { useThemeStore } from '../../stores/themeStore';
 import { PortfolioPosition, Transaction, TechnicalSignal } from '../../types';
 
+interface PricePoint {
+  date: string;
+  closeTRY: number;
+  closeUSD: number;
+  closeNative: number;
+  investors?: number | null;
+}
+
+interface MonthlyPerformanceItem {
+  month: string;
+  label: string;
+  returnTRY: number;
+  returnUSD: number;
+}
+
+interface TefasStats {
+  latest: number | null;
+  priorWeek: number | null;
+  weekDelta: number | null;
+  weekDeltaPct: number | null;
+  trend4w: 'up' | 'down' | 'flat' | 'unknown';
+}
+
 export default function AssetDetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
   const router = useRouter();
   const { theme } = useThemeStore();
 
   const [activeTab, setActiveTab] = useState<'details' | 'technical'>('details');
+  const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | '1Y'>('3M');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [position, setPosition] = useState<PortfolioPosition | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [technical, setTechnical] = useState<TechnicalSignal | null>(null);
+  const [history, setHistory] = useState<PricePoint[]>([]);
+  const [monthlyPerformance, setMonthlyPerformance] = useState<MonthlyPerformanceItem[]>([]);
+  const [tefasStats, setTefasStats] = useState<TefasStats | null>(null);
 
   const fetchAssetData = useCallback(async () => {
     if (!symbol) return;
@@ -52,12 +81,18 @@ export default function AssetDetailScreen() {
         position: PortfolioPosition | null;
         transactions: Transaction[];
         technical: TechnicalSignal | null;
+        history: PricePoint[];
+        monthlyPerformance: MonthlyPerformanceItem[];
+        tefasStats: TefasStats | null;
       }>(`/portfolio/asset?symbol=${symbol}`);
 
       if (res.data) {
         if (res.data.position) setPosition(res.data.position);
         if (res.data.transactions) setTransactions(res.data.transactions);
         if (res.data.technical) setTechnical(res.data.technical);
+        if (res.data.history) setHistory(res.data.history);
+        if (res.data.monthlyPerformance) setMonthlyPerformance(res.data.monthlyPerformance);
+        if (res.data.tefasStats) setTefasStats(res.data.tefasStats);
       }
     } catch (err) {
       console.error('Varlık detayı hatası:', err);
@@ -75,6 +110,37 @@ export default function AssetDetailScreen() {
     setRefreshing(true);
     await fetchAssetData();
   }, [fetchAssetData]);
+
+  // Filtrelenmiş fiyat geçmişi
+  const filteredHistory = useMemo(() => {
+    if (!history || history.length === 0) return [];
+    const now = new Date();
+    const days = timeframe === '1M' ? 30 : timeframe === '3M' ? 90 : timeframe === '6M' ? 180 : 365;
+    const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    return history.filter((h) => new Date(h.date) >= cutoff);
+  }, [history, timeframe]);
+
+  // Mini Grafik Min/Max & Noktalar
+  const chartPoints = useMemo(() => {
+    if (filteredHistory.length < 2) return null;
+    const prices = filteredHistory.map((h) => h.closeTRY);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min || 1;
+    const first = prices[0];
+    const last = prices[prices.length - 1];
+    const diffPct = first > 0 ? ((last - first) / first) * 100 : 0;
+
+    return {
+      min,
+      max,
+      range,
+      first,
+      last,
+      diffPct,
+      prices,
+    };
+  }, [filteredHistory]);
 
   const badge = position ? getAssetTypeBadgeColor(position.assetType) : null;
   const isProfit = (position?.profitTRY ?? 0) >= 0;
@@ -113,7 +179,7 @@ export default function AssetDetailScreen() {
         <View style={{ width: 34 }} />
       </View>
 
-      {/* 2. İKİ SEÇENEKLİ SEKME MENÜSÜ (Varlık & Pozisyon / Teknik Analiz) */}
+      {/* 2. İKİ SEÇENEKLİ SEKME MENÜSÜ */}
       <View style={[styles.tabsBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={[
@@ -267,9 +333,236 @@ export default function AssetDetailScreen() {
                 </View>
               </View>
 
-              {/* 5. BU VARLIĞA AİT İŞLEM GEÇMİŞİ TABLOSU */}
+              {/* 5. FİYAT GEÇMİŞİ GRAFİĞİ & ZAMAN DİLİMİ BUTONLARI */}
               <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderRow}>
+                  <View>
+                    <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+                      Fiyat Grafiği
+                    </Text>
+                    {chartPoints && (
+                      <Text
+                        style={[
+                          styles.chartPeriodChange,
+                          {
+                            color:
+                              chartPoints.diffPct >= 0 ? theme.profit.main : theme.loss.main,
+                          },
+                        ]}
+                      >
+                        {formatPercent(chartPoints.diffPct)} ({timeframe})
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Zaman Dilimi Seçici */}
+                  <View
+                    style={[
+                      styles.timeframeBar,
+                      { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                    ]}
+                  >
+                    {(['1M', '3M', '6M', '1Y'] as const).map((tf) => (
+                      <TouchableOpacity
+                        key={tf}
+                        style={[
+                          styles.tfBtn,
+                          timeframe === tf && [
+                            styles.activeTfBtn,
+                            { backgroundColor: theme.surface },
+                          ],
+                        ]}
+                        onPress={() => setTimeframe(tf)}
+                      >
+                        <Text
+                          style={[
+                            styles.tfText,
+                            {
+                              color:
+                                timeframe === tf ? theme.brand.primary : theme.text.muted,
+                            },
+                            timeframe === tf && styles.activeTfText,
+                          ]}
+                        >
+                          {tf}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Görsel Trend Çizgisi */}
+                {chartPoints && chartPoints.prices.length >= 2 ? (
+                  <View style={styles.chartArea}>
+                    <View style={styles.chartBarsContainer}>
+                      {chartPoints.prices.map((p, idx) => {
+                        const normalizedHeight = Math.max(
+                          6,
+                          Math.min(80, ((p - chartPoints.min) / chartPoints.range) * 80)
+                        );
+                        const isUp = chartPoints.diffPct >= 0;
+                        return (
+                          <View
+                            key={`bar-${idx}`}
+                            style={[
+                              styles.chartBar,
+                              {
+                                height: normalizedHeight,
+                                backgroundColor: isUp
+                                  ? theme.profit.main
+                                  : theme.loss.main,
+                                opacity: 0.4 + (idx / chartPoints.prices.length) * 0.6,
+                              },
+                            ]}
+                          />
+                        );
+                      })}
+                    </View>
+
+                    {/* Min - Max Fiyat Etiketleri */}
+                    <View style={styles.chartRangeRow}>
+                      <Text style={[styles.rangeLabel, { color: theme.text.muted }]}>
+                        Düşük: {formatCurrency(chartPoints.min)}
+                      </Text>
+                      <Text style={[styles.rangeLabel, { color: theme.text.muted }]}>
+                        Yüksek: {formatCurrency(chartPoints.max)}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.emptyChartBox}>
+                    <Text style={[styles.emptyText, { color: theme.text.muted }]}>
+                      Bu aralık için fiyat geçmişi yükleniyor...
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* 6. YATIRIMCI SAYISI & FON BİLGİSİ (Varsa / TEFAS için) */}
+              {tefasStats?.latest != null && (
+                <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <View style={styles.sectionHeaderRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Users size={16} color={theme.brand.primary} />
+                      <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+                        Fon Yatırımcı Sayısı
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.trendTag,
+                        {
+                          backgroundColor:
+                            tefasStats.trend4w === 'up'
+                              ? theme.profit.soft
+                              : tefasStats.trend4w === 'down'
+                              ? theme.loss.soft
+                              : theme.surfaceMuted,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.trendTagText,
+                          {
+                            color:
+                              tefasStats.trend4w === 'up'
+                                ? theme.profit.main
+                                : tefasStats.trend4w === 'down'
+                                ? theme.loss.main
+                                : theme.text.muted,
+                          },
+                        ]}
+                      >
+                        {tefasStats.trend4w === 'up'
+                          ? 'Yükseliş Trendi'
+                          : tefasStats.trend4w === 'down'
+                          ? 'Düşüş Trendi'
+                          : 'Yatay'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.investorStatsRow}>
+                    <View style={styles.investorStatCell}>
+                      <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>
+                        Toplam Yatırımcı
+                      </Text>
+                      <Text style={[styles.investorBigNum, { color: theme.text.primary }]}>
+                        {formatQuantity(tefasStats.latest)} <Text style={{ fontSize: 11, color: theme.text.muted }}>Kişi</Text>
+                      </Text>
+                    </View>
+
+                    <View style={styles.investorStatCell}>
+                      <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>
+                        Haftalık Değişim
+                      </Text>
+                      <Text
+                        style={[
+                          styles.investorDeltaNum,
+                          {
+                            color:
+                              (tefasStats.weekDelta ?? 0) >= 0
+                                ? theme.profit.main
+                                : theme.loss.main,
+                          },
+                        ]}
+                      >
+                        {(tefasStats.weekDelta ?? 0) >= 0 ? '+' : ''}
+                        {formatQuantity(tefasStats.weekDelta)} ({formatPercent(tefasStats.weekDeltaPct)})
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* 7. SON 1 YILLIK AYLIK PERFORMANS LİSTESİ / ISI HARİTASI */}
+              {monthlyPerformance && monthlyPerformance.length > 0 && (
+                <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <View style={styles.sectionHeaderRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <BarChart2 size={16} color={theme.brand.primary} />
+                      <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+                        Son 1 Yıllık Aylık Performans
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.monthlyGrid}>
+                    {monthlyPerformance.map((item) => {
+                      const isPos = item.returnTRY >= 0;
+                      return (
+                        <View
+                          key={item.month}
+                          style={[
+                            styles.monthlyCell,
+                            {
+                              backgroundColor: isPos ? theme.profit.soft : theme.loss.soft,
+                              borderColor: theme.borderSubtle,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.monthlyLabel, { color: theme.text.muted }]}>
+                            {item.label}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.monthlyPct,
+                              { color: isPos ? theme.profit.main : theme.loss.main },
+                            ]}
+                          >
+                            {formatPercent(item.returnTRY)}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* 8. İŞLEM GEÇMİŞİ */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <View style={styles.sectionHeaderRow}>
                   <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>İşlem Geçmişi</Text>
                   <Text style={[styles.sectionCount, { color: theme.text.muted }]}>
                     {transactions.length} İşlem
@@ -577,14 +870,121 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
   },
-  sectionHeader: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  chartPeriodChange: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  timeframeBar: {
+    flexDirection: 'row',
+    padding: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  tfBtn: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  activeTfBtn: {
+    shadowOpacity: 0.1,
+  },
+  tfText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  activeTfText: {
+    fontWeight: '800',
+  },
+  chartArea: {
+    paddingTop: 8,
+    gap: 8,
+  },
+  chartBarsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 85,
+    paddingHorizontal: 4,
+  },
+  chartBar: {
+    flex: 1,
+    marginHorizontal: 1,
+    borderRadius: 2,
+  },
+  chartRangeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    paddingTop: 4,
+  },
+  rangeLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+  },
+  emptyChartBox: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  trendTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  trendTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  investorStatsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  investorStatCell: {
+    flex: 1,
+  },
+  investorBigNum: {
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  investorDeltaNum: {
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 3,
+  },
+  monthlyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  monthlyCell: {
+    width: '31.8%',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  monthlyLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  monthlyPct: {
+    fontSize: 11,
     fontWeight: '800',
   },
   sectionCount: {
