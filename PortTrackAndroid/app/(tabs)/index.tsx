@@ -24,7 +24,13 @@ import {
   TrendingDown,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
-import { formatCurrency, formatPercent, formatQuantity, getAssetTypeLabel, getAssetTypeBadgeColor } from '../../utils/formatters';
+import {
+  formatCurrency,
+  formatPercent,
+  formatQuantity,
+  getAssetTypeLabel,
+  getAssetTypeBadgeColor,
+} from '../../utils/formatters';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { PortfolioSummary, PortfolioPosition, AssetType } from '../../types';
@@ -101,8 +107,8 @@ export default function DashboardScreen() {
   const pReturns = portfolio?.periodReturns;
   const isTRY = currency === 'TRY';
 
-  // Dönemsel Kart Listesi
-  const periodMetrics = [
+  // 2x2 Grid için 4 Ana Dönemsel Getiri
+  const gridPeriods = [
     {
       key: '5d',
       label: 'Son 5 Gün',
@@ -114,12 +120,6 @@ export default function DashboardScreen() {
       label: 'Bu Ay (MTD)',
       pct: isTRY ? pReturns?.mtdTRY : pReturns?.mtdUSD,
       amt: isTRY ? pReturns?.mtdAmtTRY : pReturns?.mtdAmtUSD,
-    },
-    {
-      key: '1m',
-      label: 'Son 1 Ay',
-      pct: isTRY ? pReturns?.monthlyTRY : pReturns?.monthlyUSD,
-      amt: isTRY ? pReturns?.monthlyAmtTRY : pReturns?.monthlyAmtUSD,
     },
     {
       key: 'ytd',
@@ -232,7 +232,7 @@ export default function DashboardScreen() {
             />
           }
         >
-          {/* 2. BİRLEŞİK TEK BÜTÜN HERO KART (TOPLAM PORTFÖY + DÖNEMSEL GETİRİLER) */}
+          {/* 2. BİRLEŞİK TEK BÜTÜN HERO KART (TOPLAM PORTFÖY + 2x2 DÖNEMSEL GETİRİLER) */}
           <View
             style={[
               styles.unifiedHeroCard,
@@ -250,10 +250,10 @@ export default function DashboardScreen() {
                 </Text>
                 <Text style={[styles.heroDate, { color: theme.text.muted }]}>
                   {portfolio?.lastUpdated
-                    ? new Date(portfolio.lastUpdated).toLocaleTimeString('tr-TR', {
+                    ? `Son: ${new Date(portfolio.lastUpdated).toLocaleTimeString('tr-TR', {
                         hour: '2-digit',
                         minute: '2-digit',
-                      })
+                      })}`
                     : ''}
                 </Text>
               </View>
@@ -263,14 +263,10 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
-            {/* Alt Kısım: Dönemsel Getiriler (Son 5 Gün, MTD, 1 Ay, YTD, 1 Yıl) */}
-            <View style={[styles.heroBottom, { borderTopColor: theme.borderSubtle }]}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.heroPeriodScroll}
-              >
-                {periodMetrics.map((item) => {
+            {/* Alt Kısım: 2x2 İKİ SATIR BİRLEŞİK DÖNEMSEL GETİRİLER */}
+            <View style={[styles.heroGridContainer, { borderTopColor: theme.borderSubtle }]}>
+              <View style={styles.heroGridRow}>
+                {gridPeriods.slice(0, 2).map((item) => {
                   const hasPct = item.pct !== null && item.pct !== undefined;
                   const isPos = (item.pct ?? 0) >= 0;
                   const color = hasPct ? (isPos ? theme.profit.main : theme.loss.main) : theme.text.muted;
@@ -280,39 +276,86 @@ export default function DashboardScreen() {
                     <View
                       key={item.key}
                       style={[
-                        styles.heroPeriodItem,
+                        styles.heroGridCell,
                         {
                           backgroundColor: theme.surfaceMuted,
                           borderColor: theme.borderSubtle,
                         },
                       ]}
                     >
-                      <Text style={[styles.heroPeriodLabel, { color: theme.text.muted }]}>
-                        {item.label}
-                      </Text>
-
-                      <View style={[styles.heroPeriodBadge, { backgroundColor: bg }]}>
-                        {hasPct && (
-                          isPos ? (
-                            <TrendingUp size={11} color={color} style={{ marginRight: 2 }} />
-                          ) : (
-                            <TrendingDown size={11} color={color} style={{ marginRight: 2 }} />
-                          )
-                        )}
-                        <Text style={[styles.heroPeriodPct, { color }]}>
-                          {hasPct && showValues ? formatPercent(item.pct) : (hasPct ? '••••' : '%0.00')}
+                      <View style={styles.gridCellTop}>
+                        <Text style={[styles.gridCellLabel, { color: theme.text.muted }]}>
+                          {item.label}
                         </Text>
+                        <View style={[styles.gridBadge, { backgroundColor: bg }]}>
+                          {hasPct && (
+                            isPos ? (
+                              <TrendingUp size={10} color={color} style={{ marginRight: 2 }} />
+                            ) : (
+                              <TrendingDown size={10} color={color} style={{ marginRight: 2 }} />
+                            )
+                          )}
+                          <Text style={[styles.gridPctText, { color }]}>
+                            {hasPct && showValues ? formatPercent(item.pct) : (hasPct ? '••••' : '%0,00')}
+                          </Text>
+                        </View>
                       </View>
 
                       {item.amt !== null && item.amt !== undefined && (
-                        <Text style={[styles.heroPeriodAmt, { color: theme.text.muted }]}>
+                        <Text style={[styles.gridAmtText, { color: theme.text.primary }]}>
                           {showValues ? formatCurrency(item.amt, currency) : '••••'}
                         </Text>
                       )}
                     </View>
                   );
                 })}
-              </ScrollView>
+              </View>
+
+              <View style={styles.heroGridRow}>
+                {gridPeriods.slice(2, 4).map((item) => {
+                  const hasPct = item.pct !== null && item.pct !== undefined;
+                  const isPos = (item.pct ?? 0) >= 0;
+                  const color = hasPct ? (isPos ? theme.profit.main : theme.loss.main) : theme.text.muted;
+                  const bg = hasPct ? (isPos ? theme.profit.soft : theme.loss.soft) : theme.surfaceMuted;
+
+                  return (
+                    <View
+                      key={item.key}
+                      style={[
+                        styles.heroGridCell,
+                        {
+                          backgroundColor: theme.surfaceMuted,
+                          borderColor: theme.borderSubtle,
+                        },
+                      ]}
+                    >
+                      <View style={styles.gridCellTop}>
+                        <Text style={[styles.gridCellLabel, { color: theme.text.muted }]}>
+                          {item.label}
+                        </Text>
+                        <View style={[styles.gridBadge, { backgroundColor: bg }]}>
+                          {hasPct && (
+                            isPos ? (
+                              <TrendingUp size={10} color={color} style={{ marginRight: 2 }} />
+                            ) : (
+                              <TrendingDown size={10} color={color} style={{ marginRight: 2 }} />
+                            )
+                          )}
+                          <Text style={[styles.gridPctText, { color }]}>
+                            {hasPct && showValues ? formatPercent(item.pct) : (hasPct ? '••••' : '%0,00')}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {item.amt !== null && item.amt !== undefined && (
+                        <Text style={[styles.gridAmtText, { color: theme.text.primary }]}>
+                          {showValues ? formatCurrency(item.amt, currency) : '••••'}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           </View>
 
@@ -383,7 +426,7 @@ export default function DashboardScreen() {
             )}
           </View>
 
-          {/* 4. AÇIK POZİSYONLAR (GÜNCEL FİYAT, GÜNLÜK %, ADET SEMBOL ALTINDA) */}
+          {/* 4. AÇIK POZİSYONLAR (GÜNLÜK % AYRI KOLON, TOTAL TUTAR ALTINDA TOTAL % K/Z) */}
           <View style={styles.categoriesContainer}>
             <Text style={[styles.categoriesMainTitle, { color: theme.text.primary }]}>
               Açık Pozisyonlar
@@ -440,13 +483,48 @@ export default function DashboardScreen() {
                     </View>
                   </TouchableOpacity>
 
-                  {/* Kategori İçi Varlık Listesi (Tek Satır: Sol: Sembol+Adet, Orta: Güncel Fiyat, Sağ: Değer+Günlük %) */}
+                  {/* Kategori İçi Tablo Başlıkları & Varlık Listesi */}
                   {!isCollapsed && (
                     <View style={[styles.itemsList, { borderTopColor: theme.borderSubtle }]}>
+                      {/* Küçük Tablo Başlık Çubuğu */}
+                      <View style={[styles.tableSubHeader, { backgroundColor: theme.surfaceMuted }]}>
+                        <Text style={[styles.thText, { width: '28%', color: theme.text.muted }]}>
+                          Varlık / Adet
+                        </Text>
+                        <Text
+                          style={[
+                            styles.thText,
+                            { width: '22%', textAlign: 'center', color: theme.text.muted },
+                          ]}
+                        >
+                          Fiyat
+                        </Text>
+                        <Text
+                          style={[
+                            styles.thText,
+                            { width: '20%', textAlign: 'center', color: theme.text.muted },
+                          ]}
+                        >
+                          Günlük %
+                        </Text>
+                        <Text
+                          style={[
+                            styles.thText,
+                            { width: '30%', textAlign: 'right', color: theme.text.muted },
+                          ]}
+                        >
+                          Tutar / Toplam K/Z
+                        </Text>
+                      </View>
+
+                      {/* Varlık Satırları */}
                       {items.map((pos, pIdx) => {
                         const dailyPct = pos.dailyChangePct ?? 0;
                         const isDailyPos = dailyPct >= 0;
                         const dailyColor = isDailyPos ? theme.profit.main : theme.loss.main;
+
+                        const isTotalPos = pos.profitRate >= 0;
+                        const totalProfitColor = isTotalPos ? theme.profit.main : theme.loss.main;
 
                         return (
                           <TouchableOpacity
@@ -458,9 +536,9 @@ export default function DashboardScreen() {
                             onPress={() => router.push(`/asset/${pos.symbol}` as any)}
                             activeOpacity={0.7}
                           >
-                            {/* Sol: Üstte Sembol, Altta Adet */}
-                            <View style={styles.colLeft}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            {/* Kolon 1: Üstte Sembol, Altta Adet */}
+                            <View style={styles.colAsset}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                                 <Text style={[styles.symbolText, { color: theme.text.primary }]}>
                                   {pos.symbol}
                                 </Text>
@@ -477,28 +555,40 @@ export default function DashboardScreen() {
                               </Text>
                             </View>
 
-                            {/* Orta: Güncel Fiyat */}
-                            <View style={styles.colCenter}>
+                            {/* Kolon 2: Güncel Birim Fiyat */}
+                            <View style={styles.colPrice}>
                               <Text style={[styles.centerPrice, { color: theme.text.secondary }]}>
                                 {formatCurrency(pos.currentPriceTRY, currency)}
                               </Text>
                             </View>
 
-                            {/* Sağ: Üstte Toplam Değer, Altta Günlük % Değişim */}
-                            <View style={styles.colRight}>
-                              <Text style={[styles.rightValue, { color: theme.text.primary }]}>
-                                {showValues ? formatCurrency(pos.currentValueTRY, currency) : '••••••'}
-                              </Text>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 1 }}>
+                            {/* Kolon 3: Günlük % Değişimi (Ayrı Kolon) */}
+                            <View style={styles.colDaily}>
+                              <View
+                                style={[
+                                  styles.dailyPill,
+                                  { backgroundColor: isDailyPos ? theme.profit.soft : theme.loss.soft },
+                                ]}
+                              >
                                 {isDailyPos ? (
-                                  <TrendingUp size={10} color={dailyColor} />
+                                  <TrendingUp size={9} color={dailyColor} />
                                 ) : (
-                                  <TrendingDown size={10} color={dailyColor} />
+                                  <TrendingDown size={9} color={dailyColor} />
                                 )}
                                 <Text style={[styles.dailyPctText, { color: dailyColor }]}>
                                   {showValues ? formatPercent(dailyPct) : '••••'}
                                 </Text>
                               </View>
+                            </View>
+
+                            {/* Kolon 4: Üstte Total Tutar, Altta Total % K/Z */}
+                            <View style={styles.colTotal}>
+                              <Text style={[styles.rightValue, { color: theme.text.primary }]}>
+                                {showValues ? formatCurrency(pos.currentValueTRY, currency) : '••••••'}
+                              </Text>
+                              <Text style={[styles.totalProfitPctText, { color: totalProfitColor }]}>
+                                {showValues ? formatPercent(pos.profitRate) : '••••'}
+                              </Text>
                             </View>
                           </TouchableOpacity>
                         );
@@ -588,7 +678,7 @@ const styles = StyleSheet.create({
   },
   heroTop: {
     padding: 16,
-    paddingBottom: 14,
+    paddingBottom: 12,
   },
   heroHeaderRow: {
     flexDirection: 'row',
@@ -609,42 +699,46 @@ const styles = StyleSheet.create({
     marginTop: 6,
     letterSpacing: -0.5,
   },
-  heroBottom: {
+  heroGridContainer: {
     borderTopWidth: 1,
-    paddingVertical: 10,
-  },
-  heroPeriodScroll: {
-    paddingHorizontal: 12,
+    padding: 10,
     gap: 8,
   },
-  heroPeriodItem: {
+  heroGridRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  heroGridCell: {
+    flex: 1,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
-    minWidth: 95,
   },
-  heroPeriodLabel: {
-    fontSize: 10,
-    fontWeight: '600',
+  gridCellTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  heroPeriodBadge: {
+  gridCellLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  gridBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 1.5,
     borderRadius: 4,
-    alignSelf: 'flex-start',
   },
-  heroPeriodPct: {
-    fontSize: 11,
+  gridPctText: {
+    fontSize: 10,
     fontWeight: '800',
   },
-  heroPeriodAmt: {
-    fontSize: 9,
-    fontWeight: '500',
-    marginTop: 3,
+  gridAmtText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   sectionCard: {
     borderRadius: 14,
@@ -752,54 +846,82 @@ const styles = StyleSheet.create({
   itemsList: {
     borderTopWidth: 1,
   },
+  tableSubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  thText: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
   singleRowAsset: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
-  colLeft: {
-    width: '32%',
+  colAsset: {
+    width: '28%',
   },
   symbolText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
   },
   qtyText: {
     fontSize: 10,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 1,
   },
   currencyTag: {
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingHorizontal: 3,
+    paddingVertical: 0.5,
     borderRadius: 3,
   },
   currencyTagText: {
     fontSize: 8,
     fontWeight: '700',
   },
-  colCenter: {
-    flex: 1,
+  colPrice: {
+    width: '22%',
     alignItems: 'center',
   },
   centerPrice: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
-  colRight: {
+  colDaily: {
+    width: '20%',
+    alignItems: 'center',
+  },
+  dailyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    gap: 1.5,
+  },
+  dailyPctText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  colTotal: {
     alignItems: 'flex-end',
-    width: '34%',
+    width: '30%',
   },
   rightValue: {
     fontSize: 13,
     fontWeight: '800',
   },
-  dailyPctText: {
+  totalProfitPctText: {
     fontSize: 10,
     fontWeight: '700',
+    marginTop: 1,
   },
   centerLoading: {
     flex: 1,
