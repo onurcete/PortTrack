@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, AUTH_COOKIE } from "@/lib/auth";
 import { getPortfolio } from "@/lib/data";
+import { getPeriodReturns } from "@/lib/history";
 
 export const runtime = "nodejs";
 
@@ -22,7 +22,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Yetkisiz erişim." }, { status: 401 });
     }
 
-    const portfolio = await getPortfolio(userId);
+    const [portfolio, periodReturns] = await Promise.all([
+      getPortfolio(userId),
+      getPeriodReturns(userId).catch(() => null),
+    ]);
 
     // Günlük değişim hesaplaması
     let dailyChangeTRY = 0;
@@ -71,6 +74,7 @@ export async function GET(req: NextRequest) {
       totalProfitPercent: portfolio.totals.unrealizedPctTRY,
       dailyChangeTRY,
       dailyChangePercent,
+      periodReturns,
       positions: formattedPositions,
       assetBreakdown,
       lastUpdated: portfolio.lastUpdated,

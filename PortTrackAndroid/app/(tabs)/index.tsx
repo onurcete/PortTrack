@@ -12,38 +12,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   Wallet,
-  TrendingUp,
-  TrendingDown,
   Eye,
   EyeOff,
-  Plus,
   RefreshCw,
-  Sparkles,
-  ChevronRight,
-  ShieldCheck,
   Coins,
   ChevronDown,
   Layers,
+  Sun,
+  Moon,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react-native';
-import { colors } from '../../theme/colors';
 import { api } from '../../services/api';
 import { formatCurrency, formatPercent, getAssetTypeLabel, getAssetTypeBadgeColor } from '../../utils/formatters';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
 import { PortfolioSummary, PortfolioPosition, AssetType } from '../../types';
 
 const SECTION_ORDER: { type: AssetType; label: string }[] = [
-  { type: 'TEFAS', label: 'Yatırım Fonları (TEFAS)' },
+  { type: 'TEFAS', label: 'Yatırım Fonları' },
   { type: 'FOREIGN', label: 'Yabancı Hisseler' },
   { type: 'BIST', label: 'BIST Hisseleri' },
   { type: 'CRYPTO', label: 'Kripto Paralar' },
   { type: 'METAL', label: 'Kıymetli Madenler' },
   { type: 'FX', label: 'Döviz Varlıkları' },
-  { type: 'BES', label: 'Bireysel Emeklilik (BES)' },
+  { type: 'BES', label: 'Bireysel Emeklilik' },
 ];
 
 export default function DashboardScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const { theme, mode, toggleTheme } = useThemeStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,66 +98,118 @@ export default function DashboardScreen() {
   }, [portfolio]);
 
   const totalValue = portfolio?.totalValueTRY ?? 0;
-  const totalCost = portfolio?.totalCostTRY ?? 0;
-  const totalProfit = portfolio?.totalProfitTRY ?? 0;
-  const profitRate = portfolio?.totalProfitPercent ?? 0;
-  const dailyChange = portfolio?.dailyChangeTRY ?? 0;
-  const dailyPercent = portfolio?.dailyChangePercent ?? 0;
+  const pReturns = portfolio?.periodReturns;
 
-  const isProfit = totalProfit >= 0;
-  const isDailyPositive = dailyChange >= 0;
+  const isTRY = currency === 'TRY';
+
+  // Dönemsel Kart Listesi
+  const periodCards = [
+    {
+      key: '5d',
+      label: 'Son 5 Gün',
+      pct: isTRY ? pReturns?.weeklyTRY : pReturns?.weeklyUSD,
+      amt: isTRY ? pReturns?.weeklyAmtTRY : pReturns?.weeklyAmtUSD,
+    },
+    {
+      key: 'mtd',
+      label: 'Bu Ay (MTD)',
+      pct: isTRY ? pReturns?.mtdTRY : pReturns?.mtdUSD,
+      amt: isTRY ? pReturns?.mtdAmtTRY : pReturns?.mtdAmtUSD,
+    },
+    {
+      key: '1m',
+      label: 'Son 1 Ay',
+      pct: isTRY ? pReturns?.monthlyTRY : pReturns?.monthlyUSD,
+      amt: isTRY ? pReturns?.monthlyAmtTRY : pReturns?.monthlyAmtUSD,
+    },
+    {
+      key: 'ytd',
+      label: 'Yıl Başı (YTD)',
+      pct: isTRY ? pReturns?.ytdTRY : pReturns?.ytdUSD,
+      amt: isTRY ? pReturns?.ytdAmtTRY : pReturns?.ytdAmtUSD,
+    },
+    {
+      key: '1y',
+      label: 'Son 1 Yıl',
+      pct: isTRY ? pReturns?.oneYearTRY : pReturns?.oneYearUSD,
+      amt: null,
+    },
+  ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Web ile Paralel Üst Header */}
-      <View style={styles.topHeader}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
+      {/* 1. ÜST HEADER BAR */}
+      <View
+        style={[
+          styles.topHeader,
+          {
+            backgroundColor: theme.surface,
+            borderBottomColor: theme.border,
+          },
+        ]}
+      >
         <View style={styles.logoGroup}>
-          <View style={styles.logoIcon}>
+          <View style={[styles.logoIcon, { backgroundColor: theme.brand.primary }]}>
             <Wallet size={18} color="#ffffff" />
           </View>
           <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.brandTitle}>PortTrack</Text>
-              {user?.isDemo && (
-                <View style={styles.demoBadge}>
-                  <ShieldCheck size={10} color={colors.amber[400]} />
-                  <Text style={styles.demoBadgeText}>Demo</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.brandSubtitle}>Yatırım Takip</Text>
+            <Text style={[styles.brandTitle, { color: theme.text.primary }]}>PortTrack</Text>
+            <Text style={[styles.brandSubtitle, { color: theme.text.muted }]}>Genel Bakış</Text>
           </View>
         </View>
 
-        {/* Sağ Butonlar: Para Birimi Toggle, Gizle/Göster, Yenile */}
+        {/* Sağ Butonlar: Para Birimi, Tema Değiştirici, Gizle/Göster, Yenile */}
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={styles.currencyToggleBtn}
+            style={[
+              styles.headerBtn,
+              { backgroundColor: theme.surfaceMuted, borderColor: theme.border },
+            ]}
             onPress={() => setCurrency(currency === 'TRY' ? 'USD' : 'TRY')}
           >
-            <Coins size={14} color={colors.emerald[400]} />
-            <Text style={styles.currencyToggleText}>{currency}</Text>
+            <Coins size={13} color={theme.brand.primary} />
+            <Text style={[styles.headerBtnText, { color: theme.brand.primary }]}>{currency}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => setShowValues(!showValues)}
+            style={[
+              styles.iconBtn,
+              { backgroundColor: theme.surfaceMuted, borderColor: theme.border },
+            ]}
+            onPress={toggleTheme}
           >
-            {showValues ? (
-              <Eye size={18} color={colors.text.secondary} />
+            {mode === 'dark' ? (
+              <Sun size={16} color={theme.amber.main} />
             ) : (
-              <EyeOff size={18} color={colors.text.secondary} />
+              <Moon size={16} color={theme.brand.primary} />
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.iconBtn}
+            style={[
+              styles.iconBtn,
+              { backgroundColor: theme.surfaceMuted, borderColor: theme.border },
+            ]}
+            onPress={() => setShowValues(!showValues)}
+          >
+            {showValues ? (
+              <Eye size={16} color={theme.text.secondary} />
+            ) : (
+              <EyeOff size={16} color={theme.text.secondary} />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.iconBtn,
+              { backgroundColor: theme.surfaceMuted, borderColor: theme.border },
+            ]}
             onPress={onRefresh}
             disabled={refreshing}
           >
             <RefreshCw
-              size={18}
-              color={refreshing ? colors.emerald[400] : colors.text.secondary}
+              size={16}
+              color={refreshing ? theme.brand.primary : theme.text.secondary}
             />
           </TouchableOpacity>
         </View>
@@ -166,8 +217,8 @@ export default function DashboardScreen() {
 
       {loading ? (
         <View style={styles.centerLoading}>
-          <ActivityIndicator size="large" color={colors.emerald[400]} />
-          <Text style={styles.loadingText}>Portföy verileri yükleniyor...</Text>
+          <ActivityIndicator size="large" color={theme.brand.primary} />
+          <Text style={[styles.loadingText, { color: theme.text.muted }]}>Yükleniyor...</Text>
         </View>
       ) : (
         <ScrollView
@@ -177,111 +228,114 @@ export default function DashboardScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.emerald[400]}
-              colors={[colors.emerald[400]]}
+              tintColor={theme.brand.primary}
+              colors={[theme.brand.primary]}
             />
           }
         >
-          {/* 1. ANA KPI ÖZET KARTI (Net Worth) */}
-          <View style={styles.mainKpiCard}>
-            <View style={styles.kpiTopRow}>
-              <Text style={styles.kpiTitle}>TOPLAM PORTFÖY DEĞERİ</Text>
-              <Text style={styles.lastUpdatedText}>
-                {portfolio?.lastUpdated
-                  ? `Son: ${new Date(portfolio.lastUpdated).toLocaleTimeString('tr-TR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}`
-                  : 'Canlı'}
-              </Text>
-            </View>
-
-            <Text style={styles.kpiMainValue}>
+          {/* 2. TOPLAM PORTFÖY DEĞERİ (NET WORTH) */}
+          <View
+            style={[
+              styles.netWorthCard,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <Text style={[styles.netWorthLabel, { color: theme.text.muted }]}>
+              TOPLAM PORTFÖY DEĞERİ
+            </Text>
+            <Text style={[styles.netWorthValue, { color: theme.text.primary }]}>
               {showValues ? formatCurrency(totalValue, currency) : '•••••••• ₺'}
             </Text>
+          </View>
 
-            {/* Maliyet ve Getiri İstatistikleri */}
-            <View style={styles.statsGrid}>
-              <View style={styles.statCell}>
-                <Text style={styles.statLabel}>Toplam Yatırılan Maliyet</Text>
-                <Text style={styles.statValWhite}>
-                  {showValues ? formatCurrency(totalCost, currency) : '••••••'}
-                </Text>
-              </View>
+          {/* 3. DÖNEMSEL GETİRİLER (PERIOD RETURNS) */}
+          <View style={styles.periodReturnsSection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.periodScroll}
+            >
+              {periodCards.map((card) => {
+                const hasPct = card.pct !== null && card.pct !== undefined;
+                const isPos = (card.pct ?? 0) >= 0;
+                const profitColor = isPos ? theme.profit.main : theme.loss.main;
+                const profitBg = isPos ? theme.profit.soft : theme.loss.soft;
 
-              <View style={styles.statCell}>
-                <Text style={styles.statLabel}>Toplam Kâr / Zarar</Text>
-                <View style={styles.profitWithIcon}>
-                  {isProfit ? (
-                    <TrendingUp size={14} color={colors.emerald[400]} />
-                  ) : (
-                    <TrendingDown size={14} color={colors.rose[400]} />
-                  )}
-                  <Text
+                return (
+                  <View
+                    key={card.key}
                     style={[
-                      styles.statValProfit,
-                      { color: isProfit ? colors.emerald[400] : colors.rose[400] },
+                      styles.periodCard,
+                      {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                      },
                     ]}
                   >
-                    {showValues
-                      ? `${formatCurrency(totalProfit, currency)} (${formatPercent(profitRate)})`
-                      : '••••••'}
-                  </Text>
-                </View>
-              </View>
-            </View>
+                    <Text style={[styles.periodLabel, { color: theme.text.muted }]}>
+                      {card.label}
+                    </Text>
 
-            {/* Günlük Değişim Çubuğu */}
-            <View style={styles.dailyBar}>
-              <Text style={styles.dailyBarLabel}>Günlük Değişim:</Text>
-              <Text
-                style={[
-                  styles.dailyBarVal,
-                  { color: isDailyPositive ? colors.emerald[400] : colors.rose[400] },
-                ]}
-              >
-                {showValues
-                  ? `${formatCurrency(dailyChange, currency)} (${formatPercent(dailyPercent)})`
-                  : '••••'}
-              </Text>
-            </View>
+                    <View style={styles.periodRow}>
+                      {hasPct && (
+                        <View
+                          style={[
+                            styles.periodBadge,
+                            { backgroundColor: profitBg },
+                          ]}
+                        >
+                          {isPos ? (
+                            <TrendingUp size={12} color={profitColor} />
+                          ) : (
+                            <TrendingDown size={12} color={profitColor} />
+                          )}
+                          <Text style={[styles.periodPct, { color: profitColor }]}>
+                            {showValues ? formatPercent(card.pct) : '••••'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {card.amt !== null && card.amt !== undefined && (
+                      <Text style={[styles.periodAmt, { color: theme.text.secondary }]}>
+                        {showValues ? formatCurrency(card.amt, currency) : '••••'}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
 
-          {/* Hızlı İşlem Eylemleri */}
-          <View style={styles.quickBar}>
-            <TouchableOpacity
-              style={styles.primaryActionBtn}
-              onPress={() => router.push('/modals/add-transaction' as any)}
-            >
-              <Plus size={16} color="#ffffff" />
-              <Text style={styles.primaryActionText}>Yeni İşlem Ekle</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.secondaryActionBtn}
-              onPress={() => router.push('/(tabs)/analysis')}
-            >
-              <Sparkles size={16} color={colors.purple[400]} />
-              <Text style={styles.secondaryActionText}>AI Analizi</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* 2. VARLIK DAĞILIMI (Asset Allocation) */}
-          <View style={styles.sectionCard}>
+          {/* 4. VARLIK DAĞILIMI (ASSET ALLOCATION) */}
+          <View
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              },
+            ]}
+          >
             <View style={styles.sectionCardHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Layers size={16} color={colors.emerald[400]} />
-                <Text style={styles.sectionCardTitle}>Varlık Dağılımı</Text>
+                <Layers size={15} color={theme.brand.primary} />
+                <Text style={[styles.sectionCardTitle, { color: theme.text.primary }]}>
+                  Varlık Dağılımı
+                </Text>
               </View>
-              <Text style={styles.sectionCardCount}>
+              <Text style={[styles.sectionCardCount, { color: theme.text.muted }]}>
                 {portfolio?.positions?.length || 0} Varlık
               </Text>
             </View>
 
-            {/* Renkli Dağılım Segmentleri */}
             {portfolio?.assetBreakdown && portfolio.assetBreakdown.length > 0 && (
-              <View style={styles.allocationBarContainer}>
-                <View style={styles.allocationBar}>
+              <View style={styles.allocationContainer}>
+                {/* Segmentli Dağılım Çubuğu */}
+                <View style={[styles.allocationBar, { backgroundColor: theme.surfaceMuted }]}>
                   {portfolio.assetBreakdown.map((item, idx) => {
                     const badge = getAssetTypeBadgeColor(item.type);
                     return (
@@ -290,7 +344,7 @@ export default function DashboardScreen() {
                         style={{
                           flex: item.percent,
                           backgroundColor: badge.text,
-                          height: 8,
+                          height: 7,
                           borderRadius: 2,
                           marginHorizontal: 1,
                         }}
@@ -304,12 +358,17 @@ export default function DashboardScreen() {
                   {portfolio.assetBreakdown.map((item, idx) => {
                     const badge = getAssetTypeBadgeColor(item.type);
                     return (
-                      <View key={`chip-${item.type}-${idx}`} style={styles.breakdownChip}>
-                        <View
-                          style={[styles.chipDot, { backgroundColor: badge.text }]}
-                        />
-                        <Text style={styles.chipLabel}>{getAssetTypeLabel(item.type)}</Text>
-                        <Text style={styles.chipPercent}>%{item.percent.toFixed(1)}</Text>
+                      <View
+                        key={`chip-${item.type}-${idx}`}
+                        style={[styles.breakdownChip, { backgroundColor: theme.surfaceMuted }]}
+                      >
+                        <View style={[styles.chipDot, { backgroundColor: badge.text }]} />
+                        <Text style={[styles.chipLabel, { color: theme.text.secondary }]}>
+                          {getAssetTypeLabel(item.type)}
+                        </Text>
+                        <Text style={[styles.chipPercent, { color: theme.text.primary }]}>
+                          %{item.percent.toFixed(1)}
+                        </Text>
                       </View>
                     );
                   })}
@@ -318,9 +377,11 @@ export default function DashboardScreen() {
             )}
           </View>
 
-          {/* 3. KATEGORİ BAZLI AÇIK POZİSYONLAR (Web İle Birebir Sıralı) */}
-          <View style={styles.categoriesSection}>
-            <Text style={styles.categoriesSectionTitle}>Açık Pozisyonlar</Text>
+          {/* 5. TEK SATIR KOMPAKT AÇIK POZİSYONLAR */}
+          <View style={styles.categoriesContainer}>
+            <Text style={[styles.categoriesMainTitle, { color: theme.text.primary }]}>
+              Açık Pozisyonlar
+            </Text>
 
             {SECTION_ORDER.map((section) => {
               const items = positionsByType[section.type] || [];
@@ -332,96 +393,93 @@ export default function DashboardScreen() {
               const badge = getAssetTypeBadgeColor(section.type);
 
               return (
-                <View key={section.type} style={styles.categoryBlock}>
-                  {/* Kategori Başlık Başlığı */}
+                <View
+                  key={section.type}
+                  style={[
+                    styles.categoryBlock,
+                    {
+                      backgroundColor: theme.surface,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
+                  {/* Kategori Başlığı */}
                   <TouchableOpacity
-                    style={styles.categoryHeader}
+                    style={[styles.categoryHeader, { backgroundColor: theme.surface }]}
                     onPress={() => toggleSection(section.type)}
-                    activeOpacity={0.8}
+                    activeOpacity={0.7}
                   >
-                    <View style={styles.categoryHeaderLeft}>
+                    <View style={styles.catHeaderLeft}>
                       <View style={[styles.categoryBadge, { backgroundColor: badge.bg }]}>
                         <Text style={[styles.categoryBadgeText, { color: badge.text }]}>
                           {items.length}
                         </Text>
                       </View>
-                      <View>
-                        <Text style={styles.categoryTitle}>{section.label}</Text>
-                        <Text style={styles.categorySubTotal}>
-                          {showValues ? formatCurrency(sectionTotalValue) : '••••••'}
-                        </Text>
-                      </View>
+                      <Text style={[styles.categoryTitle, { color: theme.text.primary }]}>
+                        {section.label}
+                      </Text>
                     </View>
 
-                    <View style={styles.categoryHeaderRight}>
-                      <Text
-                        style={[
-                          styles.categoryProfit,
-                          { color: sectionTotalProfit >= 0 ? colors.emerald[400] : colors.rose[400] },
-                        ]}
-                      >
-                        {showValues
-                          ? `${sectionTotalProfit >= 0 ? '+' : ''}${formatCurrency(sectionTotalProfit)}`
-                          : '••••'}
+                    <View style={styles.catHeaderRight}>
+                      <Text style={[styles.categoryValue, { color: theme.text.primary }]}>
+                        {showValues ? formatCurrency(sectionTotalValue, currency) : '••••••'}
                       </Text>
                       <ChevronDown
-                        size={18}
-                        color={colors.text.muted}
+                        size={16}
+                        color={theme.text.muted}
                         style={{
                           transform: [{ rotate: isCollapsed ? '-90deg' : '0deg' }],
-                          marginLeft: 6,
+                          marginLeft: 4,
                         }}
                       />
                     </View>
                   </TouchableOpacity>
 
-                  {/* Kategori İçi Varlık Kartları */}
+                  {/* Kategori İçi Tek Satır Varlık Listesi */}
                   {!isCollapsed && (
-                    <View style={styles.itemsList}>
+                    <View style={[styles.itemsList, { borderTopColor: theme.borderSubtle }]}>
                       {items.map((pos, pIdx) => {
                         const isPosProfit = pos.profitTRY >= 0;
+                        const profitColor = isPosProfit ? theme.profit.main : theme.loss.main;
+
                         return (
                           <TouchableOpacity
                             key={`${pos.symbol}-${pIdx}`}
-                            style={styles.assetCard}
+                            style={[
+                              styles.singleRowAsset,
+                              { borderBottomColor: theme.borderSubtle },
+                            ]}
                             onPress={() => router.push(`/asset/${pos.symbol}` as any)}
+                            activeOpacity={0.7}
                           >
-                            <View style={styles.assetCardTop}>
-                              <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                  <Text style={styles.assetSymbol}>{pos.symbol}</Text>
-                                  {pos.currency !== 'TRY' && (
-                                    <View style={styles.currencyPill}>
-                                      <Text style={styles.currencyPillText}>{pos.currency}</Text>
-                                    </View>
-                                  )}
+                            {/* Sol: Sembol */}
+                            <View style={styles.rowLeft}>
+                              <Text style={[styles.rowSymbol, { color: theme.text.primary }]}>
+                                {pos.symbol}
+                              </Text>
+                              {pos.currency !== 'TRY' && (
+                                <View style={[styles.currencyTag, { backgroundColor: theme.surfaceMuted }]}>
+                                  <Text style={[styles.currencyTagText, { color: theme.text.muted }]}>
+                                    {pos.currency}
+                                  </Text>
                                 </View>
-                                <Text style={styles.assetFullName} numberOfLines={1}>
-                                  {pos.name || pos.symbol}
-                                </Text>
-                              </View>
-
-                              <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={styles.assetValue}>
-                                  {showValues ? formatCurrency(pos.currentValueTRY) : '••••••'}
-                                </Text>
-                                <Text
-                                  style={[
-                                    styles.assetProfitPct,
-                                    { color: isPosProfit ? colors.emerald[400] : colors.rose[400] },
-                                  ]}
-                                >
-                                  {showValues ? formatPercent(pos.profitRate) : '••••'}
-                                </Text>
-                              </View>
+                              )}
                             </View>
 
-                            <View style={styles.assetCardBottom}>
-                              <Text style={styles.assetMeta}>
-                                {pos.quantity.toLocaleString('tr-TR')} Adet • Maliyet: {formatCurrency(pos.avgCostTRY)}
+                            {/* Orta: Adet @ Güncel Fiyat */}
+                            <View style={styles.rowCenter}>
+                              <Text style={[styles.rowQtyPrice, { color: theme.text.muted }]}>
+                                {pos.quantity.toLocaleString('tr-TR')} adet @ {formatCurrency(pos.currentPriceTRY, currency)}
                               </Text>
-                              <Text style={styles.assetMeta}>
-                                Güncel: {formatCurrency(pos.currentPriceTRY)}
+                            </View>
+
+                            {/* Sağ: Toplam Değer & Kâr/Zarar % */}
+                            <View style={styles.rowRight}>
+                              <Text style={[styles.rowValue, { color: theme.text.primary }]}>
+                                {showValues ? formatCurrency(pos.currentValueTRY, currency) : '••••••'}
+                              </Text>
+                              <Text style={[styles.rowProfit, { color: profitColor }]}>
+                                {showValues ? formatPercent(pos.profitRate) : '••••'}
                               </Text>
                             </View>
                           </TouchableOpacity>
@@ -442,392 +500,286 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg.primary,
   },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: colors.bg.borderSubtle,
-    backgroundColor: colors.bg.secondary,
   },
   logoGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 9,
   },
   logoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.emerald[500],
+    width: 34,
+    height: 34,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
   },
   brandTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    color: colors.text.primary,
     lineHeight: 18,
   },
   brandSubtitle: {
     fontSize: 10,
-    color: colors.text.muted,
+    fontWeight: '500',
     lineHeight: 12,
-  },
-  demoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-    gap: 3,
-  },
-  demoBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.amber[400],
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  currencyToggleBtn: {
+  headerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bg.tertiary,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    borderRadius: 7,
+    gap: 3,
     borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
   },
-  currencyToggleText: {
+  headerBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.emerald[400],
   },
   iconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    backgroundColor: colors.bg.tertiary,
+    width: 32,
+    height: 32,
+    borderRadius: 7,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
   },
   scrollContent: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    paddingBottom: 36,
-    gap: 14,
-  },
-  mainKpiCard: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
-  },
-  kpiTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  kpiTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.text.muted,
-    letterSpacing: 0.8,
-  },
-  lastUpdatedText: {
-    fontSize: 10,
-    color: colors.text.muted,
-  },
-  kpiMainValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.text.primary,
-    marginVertical: 8,
-    letterSpacing: -0.5,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.bg.borderSubtle,
+    paddingBottom: 32,
     gap: 12,
   },
-  statCell: {
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: colors.text.muted,
-    marginBottom: 3,
-  },
-  statValWhite: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.text.primary,
-  },
-  profitWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValProfit: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  dailyBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.bg.borderSubtle,
-  },
-  dailyBarLabel: {
-    fontSize: 11,
-    color: colors.text.muted,
-  },
-  dailyBarVal: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  quickBar: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  primaryActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.emerald[500],
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 6,
-  },
-  primaryActionText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  secondaryActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bg.secondary,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
-  },
-  secondaryActionText: {
-    color: colors.text.primary,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  sectionCard: {
-    backgroundColor: colors.bg.secondary,
+  netWorthCard: {
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
+  },
+  netWorthLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+  },
+  netWorthValue: {
+    fontSize: 26,
+    fontWeight: '900',
+    marginTop: 4,
+    letterSpacing: -0.5,
+  },
+  periodReturnsSection: {
+    marginHorizontal: -14,
+  },
+  periodScroll: {
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  periodCard: {
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    minWidth: 105,
+  },
+  periodLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  periodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  periodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  periodPct: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  periodAmt: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 3,
+  },
+  sectionCard: {
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
   },
   sectionCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   sectionCardTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: colors.text.primary,
   },
   sectionCardCount: {
     fontSize: 11,
-    color: colors.text.muted,
     fontWeight: '600',
   },
-  allocationBarContainer: {
-    gap: 10,
+  allocationContainer: {
+    gap: 8,
   },
   allocationBar: {
     flexDirection: 'row',
-    height: 8,
-    borderRadius: 4,
+    height: 7,
+    borderRadius: 3.5,
     overflow: 'hidden',
-    backgroundColor: colors.bg.tertiary,
   },
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4,
+    gap: 5,
+    marginTop: 2,
   },
   breakdownChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bg.tertiary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+    gap: 4,
   },
   chipDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   chipLabel: {
     fontSize: 10,
-    color: colors.text.secondary,
     fontWeight: '500',
   },
   chipPercent: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.text.primary,
   },
-  categoriesSection: {
-    gap: 10,
+  categoriesContainer: {
+    gap: 8,
+    marginTop: 2,
   },
-  categoriesSectionTitle: {
-    fontSize: 15,
+  categoriesMainTitle: {
+    fontSize: 14,
     fontWeight: '800',
-    color: colors.text.primary,
     marginLeft: 2,
     marginBottom: 2,
   },
   categoryBlock: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
     overflow: 'hidden',
   },
   categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: colors.bg.secondary,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  categoryHeaderLeft: {
+  catHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   categoryBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
   },
   categoryBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   categoryTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    color: colors.text.primary,
   },
-  categorySubTotal: {
-    fontSize: 11,
-    color: colors.text.muted,
-    marginTop: 1,
-  },
-  categoryHeaderRight: {
+  catHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  categoryProfit: {
+  categoryValue: {
     fontSize: 12,
     fontWeight: '700',
   },
   itemsList: {
     borderTopWidth: 1,
-    borderTopColor: colors.bg.borderSubtle,
   },
-  assetCard: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.bg.borderSubtle,
-  },
-  assetCardTop: {
+  singleRowAsset: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  assetSymbol: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.text.primary,
-  },
-  currencyPill: {
-    backgroundColor: colors.bg.tertiary,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  currencyPillText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.text.muted,
-  },
-  assetFullName: {
-    fontSize: 11,
-    color: colors.text.muted,
-    marginTop: 2,
-  },
-  assetValue: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.text.primary,
-  },
-  assetProfitPct: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  assetCardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.04)',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
   },
-  assetMeta: {
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    width: '28%',
+  },
+  rowSymbol: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  currencyTag: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  currencyTagText: {
+    fontSize: 8,
+    fontWeight: '700',
+  },
+  rowCenter: {
+    flex: 1,
+    paddingHorizontal: 4,
+  },
+  rowQtyPrice: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  rowRight: {
+    alignItems: 'flex-end',
+    width: '32%',
+  },
+  rowValue: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  rowProfit: {
     fontSize: 10,
-    color: colors.text.muted,
+    fontWeight: '700',
+    marginTop: 1,
   },
   centerLoading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   loadingText: {
-    fontSize: 13,
-    color: colors.text.muted,
+    fontSize: 12,
   },
 });

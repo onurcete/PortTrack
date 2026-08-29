@@ -3,22 +3,24 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/authStore';
-import { colors } from '../theme/colors';
+import { useThemeStore } from '../stores/themeStore';
 
 export default function RootLayout() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const { theme, loadTheme, mode } = useThemeStore();
 
   useEffect(() => {
     checkAuth();
+    loadTheme();
   }, []);
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" backgroundColor={colors.bg.primary} />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} backgroundColor={theme.bg} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.bg.primary },
+          contentStyle: { backgroundColor: theme.bg },
           animation: 'slide_from_right',
         }}
       >

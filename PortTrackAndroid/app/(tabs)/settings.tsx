@@ -17,15 +17,17 @@ import {
   LogOut,
   ShieldCheck,
   ChevronRight,
-  ExternalLink,
+  Sun,
+  Moon,
   Info,
 } from 'lucide-react-native';
-import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { theme, mode, toggleTheme } = useThemeStore();
 
   const handleLogout = () => {
     Alert.alert('Çıkış Yap', 'Hesabınızdan çıkış yapmak istediğinize emin misiniz?', [
@@ -42,78 +44,118 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Ayarlar & Profil</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
+      <View style={[styles.header, { borderBottomColor: theme.border, backgroundColor: theme.surface }]}>
+        <Text style={[styles.headerTitle, { color: theme.text.primary }]}>Ayarlar & Profil</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Kullanıcı Bilgi Kartı */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <UserIcon size={26} color={colors.emerald[400]} />
+        <View
+          style={[
+            styles.profileCard,
+            { backgroundColor: theme.surface, borderColor: theme.border },
+          ]}
+        >
+          <View style={[styles.avatar, { backgroundColor: theme.brand.soft }]}>
+            <UserIcon size={24} color={theme.brand.primary} />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{user?.name || 'Kullanıcı'}</Text>
-            <Text style={styles.userEmail}>{user?.email || 'Giriş yapılmadı'}</Text>
+            <Text style={[styles.userName, { color: theme.text.primary }]}>
+              {user?.name || 'Kullanıcı'}
+            </Text>
+            <Text style={[styles.userEmail, { color: theme.text.muted }]}>
+              {user?.email || 'Giriş yapılmadı'}
+            </Text>
             {user?.isDemo && (
-              <View style={styles.demoTag}>
-                <ShieldCheck size={12} color={colors.amber[400]} />
-                <Text style={styles.demoTagText}>Demo Hesap</Text>
+              <View style={[styles.demoTag, { backgroundColor: theme.amber.soft }]}>
+                <ShieldCheck size={11} color={theme.amber.main} />
+                <Text style={[styles.demoTagText, { color: theme.amber.main }]}>Demo Hesap</Text>
               </View>
             )}
           </View>
         </View>
 
-        {/* Tercihler */}
+        {/* Görünüm & Tema */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>TERCİHLER</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text.muted }]}>GÖRÜNÜM & TEMA</Text>
 
-          <View style={styles.menuGroup}>
-            <TouchableOpacity style={styles.menuItem}>
+          <View style={[styles.menuGroup, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.menuItem, { borderBottomColor: theme.borderSubtle }]}>
               <View style={styles.menuLeft}>
-                <Coins size={18} color={colors.text.secondary} />
-                <Text style={styles.menuLabel}>Ana Para Birimi</Text>
-              </View>
-              <View style={styles.menuRight}>
-                <Text style={styles.menuValue}>{user?.defaultCurrency || 'TRY'}</Text>
-                <ChevronRight size={16} color={colors.text.muted} />
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.menuItem}>
-              <View style={styles.menuLeft}>
-                <Bell size={18} color={colors.text.secondary} />
-                <Text style={styles.menuLabel}>Günlük E-posta Bülteni</Text>
+                {mode === 'dark' ? (
+                  <Moon size={18} color={theme.brand.primary} />
+                ) : (
+                  <Sun size={18} color={theme.amber.main} />
+                )}
+                <Text style={[styles.menuLabel, { color: theme.text.primary }]}>
+                  Karanlık Mod (Dark Theme)
+                </Text>
               </View>
               <Switch
-                value={user?.dailyDigestEnabled ?? false}
-                trackColor={{ false: colors.bg.tertiary, true: colors.emerald[500] }}
+                value={mode === 'dark'}
+                onValueChange={toggleTheme}
+                trackColor={{ false: theme.surfaceMuted, true: theme.brand.primary }}
                 thumbColor="#ffffff"
               />
             </View>
           </View>
         </View>
 
-        {/* Hakkında & Yasal */}
+        {/* Tercihler */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>HAKKINDA</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text.muted }]}>TERCİHLER</Text>
 
-          <View style={styles.menuGroup}>
+          <View style={[styles.menuGroup, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.menuItem, { borderBottomColor: theme.borderSubtle }]}>
+              <View style={styles.menuLeft}>
+                <Coins size={18} color={theme.text.secondary} />
+                <Text style={[styles.menuLabel, { color: theme.text.primary }]}>Ana Para Birimi</Text>
+              </View>
+              <View style={styles.menuRight}>
+                <Text style={[styles.menuValue, { color: theme.text.muted }]}>{user?.defaultCurrency || 'TRY'}</Text>
+              </View>
+            </View>
+
             <View style={styles.menuItem}>
               <View style={styles.menuLeft}>
-                <Info size={18} color={colors.text.secondary} />
-                <Text style={styles.menuLabel}>Uygulama Sürümü</Text>
+                <Bell size={18} color={theme.text.secondary} />
+                <Text style={[styles.menuLabel, { color: theme.text.primary }]}>Günlük E-posta Bülteni</Text>
               </View>
-              <Text style={styles.menuValue}>v1.0.0 (Expo SDK 52)</Text>
+              <Switch
+                value={user?.dailyDigestEnabled ?? false}
+                trackColor={{ false: theme.surfaceMuted, true: theme.brand.primary }}
+                thumbColor="#ffffff"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Hakkında */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text.muted }]}>HAKKINDA</Text>
+
+          <View style={[styles.menuGroup, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.menuItem}>
+              <View style={styles.menuLeft}>
+                <Info size={18} color={theme.text.secondary} />
+                <Text style={[styles.menuLabel, { color: theme.text.primary }]}>Uygulama Sürümü</Text>
+              </View>
+              <Text style={[styles.menuValue, { color: theme.text.muted }]}>v1.0.0 (PortTrack Mobile)</Text>
             </View>
           </View>
         </View>
 
         {/* Çıkış Yap Butonu */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <LogOut size={18} color={colors.rose[400]} />
-          <Text style={styles.logoutText}>Oturumu Kapat</Text>
+        <TouchableOpacity
+          style={[
+            styles.logoutBtn,
+            { backgroundColor: theme.loss.soft, borderColor: theme.loss.main },
+          ]}
+          onPress={handleLogout}
+        >
+          <LogOut size={17} color={theme.loss.main} />
+          <Text style={[styles.logoutText, { color: theme.loss.main }]}>Oturumu Kapat</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -123,37 +165,34 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg.primary,
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
-    color: colors.text.primary,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 30,
-    gap: 20,
+    paddingVertical: 16,
+    paddingBottom: 36,
+    gap: 18,
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
     gap: 14,
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: colors.emerald.bgSubtle,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -161,19 +200,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.text.primary,
   },
   userEmail: {
     fontSize: 12,
-    color: colors.text.muted,
     marginTop: 2,
   },
   demoTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -183,44 +219,38 @@ const styles = StyleSheet.create({
   },
   demoTagText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: colors.amber[400],
+    fontWeight: '700',
   },
   section: {
-    gap: 8,
+    gap: 7,
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: '600',
-    color: colors.text.muted,
-    letterSpacing: 0.8,
+    fontWeight: '700',
+    letterSpacing: 0.6,
     marginLeft: 4,
   },
   menuGroup: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
     overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.bg.borderSubtle,
   },
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   menuLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
   menuRight: {
     flexDirection: 'row',
@@ -228,24 +258,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   menuValue: {
-    fontSize: 13,
-    color: colors.text.muted,
+    fontSize: 12,
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.rose.bgSubtle,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 13,
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.2)',
-    marginTop: 10,
+    marginTop: 6,
   },
   logoutText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.rose[400],
+    fontWeight: '700',
   },
 });

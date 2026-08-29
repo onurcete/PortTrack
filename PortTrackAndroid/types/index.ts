@@ -56,6 +56,31 @@ export interface PortfolioPosition {
   weightPercent: number;
 }
 
+export interface PeriodReturns {
+  dailyTRY?: number | null;
+  dailyUSD?: number | null;
+  dailyAmtTRY?: number | null;
+  dailyAmtUSD?: number | null;
+  weeklyTRY?: number | null;
+  weeklyUSD?: number | null;
+  weeklyAmtTRY?: number | null;
+  weeklyAmtUSD?: number | null;
+  mtdTRY?: number | null;
+  mtdUSD?: number | null;
+  mtdAmtTRY?: number | null;
+  mtdAmtUSD?: number | null;
+  monthlyTRY?: number | null;
+  monthlyUSD?: number | null;
+  monthlyAmtTRY?: number | null;
+  monthlyAmtUSD?: number | null;
+  ytdTRY?: number | null;
+  ytdUSD?: number | null;
+  ytdAmtTRY?: number | null;
+  ytdAmtUSD?: number | null;
+  oneYearTRY?: number | null;
+  oneYearUSD?: number | null;
+}
+
 export interface PortfolioSummary {
   totalValueTRY: number;
   totalCostTRY: number;
@@ -63,6 +88,7 @@ export interface PortfolioSummary {
   totalProfitPercent: number;
   dailyChangeTRY: number;
   dailyChangePercent: number;
+  periodReturns?: PeriodReturns | null;
   positions: PortfolioPosition[];
   assetBreakdown: {
     type: AssetType;
@@ -71,6 +97,7 @@ export interface PortfolioSummary {
     percent: number;
     color: string;
   }[];
+  lastUpdated?: string | null;
 }
 
 export interface TechnicalSignal {
