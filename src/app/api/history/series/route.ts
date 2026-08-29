@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  try {
     const rawCookie = req.cookies.get(AUTH_COOKIE)?.value;
     const authHeader = req.headers.get("authorization");
     const bearerToken = authHeader?.startsWith("Bearer ")
