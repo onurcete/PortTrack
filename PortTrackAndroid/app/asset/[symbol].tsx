@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,11 +16,9 @@ import {
   TrendingDown,
   Layers,
   Activity,
-  Calendar,
   Users,
   Sparkles,
   BarChart2,
-  ChevronRight,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
@@ -111,7 +108,6 @@ export default function AssetDetailScreen() {
     await fetchAssetData();
   }, [fetchAssetData]);
 
-  // Filtrelenmiş fiyat geçmişi
   const filteredHistory = useMemo(() => {
     if (!history || history.length === 0) return [];
     const now = new Date();
@@ -120,7 +116,6 @@ export default function AssetDetailScreen() {
     return history.filter((h) => new Date(h.date) >= cutoff);
   }, [history, timeframe]);
 
-  // Mini Grafik Min/Max & Noktalar
   const chartPoints = useMemo(() => {
     if (filteredHistory.length < 2) return null;
     const prices = filteredHistory.map((h) => h.closeTRY);
@@ -149,7 +144,7 @@ export default function AssetDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. ÜST HEADER */}
+      {/* 1. HEADER (Tam Genişlik) */}
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.border }]}
@@ -179,7 +174,7 @@ export default function AssetDetailScreen() {
         <View style={{ width: 34 }} />
       </View>
 
-      {/* 2. İKİ SEÇENEKLİ SEKME MENÜSÜ */}
+      {/* 2. SEKME ÇUBUĞU */}
       <View style={[styles.tabsBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={[
@@ -246,8 +241,8 @@ export default function AssetDetailScreen() {
         >
           {activeTab === 'details' ? (
             <>
-              {/* 3. ANA DEĞER & KÂR/ZARAR HERO KARTI */}
-              <View style={[styles.heroCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              {/* 3. HERO DEĞER KARTI (Tam Genişlik) */}
+              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                 <View style={styles.heroRow}>
                   <View>
                     <Text style={[styles.heroLabel, { color: theme.text.muted }]}>TOPLAM DEĞER</Text>
@@ -302,39 +297,43 @@ export default function AssetDetailScreen() {
                 </View>
               </View>
 
-              {/* 4. POZİSYON İSTATİSTİKLERİ (2x2 GRID) */}
-              <View style={styles.statsGrid}>
-                <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Mevcut Adet</Text>
-                  <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                    {formatQuantity(position?.quantity)}
-                  </Text>
+              {/* 4. POZİSYON İSTATİSTİKLERİ (2x2 GRID - Tam Genişlik) */}
+              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                <View style={styles.statsGridRow}>
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Mevcut Adet</Text>
+                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
+                      {formatQuantity(position?.quantity)}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Ortalama Maliyet</Text>
+                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
+                      {formatCurrency(position?.avgCostTRY ?? 0)}
+                    </Text>
+                  </View>
                 </View>
 
-                <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Ortalama Maliyet</Text>
-                  <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                    {formatCurrency(position?.avgCostTRY ?? 0)}
-                  </Text>
-                </View>
+                <View style={[styles.statsGridRow, { marginTop: 8 }]}>
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Güncel Fiyat</Text>
+                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
+                      {formatCurrency(position?.currentPriceTRY ?? 0)}
+                    </Text>
+                  </View>
 
-                <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Güncel Fiyat</Text>
-                  <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                    {formatCurrency(position?.currentPriceTRY ?? 0)}
-                  </Text>
-                </View>
-
-                <View style={[styles.statBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Portföy Ağırlığı</Text>
-                  <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                    %{position?.weightPercent ? position.weightPercent.toFixed(1) : '0.0'}
-                  </Text>
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Portföy Ağırlığı</Text>
+                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
+                      %{position?.weightPercent ? position.weightPercent.toFixed(1) : '0.0'}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              {/* 5. FİYAT GEÇMİŞİ GRAFİĞİ & ZAMAN DİLİMİ BUTONLARI */}
-              <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              {/* 5. FİYAT GRAFİĞİ (Tam Genişlik) */}
+              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                 <View style={styles.sectionHeaderRow}>
                   <View>
                     <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
@@ -391,14 +390,14 @@ export default function AssetDetailScreen() {
                   </View>
                 </View>
 
-                {/* Görsel Trend Çizgisi */}
+                {/* Grafik Görsel Çubukları */}
                 {chartPoints && chartPoints.prices.length >= 2 ? (
                   <View style={styles.chartArea}>
                     <View style={styles.chartBarsContainer}>
                       {chartPoints.prices.map((p, idx) => {
                         const normalizedHeight = Math.max(
                           6,
-                          Math.min(80, ((p - chartPoints.min) / chartPoints.range) * 80)
+                          Math.min(85, ((p - chartPoints.min) / chartPoints.range) * 85)
                         );
                         const isUp = chartPoints.diffPct >= 0;
                         return (
@@ -411,7 +410,7 @@ export default function AssetDetailScreen() {
                                 backgroundColor: isUp
                                   ? theme.profit.main
                                   : theme.loss.main,
-                                opacity: 0.4 + (idx / chartPoints.prices.length) * 0.6,
+                                opacity: 0.35 + (idx / chartPoints.prices.length) * 0.65,
                               },
                             ]}
                           />
@@ -420,7 +419,7 @@ export default function AssetDetailScreen() {
                     </View>
 
                     {/* Min - Max Fiyat Etiketleri */}
-                    <View style={styles.chartRangeRow}>
+                    <View style={[styles.chartRangeRow, { borderTopColor: theme.borderSubtle }]}>
                       <Text style={[styles.rangeLabel, { color: theme.text.muted }]}>
                         Düşük: {formatCurrency(chartPoints.min)}
                       </Text>
@@ -431,16 +430,17 @@ export default function AssetDetailScreen() {
                   </View>
                 ) : (
                   <View style={styles.emptyChartBox}>
-                    <Text style={[styles.emptyText, { color: theme.text.muted }]}>
-                      Bu aralık için fiyat geçmişi yükleniyor...
+                    <ActivityIndicator size="small" color={theme.brand.primary} />
+                    <Text style={[styles.emptyText, { color: theme.text.muted, marginTop: 6 }]}>
+                      Fiyat geçmişi yükleniyor...
                     </Text>
                   </View>
                 )}
               </View>
 
-              {/* 6. YATIRIMCI SAYISI & FON BİLGİSİ (Varsa / TEFAS için) */}
+              {/* 6. FON YATIRIMCI SAYISI (TEFAS) */}
               {tefasStats?.latest != null && (
-                <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                   <View style={styles.sectionHeaderRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Users size={16} color={theme.brand.primary} />
@@ -484,7 +484,7 @@ export default function AssetDetailScreen() {
                   </View>
 
                   <View style={styles.investorStatsRow}>
-                    <View style={styles.investorStatCell}>
+                    <View style={[styles.investorStatCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
                       <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>
                         Toplam Yatırımcı
                       </Text>
@@ -493,7 +493,7 @@ export default function AssetDetailScreen() {
                       </Text>
                     </View>
 
-                    <View style={styles.investorStatCell}>
+                    <View style={[styles.investorStatCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
                       <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>
                         Haftalık Değişim
                       </Text>
@@ -516,9 +516,9 @@ export default function AssetDetailScreen() {
                 </View>
               )}
 
-              {/* 7. SON 1 YILLIK AYLIK PERFORMANS LİSTESİ / ISI HARİTASI */}
+              {/* 7. SON 1 YILLIK AYLIK PERFORMANS */}
               {monthlyPerformance && monthlyPerformance.length > 0 && (
-                <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                   <View style={styles.sectionHeaderRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <BarChart2 size={16} color={theme.brand.primary} />
@@ -538,7 +538,7 @@ export default function AssetDetailScreen() {
                             styles.monthlyCell,
                             {
                               backgroundColor: isPos ? theme.profit.soft : theme.loss.soft,
-                              borderColor: theme.borderSubtle,
+                              borderColor: isPos ? 'rgba(34, 197, 94, 0.2)' : 'rgba(244, 63, 94, 0.2)',
                             },
                           ]}
                         >
@@ -560,8 +560,8 @@ export default function AssetDetailScreen() {
                 </View>
               )}
 
-              {/* 8. İŞLEM GEÇMİŞİ */}
-              <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              {/* 8. İŞLEM GEÇMİŞİ TABLOSU */}
+              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>İşlem Geçmişi</Text>
                   <Text style={[styles.sectionCount, { color: theme.text.muted }]}>
@@ -619,10 +619,9 @@ export default function AssetDetailScreen() {
               </View>
             </>
           ) : (
-            /* TEKNİK ANALİZ SEKMESİ */
+            /* TEKNİK ANALİZ SEKMESİ (Tam Genişlik) */
             <View style={styles.techContainer}>
-              {/* Teknik Skor Kartı */}
-              <View style={[styles.techScoreCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                 <View style={styles.techScoreHeader}>
                   <View>
                     <Text style={[styles.techScoreLabel, { color: theme.text.muted }]}>TEKNİK SKOR</Text>
@@ -668,36 +667,40 @@ export default function AssetDetailScreen() {
               </View>
 
               {/* İndikatör Grid */}
-              <View style={styles.indicatorsGrid}>
-                <View style={[styles.indicatorBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>Trend Sinyali</Text>
-                  <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
-                    {technical?.trendSignal || 'Yükseliş'}
-                  </Text>
+              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                <View style={styles.statsGridRow}>
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>Trend Sinyali</Text>
+                    <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
+                      {technical?.trendSignal || 'Yükseliş'}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>RSI Bölgesi</Text>
+                    <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
+                      {technical?.rsiZone || 'Nötr'}
+                    </Text>
+                  </View>
                 </View>
 
-                <View style={[styles.indicatorBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>RSI Bölgesi</Text>
-                  <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
-                    {technical?.rsiZone || 'Nötr'}
-                  </Text>
-                </View>
+                <View style={[styles.statsGridRow, { marginTop: 8 }]}>
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>MACD Sinyali</Text>
+                    <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
+                      {technical?.macdSignal || 'Pozitif'}
+                    </Text>
+                  </View>
 
-                <View style={[styles.indicatorBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>MACD Sinyali</Text>
-                  <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
-                    {technical?.macdSignal || 'Pozitif'}
-                  </Text>
-                </View>
-
-                <View style={[styles.indicatorBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                  <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>Sistem Güvenilirlik</Text>
-                  <Text style={[styles.indicatorVal, { color: theme.brand.primary }]}>Yüksek</Text>
+                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>Sistem Güvenilirlik</Text>
+                    <Text style={[styles.indicatorVal, { color: theme.brand.primary }]}>Yüksek</Text>
+                  </View>
                 </View>
               </View>
 
-              {/* Yapay Zeka Özeti & Yorum */}
-              <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              {/* AI Teknik Yorumu */}
+              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                   <Sparkles size={16} color={theme.brand.primary} />
                   <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>AI Teknik Yorumu</Text>
@@ -790,15 +793,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   scrollContent: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    paddingBottom: 36,
-    gap: 12,
+    paddingBottom: 40,
   },
-  heroCard: {
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
+  fullWidthSection: {
+    borderBottomWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
   heroRow: {
     flexDirection: 'row',
@@ -845,15 +846,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  statsGrid: {
+  statsGridRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
-  statBox: {
-    width: '48.8%',
-    borderRadius: 12,
-    padding: 12,
+  statBoxCell: {
+    flex: 1,
+    borderRadius: 8,
+    padding: 10,
     borderWidth: 1,
   },
   statBoxLabel: {
@@ -864,11 +864,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     marginTop: 3,
-  },
-  sectionCard: {
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -926,16 +921,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    paddingTop: 4,
+    paddingTop: 6,
+    marginTop: 2,
   },
   rangeLabel: {
     fontSize: 9,
     fontWeight: '500',
   },
   emptyChartBox: {
-    paddingVertical: 20,
+    paddingVertical: 24,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   trendTag: {
     paddingHorizontal: 7,
@@ -948,19 +944,22 @@ const styles = StyleSheet.create({
   },
   investorStatsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     marginTop: 4,
   },
   investorStatCell: {
     flex: 1,
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
   },
   investorBigNum: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
     marginTop: 2,
   },
   investorDeltaNum: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     marginTop: 3,
   },
@@ -972,9 +971,9 @@ const styles = StyleSheet.create({
   },
   monthlyCell: {
     width: '31.8%',
-    borderRadius: 8,
+    borderRadius: 6,
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     alignItems: 'center',
     borderWidth: 1,
   },
@@ -1033,12 +1032,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   techContainer: {
-    gap: 12,
-  },
-  techScoreCard: {
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
+    gap: 0,
   },
   techScoreHeader: {
     flexDirection: 'row',
@@ -1063,17 +1057,6 @@ const styles = StyleSheet.create({
   signalBadgeText: {
     fontSize: 12,
     fontWeight: '800',
-  },
-  indicatorsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  indicatorBox: {
-    width: '48.8%',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
   },
   indicatorLabel: {
     fontSize: 10,

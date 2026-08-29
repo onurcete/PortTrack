@@ -90,7 +90,6 @@ export default function DashboardScreen() {
     }));
   };
 
-  // Kategori bazlı pozisyon gruplaması
   const positionsByType = useMemo(() => {
     const map: Record<string, PortfolioPosition[]> = {};
     if (!portfolio?.positions) return map;
@@ -137,7 +136,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. ÜST HEADER BAR */}
+      {/* 1. ÜST HEADER BAR (Tam Genişlik) */}
       <View
         style={[
           styles.topHeader,
@@ -232,38 +231,29 @@ export default function DashboardScreen() {
             />
           }
         >
-          {/* 2. BİRLEŞİK TEK BÜTÜN HERO KART (TOPLAM PORTFÖY + 2x2 DÖNEMSEL GETİRİLER) */}
-          <View
-            style={[
-              styles.unifiedHeroCard,
-              {
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            {/* Üst Kısım: Toplam Portföy Değeri */}
-            <View style={styles.heroTop}>
-              <View style={styles.heroHeaderRow}>
+          {/* 2. FULL WIDTH HERO BÖLÜMÜ (TOPLAM DEĞER + 2x2 DÖNEMSEL GETİRİ) */}
+          <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+            {/* Toplam Portföy Değeri */}
+            <View style={styles.heroTopRow}>
+              <View>
                 <Text style={[styles.heroLabel, { color: theme.text.muted }]}>
                   TOPLAM PORTFÖY DEĞERİ
                 </Text>
-                <Text style={[styles.heroDate, { color: theme.text.muted }]}>
-                  {portfolio?.lastUpdated
-                    ? `Son: ${new Date(portfolio.lastUpdated).toLocaleTimeString('tr-TR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}`
-                    : ''}
+                <Text style={[styles.heroMainValue, { color: theme.text.primary }]}>
+                  {showValues ? formatCurrency(totalValue, currency) : '•••••••• ₺'}
                 </Text>
               </View>
-
-              <Text style={[styles.heroMainValue, { color: theme.text.primary }]}>
-                {showValues ? formatCurrency(totalValue, currency) : '•••••••• ₺'}
-              </Text>
+              {portfolio?.lastUpdated && (
+                <Text style={[styles.heroDate, { color: theme.text.muted }]}>
+                  Son: {new Date(portfolio.lastUpdated).toLocaleTimeString('tr-TR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              )}
             </View>
 
-            {/* Alt Kısım: 2x2 İKİ SATIR BİRLEŞİK DÖNEMSEL GETİRİLER */}
+            {/* 2x2 Dönemsel Getiriler Izgarası (Full Width) */}
             <View style={[styles.heroGridContainer, { borderTopColor: theme.borderSubtle }]}>
               <View style={styles.heroGridRow}>
                 {gridPeriods.slice(0, 2).map((item) => {
@@ -359,30 +349,22 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* 3. VARLIK DAĞILIMI (ASSET ALLOCATION) */}
-          <View
-            style={[
-              styles.sectionCard,
-              {
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            <View style={styles.sectionCardHeader}>
+          {/* 3. VARLIK DAĞILIMI (Tam Genişlik) */}
+          <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+            <View style={styles.sectionHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Layers size={15} color={theme.brand.primary} />
-                <Text style={[styles.sectionCardTitle, { color: theme.text.primary }]}>
+                <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
                   Varlık Dağılımı
                 </Text>
               </View>
-              <Text style={[styles.sectionCardCount, { color: theme.text.muted }]}>
+              <Text style={[styles.sectionCount, { color: theme.text.muted }]}>
                 {portfolio?.positions?.length || 0} Varlık
               </Text>
             </View>
 
             {portfolio?.assetBreakdown && portfolio.assetBreakdown.length > 0 && (
-              <View style={styles.allocationContainer}>
+              <View style={styles.allocationBody}>
                 {/* Segmentli Dağılım Çubuğu */}
                 <View style={[styles.allocationBar, { backgroundColor: theme.surfaceMuted }]}>
                   {portfolio.assetBreakdown.map((item, idx) => {
@@ -393,7 +375,7 @@ export default function DashboardScreen() {
                         style={{
                           flex: item.percent,
                           backgroundColor: badge.text,
-                          height: 7,
+                          height: 8,
                           borderRadius: 2,
                           marginHorizontal: 1,
                         }}
@@ -426,11 +408,13 @@ export default function DashboardScreen() {
             )}
           </View>
 
-          {/* 4. AÇIK POZİSYONLAR (GÜNLÜK % AYRI KOLON, TOTAL TUTAR ALTINDA TOTAL % K/Z) */}
-          <View style={styles.categoriesContainer}>
-            <Text style={[styles.categoriesMainTitle, { color: theme.text.primary }]}>
-              Açık Pozisyonlar
-            </Text>
+          {/* 4. AÇIK POZİSYONLAR TABLOSU (Tam Genişlik, Ekranla Bütün) */}
+          <View style={styles.positionsSection}>
+            <View style={styles.positionsSectionHeader}>
+              <Text style={[styles.positionsTitleText, { color: theme.text.primary }]}>
+                Açık Pozisyonlar
+              </Text>
+            </View>
 
             {SECTION_ORDER.map((section) => {
               const items = positionsByType[section.type] || [];
@@ -444,10 +428,10 @@ export default function DashboardScreen() {
                 <View
                   key={section.type}
                   style={[
-                    styles.categoryBlock,
+                    styles.categoryBlockFull,
                     {
                       backgroundColor: theme.surface,
-                      borderColor: theme.border,
+                      borderBottomColor: theme.border,
                     },
                   ]}
                 >
@@ -483,10 +467,10 @@ export default function DashboardScreen() {
                     </View>
                   </TouchableOpacity>
 
-                  {/* Kategori İçi Tablo Başlıkları & Varlık Listesi */}
+                  {/* Kategori İçi Tablo Başlıkları & Varlık Satırları */}
                   {!isCollapsed && (
-                    <View style={[styles.itemsList, { borderTopColor: theme.borderSubtle }]}>
-                      {/* Küçük Tablo Başlık Çubuğu */}
+                    <View style={styles.itemsList}>
+                      {/* Tablo Alt Başlığı */}
                       <View style={[styles.tableSubHeader, { backgroundColor: theme.surfaceMuted }]}>
                         <Text style={[styles.thText, { width: '28%', color: theme.text.muted }]}>
                           Varlık / Adet
@@ -562,7 +546,7 @@ export default function DashboardScreen() {
                               </Text>
                             </View>
 
-                            {/* Kolon 3: Günlük % Değişimi (Ayrı Kolon) */}
+                            {/* Kolon 3: Günlük % Değişimi */}
                             <View style={styles.colDaily}>
                               <View
                                 style={[
@@ -666,24 +650,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   scrollContent: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    paddingBottom: 36,
-    gap: 12,
+    paddingBottom: 40,
   },
-  unifiedHeroCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: 'hidden',
+  fullWidthSection: {
+    borderBottomWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
-  heroTop: {
-    padding: 16,
-    paddingBottom: 12,
-  },
-  heroHeaderRow: {
+  heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   heroLabel: {
     fontSize: 11,
@@ -692,16 +670,18 @@ const styles = StyleSheet.create({
   },
   heroDate: {
     fontSize: 10,
+    marginTop: 2,
   },
   heroMainValue: {
     fontSize: 28,
     fontWeight: '900',
-    marginTop: 6,
+    marginTop: 4,
     letterSpacing: -0.5,
   },
   heroGridContainer: {
     borderTopWidth: 1,
-    padding: 10,
+    marginTop: 12,
+    paddingTop: 10,
     gap: 8,
   },
   heroGridRow: {
@@ -710,7 +690,7 @@ const styles = StyleSheet.create({
   },
   heroGridCell: {
     flex: 1,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
@@ -740,32 +720,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  sectionCard: {
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-  },
-  sectionCardHeader: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  sectionCardTitle: {
+  sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
   },
-  sectionCardCount: {
+  sectionCount: {
     fontSize: 11,
     fontWeight: '600',
   },
-  allocationContainer: {
+  allocationBody: {
     gap: 8,
   },
   allocationBar: {
     flexDirection: 'row',
-    height: 7,
-    borderRadius: 3.5,
+    height: 8,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   chipsContainer: {
@@ -795,27 +770,27 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  categoriesContainer: {
-    gap: 8,
-    marginTop: 2,
+  positionsSection: {
+    gap: 0,
   },
-  categoriesMainTitle: {
+  positionsSectionHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  positionsTitleText: {
     fontSize: 14,
     fontWeight: '800',
-    marginLeft: 2,
-    marginBottom: 2,
   },
-  categoryBlock: {
-    borderRadius: 12,
-    borderWidth: 1,
+  categoryBlockFull: {
+    borderBottomWidth: 1,
     overflow: 'hidden',
   },
   categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
   },
   catHeaderLeft: {
     flexDirection: 'row',
@@ -845,12 +820,13 @@ const styles = StyleSheet.create({
   },
   itemsList: {
     borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
   },
   tableSubHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
   },
   thText: {
     fontSize: 9,
@@ -861,8 +837,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
   colAsset: {
