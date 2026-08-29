@@ -198,15 +198,12 @@ export async function GET(req: NextRequest) {
     const monthKeys = Array.from(monthlyMap.keys()).sort().slice(-12);
     for (const k of monthKeys) {
       const data = monthlyMap.get(k)!;
-      const [yStr, mStr] = k.split("-");
-      const m = Number(mStr);
-      const y = Number(yStr);
       const retTRY = data.first > 0 ? ((data.last - data.first) / data.first) * 100 : 0;
       const retUSD = data.firstUSD > 0 ? ((data.lastUSD - data.firstUSD) / data.firstUSD) * 100 : 0;
 
       monthlyPerformance.push({
         month: k,
-        label: `${monthLabel(m).slice(0, 3)} '${String(y).slice(2)}`,
+        label: monthLabel(k),
         returnTRY: retTRY,
         returnUSD: retUSD,
       });
