@@ -137,7 +137,7 @@ export default function DashboardScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
       {/* 1. ÜST HEADER BAR */}
       <View
         style={[

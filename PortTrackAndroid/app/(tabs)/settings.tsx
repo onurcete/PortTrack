@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
       <View style={[styles.header, { borderBottomColor: theme.border, backgroundColor: theme.surface }]}>
         <Text style={[styles.headerTitle, { color: theme.text.primary }]}>Ayarlar & Profil</Text>
       </View>
