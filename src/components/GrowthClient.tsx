@@ -624,14 +624,10 @@ export function GrowthClient({
       const returnPct =
         prevVal != null && prevVal > 0 ? ((value / prevVal) - 1) * 100 : null;
 
-      // Her bir varlık türünün güncel değerini ekle (Dağılım modu için %0-100 oransal değer)
+      // Her bir varlık türünün güncel değerini ekle
       const allocationValues: Record<string, number> = {};
       for (const t of TABLE_TYPES) {
-        const rawVal = typeValue(p, t, currency);
-        allocationValues[t] = chartMetric === "allocation"
-          ? (value > 0 ? Number(((rawVal / value) * 100).toFixed(2)) : 0)
-          : rawVal;
-        allocationValues[`${t}_raw`] = rawVal;
+        allocationValues[t] = typeValue(p, t, currency);
       }
 
       return {
@@ -643,13 +639,13 @@ export function GrowthClient({
         originalPoint: p,
       };
     });
-  }, [displaySeries, chartYearValue, isTRY, currency, seriesByMonth, chartMetric]);
+  }, [displaySeries, chartYearValue, isTRY, currency, seriesByMonth]);
 
   const chartTitle =
     chartMetric === "value"
       ? "Aylık Değer ve Maliyet"
       : chartMetric === "allocation"
-        ? "Varlık Dağılımı ve Portföy Yapısı (% Pay)"
+        ? "Varlık Bazında Değer Gelişimi"
         : "Aylık Portföy Getirisi (%)";
 
   const showReturnMetric = chartMetric === "return";
@@ -680,7 +676,7 @@ export function GrowthClient({
       return returnChartMeta.domain;
     }
     if (chartMetric === "allocation") {
-      return [0, 100] as [number, number];
+      return [0, (dataMax: number) => Math.ceil(dataMax * 1.08)] as any;
     }
     return [
       (dataMin: number) => Math.max(0, Math.floor(dataMin * 0.94)),
@@ -902,7 +898,7 @@ export function GrowthClient({
                   <p className="text-[11px] text-[var(--color-muted)] font-medium">
                     {chartMetric === "return" && "Her ayın yüzde kâr/zarar getiri oranları"}
                     {chartMetric === "value" && "Zaman içindeki toplam portföy tutarı ve maliyet gelişimi"}
-                    {chartMetric === "allocation" && "Varlık türlerinin (TEFAS, BES, BIST vb.) portföy içerisindeki oransal ağırlıkları (%0 - %100)"}
+                    {chartMetric === "allocation" && "Her varlık türünün (TEFAS, BES, BIST vb.) ayrı parasal değer gelişimi"}
                   </p>
                 </div>
               </div>
@@ -1137,14 +1133,12 @@ export function GrowthClient({
                         tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={false}
-                        width={showReturnMetric ? 56 : chartMetric === "allocation" ? 48 : 70}
+                        width={showReturnMetric ? 56 : 70}
                         domain={chartYDomain}
                         tickFormatter={(v) =>
                           showReturnMetric
                             ? formatPercent(Number(v), 1)
-                            : chartMetric === "allocation"
-                              ? `%${Number(v).toFixed(0)}`
-                              : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
+                            : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
                         }
                       />
                       {showReturnMetric && (
@@ -1187,12 +1181,11 @@ export function GrowthClient({
                             key={t}
                             type="monotone"
                             dataKey={t}
-                            stackId="1"
                             stroke={ASSET_META[t].color}
-                            strokeWidth={2}
+                            strokeWidth={2.5}
                             fill={`url(#g-${t})`}
                             name={t}
-                            activeDot={{ r: 5, strokeWidth: 0 }}
+                            activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
                           />
                         ))
                       ) : (
@@ -1239,14 +1232,12 @@ export function GrowthClient({
                         tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
                         tickLine={false}
                         axisLine={false}
-                        width={showReturnMetric ? 56 : chartMetric === "allocation" ? 48 : 70}
+                        width={showReturnMetric ? 56 : 70}
                         domain={chartYDomain}
                         tickFormatter={(v) =>
                           showReturnMetric
                             ? formatPercent(Number(v), 1)
-                            : chartMetric === "allocation"
-                              ? `%${Number(v).toFixed(0)}`
-                              : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
+                            : formatMoney(Number(v), currency, { compact: true, decimals: 1 })
                         }
                       />
                       {showReturnMetric && (
