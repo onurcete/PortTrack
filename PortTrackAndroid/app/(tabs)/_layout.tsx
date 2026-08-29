@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Platform, StyleSheet } from 'react-native';
-import { LayoutDashboard, PieChart, ArrowLeftRight, TrendingUp, Sparkles, Settings } from 'lucide-react-native';
+import { Platform } from 'react-native';
+import { LayoutDashboard, ArrowLeftRight, TrendingUp, Activity, Settings } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 
 export default function TabLayout() {
@@ -15,32 +15,23 @@ export default function TabLayout() {
           backgroundColor: colors.bg.secondary,
           borderTopColor: colors.bg.borderSubtle,
           borderTopWidth: 1,
-          height: Platform.OS === 'android' ? 65 : 85,
-          paddingBottom: Platform.OS === 'android' ? 10 : 25,
+          height: Platform.OS === 'android' ? 64 : 84,
+          paddingBottom: Platform.OS === 'android' ? 10 : 26,
           paddingTop: 8,
-          elevation: 8,
+          elevation: 10,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '500',
+          fontWeight: '600',
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Özet',
+          title: 'Genel Bakış',
           tabBarIcon: ({ color, size }) => (
             <LayoutDashboard size={size ?? 22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="portfolio"
-        options={{
-          title: 'Portföy',
-          tabBarIcon: ({ color, size }) => (
-            <PieChart size={size ?? 22} color={color} />
           ),
         }}
       />
@@ -56,7 +47,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="growth"
         options={{
-          title: 'Büyüme',
+          title: 'Gelişim',
           tabBarIcon: ({ color, size }) => (
             <TrendingUp size={size ?? 22} color={color} />
           ),
@@ -65,9 +56,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analysis"
         options={{
-          title: 'AI Analiz',
+          title: 'Analiz',
           tabBarIcon: ({ color, size }) => (
-            <Sparkles size={size ?? 22} color={color} />
+            <Activity size={size ?? 22} color={color} />
           ),
         }}
       />
@@ -78,6 +69,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Settings size={size ?? 22} color={color} />
           ),
+        }}
+      />
+      {/* Portfolio screen exists as sub-view or redirected from overview */}
+      <Tabs.Screen
+        name="portfolio"
+        options={{
+          href: null, // Alt barda gizle, genel bakış içinden erişilebilir
         }}
       />
     </Tabs>
