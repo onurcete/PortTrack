@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,36 +11,135 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { X, Check } from 'lucide-react-native';
-import { colors } from '../../theme/colors';
+import {
+  X,
+  Check,
+  Search,
+  Calendar,
+  Sparkles,
+  Layers,
+  ArrowDownLeft,
+  ArrowUpRight,
+  DollarSign,
+  Coins,
+  FileText,
+} from 'lucide-react-native';
 import { api } from '../../services/api';
+import { useThemeStore } from '../../stores/themeStore';
+import {
+  formatCurrency,
+  getAssetTypeLabel,
+  getAssetTypeBadgeColor,
+} from '../../utils/formatters';
 import { AssetType, TransactionSide } from '../../types';
 
 const ASSET_TYPES: { type: AssetType; label: string }[] = [
-  { type: 'BIST', label: 'BIST' },
-  { type: 'TEFAS', label: 'TEFAS Fon' },
-  { type: 'FOREIGN', label: 'Yabancı' },
-  { type: 'CRYPTO', label: 'Kripto' },
-  { type: 'BES', label: 'BES' },
-  { type: 'METAL', label: 'Emtia' },
+  { type: 'BIST', label: 'BIST Hisseleri' },
+  { type: 'TEFAS', label: 'Yatırım Fonları' },
+  { type: 'FOREIGN', label: 'Yabancı Hisseler' },
+  { type: 'CRYPTO', label: 'Kripto Paralar' },
+  { type: 'METAL', label: 'Kıymetli Maden' },
   { type: 'FX', label: 'Döviz' },
+  { type: 'BES', label: 'BES Fonları' },
 ];
+
+interface SearchResult {
+  symbol: string;
+  name: string;
+  assetType: AssetType;
+  source: 'db' | 'yahoo';
+}
 
 export default function AddTransactionModal() {
   const router = useRouter();
+  const { theme } = useThemeStore();
 
   const [side, setSide] = useState<TransactionSide>('BUY');
   const [assetType, setAssetType] = useState<AssetType>('BIST');
   const [symbol, setSymbol] = useState('');
+  const [assetName, setAssetName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
-  const [currency, setCurrency] = useState('TRY');
+  const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
+  const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Canlı Arama State'leri
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [fetchingPrice, setFetchingPrice] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Canlı Sembol Arama (Debounce ile)
+  const handleSymbolChange = (text: string) => {
+    setSymbol(text);
+    setAssetName('');
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (text.trim().length >= 1) {
+      setSearching(true);
+      setShowDropdown(true);
+      searchTimeoutRef.current = setTimeout(async () => {
+        try {
+          const res = await api.get<{ ok: boolean; results: SearchResult[] }>(
+            `/symbols/search?query=${encodeURIComponent(text.trim())}&assetType=${assetType}`
+          );
+          if (res.data?.results) {
+            setSearchResults(res.data.results);
+          }
+        } catch (err) {
+          console.error('Sembol arama hatası:', err);
+        } finally {
+          setSearching(false);
+        }
+      }, 300);
+    } else {
+      setSearchResults([]);
+      setShowDropdown(false);
+      setSearching(false);
+    }
+  };
+
+  // Arama Sonucuna Dokunulduğunda
+  const selectSearchResult = async (item: SearchResult) => {
+    setSymbol(item.symbol);
+    setAssetName(item.name);
+    setAssetType(item.assetType);
+    setShowDropdown(false);
+
+    // Canlı Fiyatı Çek
+    setFetchingPrice(true);
+    try {
+      const res = await api.get<{ ok: boolean; data: { price: number; currency: 'TRY' | 'USD' } | null }>(
+        `/symbols/price?symbol=${encodeURIComponent(item.symbol)}&assetType=${item.assetType}`
+      );
+      if (res.data?.data) {
+        setUnitPrice(res.data.data.price.toFixed(2));
+        setCurrency(res.data.data.currency || 'TRY');
+      }
+    } catch (err) {
+      console.error('Fiyat çekme hatası:', err);
+    } finally {
+      setFetchingPrice(false);
+    }
+  };
 
   const numQty = parseFloat(quantity.replace(',', '.')) || 0;
   const numPrice = parseFloat(unitPrice.replace(',', '.')) || 0;
-  const total = numQty * numPrice;
+  const calculatedTotal = numQty * numPrice;
+
+  // Hızlı Tarih Seçenekleri
+  const setToday = () => setDate(new Date().toISOString().slice(0, 10));
+  const setYesterday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    setDate(d.toISOString().slice(0, 10));
+  };
 
   const handleSave = async () => {
     if (!symbol.trim()) {
@@ -52,7 +151,7 @@ export default function AddTransactionModal() {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       const res = await api.post('/transactions', {
         assetType,
@@ -60,9 +159,9 @@ export default function AddTransactionModal() {
         side,
         unitPrice: numPrice,
         quantity: numQty,
-        total,
+        total: calculatedTotal,
         currency,
-        date: new Date().toISOString(),
+        date: new Date(date).toISOString(),
         note: note.trim() || undefined,
       });
 
@@ -74,173 +173,296 @@ export default function AddTransactionModal() {
     } catch (err: any) {
       Alert.alert('Hata', 'İşlem kaydedilirken bir sorun oluştu.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Modal Başlık */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Yeni İşlem Ekle</Text>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
-          <X size={20} color={colors.text.secondary} />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top', 'bottom']}>
+      {/* 1. ÜST HEADER */}
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <View>
+          <Text style={[styles.headerTitle, { color: theme.text.primary }]}>Yeni İşlem Ekle</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.text.muted }]}>
+            Portföyünüze alım veya satım hareketi kaydedin
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.closeBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.border }]}
+          onPress={() => router.back()}
+        >
+          <X size={18} color={theme.text.primary} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Alış / Satış Toggle */}
-        <View style={styles.sideToggle}>
-          <TouchableOpacity
-            style={[
-              styles.sideBtn,
-              side === 'BUY' && { backgroundColor: colors.emerald[500] },
-            ]}
-            onPress={() => setSide('BUY')}
-          >
-            <Text
+        {/* 2. ALIŞ / SATIŞ YÖNÜ SEGMENTİ */}
+        <View style={styles.sectionBlock}>
+          <Text style={[styles.sectionLabel, { color: theme.text.muted }]}>İŞLEM YÖNÜ</Text>
+          <View style={[styles.sideToggleRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+            <TouchableOpacity
               style={[
-                styles.sideText,
-                side === 'BUY' && { color: '#ffffff', fontWeight: '700' },
+                styles.sideBtn,
+                side === 'BUY' && { backgroundColor: theme.profit.main },
               ]}
+              onPress={() => setSide('BUY')}
+              activeOpacity={0.8}
             >
-              ALIŞ
-            </Text>
-          </TouchableOpacity>
+              <ArrowDownLeft size={16} color={side === 'BUY' ? '#ffffff' : theme.text.muted} />
+              <Text
+                style={[
+                  styles.sideBtnText,
+                  { color: side === 'BUY' ? '#ffffff' : theme.text.muted },
+                  side === 'BUY' && { fontWeight: '800' },
+                ]}
+              >
+                ALIŞ (Portföye Ekle)
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.sideBtn,
-              side === 'SELL' && { backgroundColor: colors.rose[500] },
-            ]}
-            onPress={() => setSide('SELL')}
-          >
-            <Text
+            <TouchableOpacity
               style={[
-                styles.sideText,
-                side === 'SELL' && { color: '#ffffff', fontWeight: '700' },
+                styles.sideBtn,
+                side === 'SELL' && { backgroundColor: theme.loss.main },
               ]}
+              onPress={() => setSide('SELL')}
+              activeOpacity={0.8}
             >
-              SATIŞ
-            </Text>
-          </TouchableOpacity>
+              <ArrowUpRight size={16} color={side === 'SELL' ? '#ffffff' : theme.text.muted} />
+              <Text
+                style={[
+                  styles.sideBtnText,
+                  { color: side === 'SELL' ? '#ffffff' : theme.text.muted },
+                  side === 'SELL' && { fontWeight: '800' },
+                ]}
+              >
+                SATIŞ (Çıkış Yap)
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Varlık Türü */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Varlık Türü</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.chipRow}>
-              {ASSET_TYPES.map((item) => {
-                const isActive = assetType === item.type;
+        {/* 3. VARLIK TÜRÜ SEÇİCİ (Yatay Kaydırılabilir) */}
+        <View style={styles.sectionBlock}>
+          <Text style={[styles.sectionLabel, { color: theme.text.muted }]}>VARLIK TÜRÜ</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typesScroll}>
+            {ASSET_TYPES.map((item) => {
+              const isSelected = assetType === item.type;
+              return (
+                <TouchableOpacity
+                  key={item.type}
+                  style={[
+                    styles.typePill,
+                    {
+                      backgroundColor: isSelected ? theme.brand.primary : theme.surfaceMuted,
+                      borderColor: isSelected ? theme.brand.primary : theme.borderSubtle,
+                    },
+                  ]}
+                  onPress={() => {
+                    setAssetType(item.type);
+                    if (symbol) handleSymbolChange(symbol);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.typePillText,
+                      { color: isSelected ? '#ffffff' : theme.text.secondary },
+                      isSelected && { fontWeight: '800' },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* 4. SEMBOL CANLI ARAMA & OTOMATİK TAMAMLAMA */}
+        <View style={[styles.sectionBlock, { zIndex: 100 }]}>
+          <Text style={[styles.sectionLabel, { color: theme.text.muted }]}>VARLIK / SEMBOL ADI</Text>
+          <View style={[styles.inputBoxWithIcon, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+            <Search size={16} color={theme.text.muted} />
+            <TextInput
+              style={[styles.textInputMain, { color: theme.text.primary }]}
+              placeholder="Örn: ASELS, THYAO, AAPL, TI2, BTC..."
+              placeholderTextColor={theme.text.muted}
+              value={symbol}
+              onChangeText={handleSymbolChange}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            {searching && <ActivityIndicator size="small" color={theme.brand.primary} />}
+            {fetchingPrice && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Sparkles size={13} color={theme.amber.main} />
+                <Text style={{ fontSize: 10, color: theme.amber.main, fontWeight: '700' }}>Fiyat...</Text>
+              </View>
+            )}
+            {symbol.length > 0 && !searching && !fetchingPrice && (
+              <TouchableOpacity onPress={() => handleSymbolChange('')}>
+                <X size={16} color={theme.text.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {assetName ? (
+            <Text style={[styles.foundAssetName, { color: theme.text.muted }]}>{assetName}</Text>
+          ) : null}
+
+          {/* ARAMA DROPDOWN LİSTESİ */}
+          {showDropdown && searchResults.length > 0 && (
+            <View style={[styles.dropdownContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              {searchResults.map((item, idx) => {
+                const badge = getAssetTypeBadgeColor(item.assetType);
                 return (
                   <TouchableOpacity
-                    key={item.type}
-                    style={[
-                      styles.typeChip,
-                      isActive && {
-                        backgroundColor: colors.emerald[500],
-                        borderColor: colors.emerald[500],
-                      },
-                    ]}
-                    onPress={() => setAssetType(item.type)}
+                    key={`${item.symbol}-${idx}`}
+                    style={[styles.dropdownItem, { borderBottomColor: theme.borderSubtle }]}
+                    onPress={() => selectSearchResult(item)}
+                    activeOpacity={0.7}
                   >
-                    <Text
-                      style={[
-                        styles.typeChipText,
-                        isActive && { color: '#ffffff', fontWeight: '700' },
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
+                    <View style={styles.dropdownLeft}>
+                      <View style={[styles.dropdownBadge, { backgroundColor: badge.bg }]}>
+                        <Text style={[styles.dropdownBadgeText, { color: badge.text }]}>
+                          {getAssetTypeLabel(item.assetType)}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={[styles.dropdownSymbol, { color: theme.text.primary }]}>
+                          {item.symbol}
+                        </Text>
+                        <Text style={[styles.dropdownName, { color: theme.text.muted }]} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                      </View>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
             </View>
-          </ScrollView>
+          )}
         </View>
 
-        {/* Sembol */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Sembol / Kod</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Örn: THYAO, TUPRS, MAC, AAPL, BTC"
-            placeholderTextColor={colors.text.muted}
-            value={symbol}
-            onChangeText={(t) => setSymbol(t.toUpperCase())}
-            autoCapitalize="characters"
-          />
-        </View>
-
-        {/* Adet & Birim Fiyat */}
-        <View style={styles.row}>
-          <View style={[styles.fieldGroup, { flex: 1 }]}>
-            <Text style={styles.label}>Adet / Lot</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={colors.text.muted}
-              value={quantity}
-              onChangeText={setQuantity}
-              keyboardType="numeric"
-            />
+        {/* 5. İŞLEM TARİHİ & HIZLI BUTONLAR */}
+        <View style={styles.sectionBlock}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <Text style={[styles.sectionLabel, { color: theme.text.muted, marginBottom: 0 }]}>İŞLEM TARİHİ</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <TouchableOpacity
+                style={[styles.dateQuickBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+                onPress={setToday}
+              >
+                <Text style={[styles.dateQuickBtnText, { color: theme.brand.primary }]}>Bugün</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateQuickBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+                onPress={setYesterday}
+              >
+                <Text style={[styles.dateQuickBtnText, { color: theme.text.secondary }]}>Dün</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={[styles.fieldGroup, { flex: 1 }]}>
-            <Text style={styles.label}>Birim Fiyat ({currency})</Text>
+          <View style={[styles.inputBoxWithIcon, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+            <Calendar size={16} color={theme.text.muted} />
             <TextInput
-              style={styles.input}
-              placeholder="0.00"
-              placeholderTextColor={colors.text.muted}
-              value={unitPrice}
-              onChangeText={setUnitPrice}
-              keyboardType="numeric"
+              style={[styles.textInputMain, { color: theme.text.primary }]}
+              placeholder="YYYY-AA-GG (Örn: 2026-08-30)"
+              placeholderTextColor={theme.text.muted}
+              value={date}
+              onChangeText={setDate}
             />
           </View>
         </View>
 
-        {/* Toplam Hesaplanan Tutar */}
-        <View style={styles.totalBox}>
-          <Text style={styles.totalLabel}>Hesaplanan Toplam Tutar</Text>
-          <Text style={styles.totalValue}>
-            {total.toLocaleString('tr-TR', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}{' '}
-            {currency}
+        {/* 6. ADET VE BİRİM FİYAT GRİDİ */}
+        <View style={styles.gridRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.sectionLabel, { color: theme.text.muted }]}>MİKTAR / ADET</Text>
+            <View style={[styles.inputBoxWithIcon, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+              <TextInput
+                style={[styles.textInputMain, { color: theme.text.primary, fontWeight: '700' }]}
+                placeholder="0"
+                placeholderTextColor={theme.text.muted}
+                value={quantity}
+                onChangeText={setQuantity}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={[styles.sectionLabel, { color: theme.text.muted, marginBottom: 0 }]}>BİRİM FİYAT</Text>
+              <TouchableOpacity
+                onPress={() => setCurrency(currency === 'TRY' ? 'USD' : 'TRY')}
+                style={[styles.currencyPill, { backgroundColor: theme.brand.soft }]}
+              >
+                <Text style={[styles.currencyPillText, { color: theme.brand.strong }]}>{currency}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.inputBoxWithIcon, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+              <TextInput
+                style={[styles.textInputMain, { color: theme.text.primary, fontWeight: '700' }]}
+                placeholder="0,00"
+                placeholderTextColor={theme.text.muted}
+                value={unitPrice}
+                onChangeText={setUnitPrice}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* 7. TOPLAM TUTAR ÖNİZLEME KARTI */}
+        <View style={[styles.totalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View>
+            <Text style={[styles.totalCardLabel, { color: theme.text.muted }]}>TOPLAM TUTAR</Text>
+            <Text style={[styles.totalCardSub, { color: theme.text.secondary }]}>
+              {numQty > 0 && numPrice > 0 ? `${formatQuantity(numQty)} Adet × ${formatCurrency(numPrice, currency)}` : 'Adet ve fiyat giriniz'}
+            </Text>
+          </View>
+          <Text style={[styles.totalCardValue, { color: side === 'BUY' ? theme.profit.main : theme.loss.main }]}>
+            {formatCurrency(calculatedTotal, currency)}
           </Text>
         </View>
 
-        {/* Not */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Not (İsteğe Bağlı)</Text>
-          <TextInput
-            style={[styles.input, { height: 70, textAlignVertical: 'top' }]}
-            placeholder="İşlem hakkında kısa bir not..."
-            placeholderTextColor={colors.text.muted}
-            value={note}
-            onChangeText={setNote}
-            multiline
-          />
+        {/* 8. İŞLEM NOTU (OPSİYONEL) */}
+        <View style={styles.sectionBlock}>
+          <Text style={[styles.sectionLabel, { color: theme.text.muted }]}>İŞLEM NOTU (İSTEĞE BAĞLI)</Text>
+          <View style={[styles.inputBoxWithIcon, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+            <FileText size={16} color={theme.text.muted} />
+            <TextInput
+              style={[styles.textInputMain, { color: theme.text.primary }]}
+              placeholder="Örn: Aylık düzenli birikim, temettü sonrası ekleme..."
+              placeholderTextColor={theme.text.muted}
+              value={note}
+              onChangeText={setNote}
+            />
+          </View>
         </View>
 
-        {/* Kaydet Butonu */}
+        {/* 9. KAYDET BUTONU */}
         <TouchableOpacity
-          style={[styles.saveBtn, loading && { opacity: 0.7 }]}
+          style={[styles.saveBtn, { backgroundColor: theme.brand.primary }]}
           onPress={handleSave}
-          disabled={loading}
+          disabled={submitting}
+          activeOpacity={0.8}
         >
-          {loading ? (
+          {submitting ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Check size={18} color="#ffffff" />
               <Text style={styles.saveBtnText}>İşlemi Kaydet</Text>
-            </>
+            </View>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -251,118 +473,189 @@ export default function AddTransactionModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg.primary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.bg.borderSubtle,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text.primary,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 1,
   },
   closeBtn: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     gap: 16,
+    paddingBottom: 40,
   },
-  sideToggle: {
+  sectionBlock: {
+    gap: 6,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  sideToggleRow: {
     flexDirection: 'row',
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 12,
-    padding: 4,
+    padding: 3,
+    borderRadius: 9,
     borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
   },
   sideBtn: {
     flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  sideText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text.secondary,
-  },
-  fieldGroup: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text.secondary,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  typeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.bg.secondary,
-    borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
-  },
-  typeChipText: {
-    fontSize: 12,
-    color: colors.text.secondary,
-    fontWeight: '500',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  input: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
-    color: colors.text.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-  },
-  totalBox: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.bg.borderSubtle,
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 11,
-    color: colors.text.muted,
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.emerald[400],
-    marginTop: 4,
-  },
-  saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.emerald[500],
-    borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 8,
+    borderRadius: 7,
+    gap: 5,
+  },
+  sideBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  typesScroll: {
+    gap: 6,
+    paddingVertical: 2,
+  },
+  typePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  typePillText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  inputBoxWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 9,
+    borderWidth: 1,
     gap: 8,
-    marginTop: 10,
+  },
+  textInputMain: {
+    flex: 1,
+    fontSize: 13,
+    paddingVertical: 0,
+  },
+  foundAssetName: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  dropdownContainer: {
+    borderRadius: 9,
+    borderWidth: 1,
+    marginTop: 4,
+    maxHeight: 180,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+  },
+  dropdownLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  dropdownBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  dropdownBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+  },
+  dropdownSymbol: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  dropdownName: {
+    fontSize: 10,
+    maxWidth: 220,
+  },
+  dateQuickBtn: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+  dateQuickBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  currencyPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  currencyPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  totalCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  totalCardLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  totalCardSub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  totalCardValue: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  saveBtn: {
+    height: 48,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 4,
   },
   saveBtnText: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
