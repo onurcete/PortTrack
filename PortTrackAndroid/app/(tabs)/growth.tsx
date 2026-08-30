@@ -579,6 +579,48 @@ export default function GrowthScreen() {
     return Math.max(...chartData.map((d) => d.value), 1);
   }, [chartData]);
 
+  // Aylık Getiri Grafiği Dinamik Ölçekleme & Sıfır Ekseni Oranı
+  const returnChartScale = useMemo(() => {
+    if (!chartData || chartData.length === 0) {
+      return { maxPos: 10, maxNeg: 0, topRatio: 1, availableHeight: 140, topHeight: 140, bottomHeight: 0 };
+    }
+    let maxPos = 0;
+    let maxNeg = 0;
+    for (const d of chartData) {
+      if (d.returnPct > maxPos) maxPos = d.returnPct;
+      if (d.returnPct < -maxNeg) maxNeg = Math.abs(d.returnPct);
+    }
+
+    if (maxPos === 0 && maxNeg === 0) {
+      maxPos = 10;
+    }
+
+    const availableHeight = 140; // Bar çizim alanı yüksekliği
+    let topRatio = 0.5;
+
+    if (maxNeg === 0) {
+      topRatio = 1; // Hiç negatif yoksa 100% alan pozitif barlara ayrılır
+    } else if (maxPos === 0) {
+      topRatio = 0; // Hiç pozitif yoksa 100% alan negatif barlara ayrılır
+    } else {
+      // Hem pozitif hem negatif varsa oranlanır (en az %18, en çok %82)
+      const rawRatio = maxPos / (maxPos + maxNeg);
+      topRatio = Math.max(0.18, Math.min(0.82, rawRatio));
+    }
+
+    const topHeight = Math.round(availableHeight * topRatio);
+    const bottomHeight = availableHeight - topHeight;
+
+    return {
+      maxPos,
+      maxNeg,
+      topRatio,
+      availableHeight,
+      topHeight,
+      bottomHeight,
+    };
+  }, [chartData]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
       {loading ? (
@@ -701,7 +743,7 @@ export default function GrowthScreen() {
                       </View>
                     </View>
                     <Text style={[styles.heroBigVal, { color: theme.text.primary }]}>
-                      {formatCurrency(periodSummary.totalCurrentTRY, 'TRY')}
+                      {formatCurrency(periodSummary.totalCurrentTRY, 'TRY', 0)}
                     </Text>
                     <Text style={[styles.heroDateLabel, { color: theme.text.muted }]}>
                       {periodSummary.endDateLabel}
@@ -719,7 +761,7 @@ export default function GrowthScreen() {
                       </View>
                     </View>
                     <Text style={[styles.heroMidVal, { color: theme.profit.main }]}>
-                      +{formatCurrency(periodSummary.gainVal, currency)}
+                      +{formatCurrency(periodSummary.gainVal, currency, 0)}
                     </Text>
                     <Text style={[styles.heroDateLabel, { color: theme.text.muted }]}>
                       Net kazanç / kayıp
@@ -732,7 +774,7 @@ export default function GrowthScreen() {
                   <View style={styles.periodHeroCell}>
                     <Text style={[styles.heroSubLabel, { color: theme.text.muted }]}>DÖNEM BAŞLANGIÇ</Text>
                     <Text style={[styles.heroSubVal, { color: theme.text.secondary }]}>
-                      {formatCurrency(periodSummary.startVal, currency)}
+                      {formatCurrency(periodSummary.startVal, currency, 0)}
                     </Text>
                     <Text style={[styles.heroDateLabel, { color: theme.text.muted }]}>
                       {periodSummary.startDateLabel}
@@ -748,7 +790,7 @@ export default function GrowthScreen() {
                       </View>
                     </View>
                     <Text style={[styles.heroSubVal, { color: theme.text.primary }]}>
-                      {formatCurrency(periodSummary.totalCurrentUSD, 'USD')}
+                      {formatCurrency(periodSummary.totalCurrentUSD, 'USD', 0)}
                     </Text>
                     <Text style={[styles.heroDateLabel, { color: theme.brand.primary }]}>
                       USD Getiri: +{periodSummary.usdReturnPct.toFixed(1)}%
@@ -786,53 +828,70 @@ export default function GrowthScreen() {
                     {chartData.map((item, idx) => {
                       const isPos = item.returnPct >= 0;
                       const isZero = Math.abs(item.returnPct) < 0.05;
-                      const barHeight = Math.max(4, Math.min(50, Math.abs(item.returnPct) * 2 + 4));
+
+                      const availableTop = Math.max(0, returnChartScale.topHeight - 16);
+                      const availableBottom = Math.max(0, returnChartScale.bottomHeight - 16);
+
+                      const posBarHeight = isPos && !isZero
+                        ? Math.max(6, (item.returnPct / (returnChartScale.maxPos || 1)) * availableTop)
+                        : 0;
+
+                      const negBarHeight = !isPos && !isZero
+                        ? Math.max(6, (Math.abs(item.returnPct) / (returnChartScale.maxNeg || 1)) * availableBottom)
+                        : 0;
 
                       return (
                         <View key={`barchart-ret-${item.month}-${idx}`} style={styles.barChartColSingleYear}>
-                          <View style={styles.barTopHalf}>
-                            {isPos && !isZero && (
-                              <Text style={[styles.barPctLabelMini, { color: theme.profit.main }]}>
-                                +{item.returnPct.toFixed(0)}%
-                              </Text>
-                            )}
-                            {isPos && !isZero && (
-                              <View
-                                style={[
-                                  styles.barStickMini,
-                                  {
-                                    height: barHeight,
-                                    backgroundColor: theme.profit.main,
-                                    borderTopLeftRadius: 2,
-                                    borderTopRightRadius: 2,
-                                  },
-                                ]}
-                              />
-                            )}
-                          </View>
+                          {/* Üst Yarı (Pozitif Barlar) */}
+                          {returnChartScale.topHeight > 0 && (
+                            <View style={[styles.barTopHalf, { height: returnChartScale.topHeight }]}>
+                              {isPos && !isZero && (
+                                <Text style={[styles.barPctLabelMini, { color: theme.profit.main }]}>
+                                  +{item.returnPct.toFixed(0)}%
+                                </Text>
+                              )}
+                              {isPos && !isZero && (
+                                <View
+                                  style={[
+                                    styles.barStickMini,
+                                    {
+                                      height: posBarHeight,
+                                      backgroundColor: theme.profit.main,
+                                      borderTopLeftRadius: 3,
+                                      borderTopRightRadius: 3,
+                                    },
+                                  ]}
+                                />
+                              )}
+                            </View>
+                          )}
 
+                          {/* Sıfır Ekseni Çizgisi */}
                           <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
 
-                          <View style={styles.barBottomHalf}>
-                            {!isPos && (
-                              <View
-                                style={[
-                                  styles.barStickMini,
-                                  {
-                                    height: barHeight,
-                                    backgroundColor: theme.loss.main,
-                                    borderBottomLeftRadius: 2,
-                                    borderBottomRightRadius: 2,
-                                  },
-                                ]}
-                              />
-                            )}
-                            {!isPos && (
-                              <Text style={[styles.barPctLabelMini, { color: theme.loss.main, marginTop: 1 }]}>
-                                {item.returnPct.toFixed(0)}%
-                              </Text>
-                            )}
-                          </View>
+                          {/* Alt Yarı (Negatif Barlar) */}
+                          {returnChartScale.bottomHeight > 0 && (
+                            <View style={[styles.barBottomHalf, { height: returnChartScale.bottomHeight }]}>
+                              {!isPos && !isZero && (
+                                <View
+                                  style={[
+                                    styles.barStickMini,
+                                    {
+                                      height: negBarHeight,
+                                      backgroundColor: theme.loss.main,
+                                      borderBottomLeftRadius: 3,
+                                      borderBottomRightRadius: 3,
+                                    },
+                                  ]}
+                                />
+                              )}
+                              {!isPos && !isZero && (
+                                <Text style={[styles.barPctLabelMini, { color: theme.loss.main, marginTop: 1 }]}>
+                                  {item.returnPct.toFixed(0)}%
+                                </Text>
+                              )}
+                            </View>
+                          )}
 
                           <Text style={[styles.barDateLabelMini, { color: theme.text.muted }]}>
                             {item.label}
@@ -846,53 +905,69 @@ export default function GrowthScreen() {
                     {chartData.map((item, idx) => {
                       const isPos = item.returnPct >= 0;
                       const isZero = Math.abs(item.returnPct) < 0.05;
-                      const barHeight = Math.max(6, Math.min(65, Math.abs(item.returnPct) * 2.5 + 4));
+
+                      const availableTop = Math.max(0, returnChartScale.topHeight - 16);
+                      const availableBottom = Math.max(0, returnChartScale.bottomHeight - 16);
+
+                      const posBarHeight = isPos && !isZero
+                        ? Math.max(6, (item.returnPct / (returnChartScale.maxPos || 1)) * availableTop)
+                        : 0;
+
+                      const negBarHeight = !isPos && !isZero
+                        ? Math.max(6, (Math.abs(item.returnPct) / (returnChartScale.maxNeg || 1)) * availableBottom)
+                        : 0;
 
                       return (
                         <View key={`barchart-ret-all-${item.month}-${idx}`} style={styles.barChartCol}>
-                          <View style={styles.barTopHalf}>
-                            {isPos && !isZero && (
-                              <Text style={[styles.barPctLabel, { color: theme.profit.main }]}>
-                                +{item.returnPct.toFixed(1)}%
-                              </Text>
-                            )}
-                            {isPos && !isZero && (
-                              <View
-                                style={[
-                                  styles.barStick,
-                                  {
-                                    height: barHeight,
-                                    backgroundColor: theme.profit.main,
-                                    borderTopLeftRadius: 3,
-                                    borderTopRightRadius: 3,
-                                  },
-                                ]}
-                              />
-                            )}
-                          </View>
+                          {/* Üst Yarı */}
+                          {returnChartScale.topHeight > 0 && (
+                            <View style={[styles.barTopHalf, { height: returnChartScale.topHeight }]}>
+                              {isPos && !isZero && (
+                                <Text style={[styles.barPctLabel, { color: theme.profit.main }]}>
+                                  +{item.returnPct.toFixed(1)}%
+                                </Text>
+                              )}
+                              {isPos && !isZero && (
+                                <View
+                                  style={[
+                                    styles.barStick,
+                                    {
+                                      height: posBarHeight,
+                                      backgroundColor: theme.profit.main,
+                                      borderTopLeftRadius: 4,
+                                      borderTopRightRadius: 4,
+                                    },
+                                  ]}
+                                />
+                              )}
+                            </View>
+                          )}
 
                           <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
 
-                          <View style={styles.barBottomHalf}>
-                            {!isPos && (
-                              <View
-                                style={[
-                                  styles.barStick,
-                                  {
-                                    height: barHeight,
-                                    backgroundColor: theme.loss.main,
-                                    borderBottomLeftRadius: 3,
-                                    borderBottomRightRadius: 3,
-                                  },
-                                ]}
-                              />
-                            )}
-                            {!isPos && (
-                              <Text style={[styles.barPctLabel, { color: theme.loss.main, marginTop: 2 }]}>
-                                {item.returnPct.toFixed(1)}%
-                              </Text>
-                            )}
-                          </View>
+                          {/* Alt Yarı */}
+                          {returnChartScale.bottomHeight > 0 && (
+                            <View style={[styles.barBottomHalf, { height: returnChartScale.bottomHeight }]}>
+                              {!isPos && !isZero && (
+                                <View
+                                  style={[
+                                    styles.barStick,
+                                    {
+                                      height: negBarHeight,
+                                      backgroundColor: theme.loss.main,
+                                      borderBottomLeftRadius: 4,
+                                      borderBottomRightRadius: 4,
+                                    },
+                                  ]}
+                                />
+                              )}
+                              {!isPos && !isZero && (
+                                <Text style={[styles.barPctLabel, { color: theme.loss.main, marginTop: 2 }]}>
+                                  {item.returnPct.toFixed(1)}%
+                                </Text>
+                              )}
+                            </View>
+                          )}
 
                           <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
                             {item.label}
@@ -1162,11 +1237,11 @@ export default function GrowthScreen() {
                           <Text style={[styles.cumulGridLabel, { color: theme.text.muted }]}>TRY DEĞER DEĞİŞİMİ</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                             <Text style={[styles.cumulGridValMuted, { color: theme.text.secondary }]}>
-                              {formatCurrency(row.startTRY, 'TRY')}
+                              {formatCurrency(row.startTRY, 'TRY', 0)}
                             </Text>
                             <Text style={{ color: theme.text.muted, fontSize: 10 }}>→</Text>
                             <Text style={[styles.cumulGridValBold, { color: theme.text.primary }]}>
-                              {formatCurrency(row.endTRY, 'TRY')}
+                              {formatCurrency(row.endTRY, 'TRY', 0)}
                             </Text>
                           </View>
                         </View>
@@ -1176,11 +1251,11 @@ export default function GrowthScreen() {
                           <Text style={[styles.cumulGridLabel, { color: theme.text.muted }]}>USD DEĞER DEĞİŞİMİ</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                             <Text style={[styles.cumulGridValMuted, { color: theme.text.secondary }]}>
-                              {formatCurrency(row.startUSD, 'USD')}
+                              {formatCurrency(row.startUSD, 'USD', 0)}
                             </Text>
                             <Text style={{ color: theme.text.muted, fontSize: 10 }}>→</Text>
                             <Text style={[styles.cumulGridValBold, { color: theme.brand.strong }]}>
-                              {formatCurrency(row.endUSD, 'USD')}
+                              {formatCurrency(row.endUSD, 'USD', 0)}
                             </Text>
                           </View>
                         </View>
@@ -1221,16 +1296,16 @@ export default function GrowthScreen() {
                           {row.year}
                         </Text>
                         <Text style={[styles.tdCell, { width: 95, textAlign: 'right', color: theme.text.secondary }]}>
-                          {formatCurrency(row.startTRY, 'TRY')}
+                          {formatCurrency(row.startTRY, 'TRY', 0)}
                         </Text>
                         <Text style={[styles.tdCell, { width: 95, textAlign: 'right', fontWeight: '700', color: theme.text.primary }]}>
-                          {formatCurrency(row.endTRY, 'TRY')}
+                          {formatCurrency(row.endTRY, 'TRY', 0)}
                         </Text>
                         <Text style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.secondary }]}>
-                          {formatCurrency(row.startUSD, 'USD')}
+                          {formatCurrency(row.startUSD, 'USD', 0)}
                         </Text>
                         <Text style={[styles.tdCell, { width: 85, textAlign: 'right', fontWeight: '700', color: theme.text.primary }]}>
-                          {formatCurrency(row.endUSD, 'USD')}
+                          {formatCurrency(row.endUSD, 'USD', 0)}
                         </Text>
                         <Text
                           style={[
@@ -1444,7 +1519,7 @@ export default function GrowthScreen() {
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                           <Text style={[styles.monthTotalVal, { color: theme.text.primary }]}>
-                            {formatCurrency(row.totalVal, currency)}
+                            {formatCurrency(row.totalVal, currency, 0)}
                           </Text>
 
                           {monthlyViewMode === 'return' ? (
@@ -1510,7 +1585,7 @@ export default function GrowthScreen() {
                                 {/* Sağ: Tutar + Mod Bilgisi */}
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                   <Text style={[styles.monthlyAssetAmount, { color: theme.text.primary }]}>
-                                    {formatCurrency(cell.amount, currency)}
+                                    {formatCurrency(cell.amount, currency, 0)}
                                   </Text>
 
                                   {monthlyViewMode === 'return' && ret != null && (
@@ -1662,7 +1737,7 @@ export default function GrowthScreen() {
                           if (monthlyViewMode === 'amount') {
                             return (
                               <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.secondary }]}>
-                                {formatCurrency(cellData.amount, currency)}
+                                {formatCurrency(cellData.amount, currency, 0)}
                               </Text>
                             );
                           }
@@ -1708,7 +1783,7 @@ export default function GrowthScreen() {
                         <View style={{ width: 85, alignItems: 'flex-end', justifyContent: 'center' }}>
                           {monthlyViewMode === 'amount' ? (
                             <Text style={[styles.tdCell, { width: '100%', textAlign: 'right', fontWeight: '800', color: theme.text.primary }]}>
-                              {formatCurrency(row.totalVal, currency)}
+                              {formatCurrency(row.totalVal, currency, 0)}
                             </Text>
                           ) : monthlyViewMode === 'share' ? (
                             <Text style={[styles.tdCell, { width: '100%', textAlign: 'right', fontWeight: '800', color: theme.text.primary }]}>
@@ -1992,17 +2067,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    height: 145,
+    height: 165,
     paddingHorizontal: 2,
   },
   barChartColSingleYear: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'space-between',
     height: '100%',
   },
   barStickMini: {
-    width: '75%',
+    width: '78%',
     maxWidth: 16,
+    minWidth: 8,
   },
   barPctLabelMini: {
     fontSize: 7.5,
@@ -2023,11 +2100,11 @@ const styles = StyleSheet.create({
   },
   barChartCol: {
     alignItems: 'center',
+    justifyContent: 'space-between',
     width: 44,
     height: '100%',
   },
   barTopHalf: {
-    flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
     width: '100%',
@@ -2037,13 +2114,12 @@ const styles = StyleSheet.create({
     height: 1.5,
   },
   barBottomHalf: {
-    flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
     width: '100%',
   },
   barStick: {
-    width: 20,
+    width: 22,
   },
   barPctLabel: {
     fontSize: 8,
