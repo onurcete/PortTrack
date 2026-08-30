@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, AUTH_COOKIE } from "@/lib/auth";
+import { getGrowthSeries, getPeriodReturns } from "@/lib/history";
 
 export const runtime = "nodejs";
 
@@ -22,13 +23,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Yetkisiz erişim." }, { status: 401 });
     }
 
-    const snapshots = await prisma.portfolioMonthSnapshot.findMany({
-      where: { userId },
-      orderBy: { month: "desc" },
-    });
+    const [series, periodReturns, snapshots] = await Promise.all([
+      getGrowthSeries(userId),
+      getPeriodReturns(userId),
+      prisma.portfolioMonthSnapshot.findMany({
+        where: { userId },
+        orderBy: { month: "desc" },
+      }),
+    ]);
 
     return NextResponse.json({
       ok: true,
+      series,
+      periodReturns,
       snapshots,
     });
   } catch (err: any) {
