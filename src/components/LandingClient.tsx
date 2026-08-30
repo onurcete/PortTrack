@@ -62,6 +62,16 @@ const MARKET_TICKER = [
 ];
 
 export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const trackDemoClick = (source: string) => {
+    if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+      (window as any).gtag("event", "demo_click", {
+        event_category: "Engagement",
+        event_label: source,
+        button_location: source,
+      });
+    }
+  };
+
   useEffect(() => {
     if (!isLoggedIn && typeof window !== "undefined" && typeof (window as any).gtag === "function") {
       (window as any).gtag("event", "conversion", {
@@ -214,6 +224,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             {!isLoggedIn && (
               <a
                 href="/api/auth/demo"
+                onClick={() => trackDemoClick("header")}
                 className="hidden sm:inline-flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-2 rounded-xl border border-[var(--color-brand)]/40 bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] hover:bg-[var(--color-brand)] hover:text-white transition-all shadow-2xs hover:scale-105 active:scale-95"
                 title="Şifresiz anında örnek demo hesabına giriş yap"
               >
@@ -304,6 +315,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
             {!isLoggedIn && (
               <a
                 href="/api/auth/demo"
+                onClick={() => trackDemoClick("hero")}
                 className="inline-flex items-center gap-2 text-sm sm:text-base font-black px-7 py-4 rounded-2xl border-2 border-[var(--color-brand)]/40 bg-[var(--color-surface)] hover:bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] hover:border-[var(--color-brand)] transition-all hover:scale-105 active:scale-95 shadow-md"
               >
                 <Zap size={18} className="fill-current text-[var(--color-brand)]" />
@@ -1266,6 +1278,7 @@ export function LandingClient({ isLoggedIn }: { isLoggedIn: boolean }) {
               {!isLoggedIn && (
                 <a
                   href="/api/auth/demo"
+                  onClick={() => trackDemoClick("footer_cta")}
                   className="px-6 py-3.5 rounded-2xl bg-indigo-950/40 text-white border border-white/30 font-black text-sm hover:bg-indigo-950/60 transition-all"
                 >
                   ⚡ Demo Hesabı Gör
