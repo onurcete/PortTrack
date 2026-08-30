@@ -60,6 +60,7 @@ export default function DashboardScreen() {
   const [showValues, setShowValues] = useState(true);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [positionTab, setPositionTab] = useState<'OPEN' | 'CLOSED'>('OPEN');
 
   const fetchPortfolio = useCallback(async () => {
     try {
@@ -97,17 +98,41 @@ export default function DashboardScreen() {
     }));
   };
 
+  // Açık Pozisyonlar: Adet > 0 olan ve portföy değeri bulunan varlıklar
+  const openPositions = useMemo(() => {
+    if (!portfolio?.positions) return [];
+    return portfolio.positions.filter(
+      (p) => p.quantity > 1e-9 && (p.currentValueTRY > 0 || p.totalCostTRY > 0)
+    );
+  }, [portfolio?.positions]);
+
+  // Kapalı Pozisyonlar: Adet <= 0 olan (tamamı satılmış) varlıklar
+  const closedPositions = useMemo(() => {
+    if (!portfolio?.positions) return [];
+    return portfolio.positions.filter(
+      (p) =>
+        p.quantity <= 1e-9 &&
+        ((p.profitTRY != null && Math.abs(p.profitTRY) > 0.001) ||
+          p.totalCostTRY > 0 ||
+          (p.profitRate != null && Math.abs(p.profitRate) > 0.001))
+    );
+  }, [portfolio?.positions]);
+
+  // Aktif sekmeye göre gösterilecek pozisyonlar
+  const activePositions = useMemo(() => {
+    return positionTab === 'OPEN' ? openPositions : closedPositions;
+  }, [positionTab, openPositions, closedPositions]);
+
   const positionsByType = useMemo(() => {
     const map: Record<string, PortfolioPosition[]> = {};
-    if (!portfolio?.positions) return map;
-    for (const pos of portfolio.positions) {
+    for (const pos of activePositions) {
       if (!map[pos.assetType]) {
         map[pos.assetType] = [];
       }
       map[pos.assetType].push(pos);
     }
     return map;
-  }, [portfolio]);
+  }, [activePositions]);
 
   const totalValue = isTRY
     ? (portfolio?.totalValueTRY ?? 0)
@@ -377,7 +402,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <Text style={[styles.sectionCount, { color: theme.text.muted }]}>
-                {portfolio?.positions?.length || 0} Varlık
+                {openPositions.length} Varlık
               </Text>
             </View>
 
@@ -426,13 +451,84 @@ export default function DashboardScreen() {
             )}
           </View>
 
-          {/* 4. AÇIK POZİSYONLAR TABLOSU (Tam Genişlik, Ekranla Bütün) */}
+          {/* 4. POZİSYONLAR BÖLÜMÜ (AÇIK / KAPALI POZİSYONLAR SEÇİCİ) */}
           <View style={styles.positionsSection}>
             <View style={styles.positionsSectionHeader}>
-              <Text style={[styles.positionsTitleText, { color: theme.text.primary }]}>
-                Açık Pozisyonlar
-              </Text>
+              <View
+                style={[
+                  styles.posTabContainer,
+                  { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                ]}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.posTabBtn,
+                    positionTab === 'OPEN' && [
+                      styles.posTabBtnActive,
+                      { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
+                    ],
+                  ]}
+                  onPress={() => {
+                    haptic.selection();
+                    setPositionTab('OPEN');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.posTabText,
+                      { color: positionTab === 'OPEN' ? theme.brand.primary : theme.text.muted },
+                      positionTab === 'OPEN' && { fontWeight: '800' },
+                    ]}
+                  >
+                    Açık Pozisyonlar ({openPositions.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.posTabBtn,
+                    positionTab === 'CLOSED' && [
+                      styles.posTabBtnActive,
+                      { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
+                    ],
+                  ]}
+                  onPress={() => {
+                    haptic.selection();
+                    setPositionTab('CLOSED');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.posTabText,
+                      { color: positionTab === 'CLOSED' ? theme.brand.primary : theme.text.muted },
+                      positionTab === 'CLOSED' && { fontWeight: '800' },
+                    ]}
+                  >
+                    Kapalı Pozisyonlar ({closedPositions.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
+
+            {/* Kapalı Pozisyon Boş Durumu */}
+            {positionTab === 'CLOSED' && closedPositions.length === 0 && (
+              <View
+                style={[
+                  styles.emptyClosedCard,
+                  { backgroundColor: theme.surface, borderColor: theme.borderSubtle },
+                ]}
+              >
+                <Layers size={28} color={theme.text.muted} style={{ opacity: 0.5, marginBottom: 6 }} />
+                <Text style={[styles.emptyClosedTitle, { color: theme.text.primary }]}>
+                  Kapalı Pozisyon Yok
+                </Text>
+                <Text style={[styles.emptyClosedSub, { color: theme.text.muted }]}>
+                  Henüz tamamen satılıp kapatılmış bir pozisyonunuz bulunmuyor.
+                </Text>
+              </View>
+            )}
 
             {SECTION_ORDER.map((section) => {
               const items = positionsByType[section.type] || [];
@@ -440,9 +536,22 @@ export default function DashboardScreen() {
 
               const isCollapsed = collapsedSections[section.type];
               const sectionTotalValue = items.reduce(
-                (acc, p) => acc + (isTRY ? p.currentValueTRY : (p.currentValueUSD ?? (p.currentValueTRY / (portfolio?.currentUsdTry || 1)))),
+                (acc, p) =>
+                  acc +
+                  (isTRY
+                    ? p.currentValueTRY
+                    : p.currentValueUSD ?? p.currentValueTRY / (portfolio?.currentUsdTry || 1)),
                 0
               );
+              const sectionTotalProfit = items.reduce(
+                (acc, p) =>
+                  acc +
+                  (isTRY
+                    ? p.profitTRY
+                    : p.profitUSD ?? p.profitTRY / (portfolio?.currentUsdTry || 1)),
+                0
+              );
+              const isSectionProfitPos = sectionTotalProfit >= 0;
               const badge = getAssetTypeBadgeColor(section.type);
 
               return (
@@ -474,9 +583,23 @@ export default function DashboardScreen() {
                     </View>
 
                     <View style={styles.catHeaderRight}>
-                      <Text style={[styles.categoryValue, { color: theme.text.primary }]}>
-                        {showValues ? formatCurrency(sectionTotalValue, currency, 0) : '••••••'}
-                      </Text>
+                      {positionTab === 'OPEN' ? (
+                        <Text style={[styles.categoryValue, { color: theme.text.primary }]}>
+                          {showValues ? formatCurrency(sectionTotalValue, currency, 0) : '••••••'}
+                        </Text>
+                      ) : (
+                        <Text
+                          style={[
+                            styles.categoryValue,
+                            { color: isSectionProfitPos ? theme.profit.main : theme.loss.main },
+                          ]}
+                        >
+                          {showValues
+                            ? (isSectionProfitPos ? '+' : '') +
+                              formatCurrency(sectionTotalProfit, currency, 0)
+                            : '••••••'}
+                        </Text>
+                      )}
                       <ChevronDown
                         size={16}
                         color={theme.text.muted}
@@ -494,7 +617,7 @@ export default function DashboardScreen() {
                       {/* Tablo Alt Başlığı */}
                       <View style={[styles.tableSubHeader, { backgroundColor: theme.surfaceMuted }]}>
                         <Text style={[styles.thText, { width: '28%', color: theme.text.muted }]}>
-                          Varlık / Adet
+                          {positionTab === 'OPEN' ? 'Varlık / Adet' : 'Varlık'}
                         </Text>
                         <Text
                           style={[
@@ -502,7 +625,7 @@ export default function DashboardScreen() {
                             { width: '22%', textAlign: 'center', color: theme.text.muted },
                           ]}
                         >
-                          Fiyat
+                          {positionTab === 'OPEN' ? 'Fiyat' : 'Alış Maliyeti'}
                         </Text>
                         <Text
                           style={[
@@ -510,7 +633,7 @@ export default function DashboardScreen() {
                             { width: '20%', textAlign: 'center', color: theme.text.muted },
                           ]}
                         >
-                          Günlük %
+                          {positionTab === 'OPEN' ? 'Günlük %' : 'Getiri %'}
                         </Text>
                         <Text
                           style={[
@@ -518,7 +641,7 @@ export default function DashboardScreen() {
                             { width: '30%', textAlign: 'right', color: theme.text.muted },
                           ]}
                         >
-                          Tutar / Toplam K/Z
+                          {positionTab === 'OPEN' ? 'Tutar / Toplam K/Z' : 'Realize K/Z'}
                         </Text>
                       </View>
 
@@ -531,8 +654,18 @@ export default function DashboardScreen() {
                         const isTotalPos = pos.profitRate >= 0;
                         const totalProfitColor = isTotalPos ? theme.profit.main : theme.loss.main;
 
-                        const posPrice = isTRY ? pos.currentPriceTRY : (pos.currentPriceUSD ?? (pos.currentPriceTRY / (portfolio?.currentUsdTry || 1)));
-                        const posValue = isTRY ? pos.currentValueTRY : (pos.currentValueUSD ?? (pos.currentValueTRY / (portfolio?.currentUsdTry || 1)));
+                        const posPrice = isTRY
+                          ? pos.currentPriceTRY
+                          : pos.currentPriceUSD ?? pos.currentPriceTRY / (portfolio?.currentUsdTry || 1);
+                        const posValue = isTRY
+                          ? pos.currentValueTRY
+                          : pos.currentValueUSD ?? pos.currentValueTRY / (portfolio?.currentUsdTry || 1);
+                        const posCost = isTRY
+                          ? pos.totalCostTRY
+                          : pos.totalCostUSD ?? pos.totalCostTRY / (portfolio?.currentUsdTry || 1);
+                        const posProfit = isTRY
+                          ? pos.profitTRY
+                          : pos.profitUSD ?? pos.profitTRY / (portfolio?.currentUsdTry || 1);
 
                         return (
                           <TouchableOpacity
@@ -544,7 +677,7 @@ export default function DashboardScreen() {
                             onPress={() => router.push(`/asset/${pos.symbol}` as any)}
                             activeOpacity={0.7}
                           >
-                            {/* Kolon 1: Üstte Sembol, Altta Adet */}
+                            {/* Kolon 1: Üstte Sembol, Altta Durum/Adet */}
                             <View style={styles.colAsset}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                                 <Text style={[styles.symbolText, { color: theme.text.primary }]}>
@@ -558,45 +691,88 @@ export default function DashboardScreen() {
                                   </View>
                                 )}
                               </View>
-                              <Text style={[styles.qtyText, { color: theme.text.muted }]}>
-                                {formatQuantity(pos.quantity)} Adet
-                              </Text>
+                              {positionTab === 'OPEN' ? (
+                                <Text style={[styles.qtyText, { color: theme.text.muted }]}>
+                                  {formatQuantity(pos.quantity)} Adet
+                                </Text>
+                              ) : (
+                                <View style={[styles.closedMiniBadge, { backgroundColor: theme.surfaceMuted }]}>
+                                  <Text style={[styles.closedMiniBadgeText, { color: theme.text.muted }]}>
+                                    Kapatıldı
+                                  </Text>
+                                </View>
+                              )}
                             </View>
 
-                            {/* Kolon 2: Güncel Birim Fiyat */}
+                            {/* Kolon 2: Güncel Fiyat veya Alış Maliyeti */}
                             <View style={styles.colPrice}>
                               <Text style={[styles.centerPrice, { color: theme.text.secondary }]}>
-                                {formatCurrency(posPrice, currency)}
+                                {positionTab === 'OPEN'
+                                  ? formatCurrency(posPrice, currency)
+                                  : formatCurrency(posCost, currency, 0)}
                               </Text>
                             </View>
 
-                            {/* Kolon 3: Günlük % Değişimi */}
+                            {/* Kolon 3: Günlük % veya Realize Getiri % */}
                             <View style={styles.colDaily}>
-                              <View
-                                style={[
-                                  styles.dailyPill,
-                                  { backgroundColor: isDailyPos ? theme.profit.soft : theme.loss.soft },
-                                ]}
-                              >
-                                {isDailyPos ? (
-                                  <TrendingUp size={9} color={dailyColor} />
-                                ) : (
-                                  <TrendingDown size={9} color={dailyColor} />
-                                )}
-                                <Text style={[styles.dailyPctText, { color: dailyColor }]}>
-                                  {showValues ? formatPercent(dailyPct) : '••••'}
-                                </Text>
-                              </View>
+                              {positionTab === 'OPEN' ? (
+                                <View
+                                  style={[
+                                    styles.dailyPill,
+                                    { backgroundColor: isDailyPos ? theme.profit.soft : theme.loss.soft },
+                                  ]}
+                                >
+                                  {isDailyPos ? (
+                                    <TrendingUp size={9} color={dailyColor} />
+                                  ) : (
+                                    <TrendingDown size={9} color={dailyColor} />
+                                  )}
+                                  <Text style={[styles.dailyPctText, { color: dailyColor }]}>
+                                    {showValues ? formatPercent(dailyPct) : '••••'}
+                                  </Text>
+                                </View>
+                              ) : (
+                                <View
+                                  style={[
+                                    styles.dailyPill,
+                                    { backgroundColor: isTotalPos ? theme.profit.soft : theme.loss.soft },
+                                  ]}
+                                >
+                                  <Text style={[styles.dailyPctText, { color: totalProfitColor }]}>
+                                    {showValues ? formatPercent(pos.profitRate) : '••••'}
+                                  </Text>
+                                </View>
+                              )}
                             </View>
 
-                            {/* Kolon 4: Üstte Total Tutar, Altta Total % K/Z */}
+                            {/* Kolon 4: Tutar / Toplam K/Z veya Realize Net K/Z */}
                             <View style={styles.colTotal}>
-                              <Text style={[styles.rightValue, { color: theme.text.primary }]}>
-                                {showValues ? formatCurrency(posValue, currency, 0) : '••••••'}
-                              </Text>
-                              <Text style={[styles.totalProfitPctText, { color: totalProfitColor }]}>
-                                {showValues ? formatPercent(pos.profitRate) : '••••'}
-                              </Text>
+                              {positionTab === 'OPEN' ? (
+                                <>
+                                  <Text style={[styles.rightValue, { color: theme.text.primary }]}>
+                                    {showValues ? formatCurrency(posValue, currency, 0) : '••••••'}
+                                  </Text>
+                                  <Text style={[styles.totalProfitPctText, { color: totalProfitColor }]}>
+                                    {showValues ? formatPercent(pos.profitRate) : '••••'}
+                                  </Text>
+                                </>
+                              ) : (
+                                <>
+                                  <Text
+                                    style={[
+                                      styles.rightValue,
+                                      { color: isTotalPos ? theme.profit.main : theme.loss.main },
+                                    ]}
+                                  >
+                                    {showValues
+                                      ? (isTotalPos ? '+' : '') + formatCurrency(posProfit, currency, 0)
+                                      : '••••••'}
+                                  </Text>
+                                  <Text style={[styles.qtyText, { color: theme.text.muted }]}>
+                                    Net K/Z
+                                  </Text>
+                                </>
+                              )}
                             </View>
                           </TouchableOpacity>
                         );
@@ -799,11 +975,62 @@ const styles = StyleSheet.create({
   },
   positionsSectionHeader: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
-  positionsTitleText: {
+  posTabContainer: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 1,
+  },
+  posTabBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 7,
+  },
+  posTabBtnActive: {
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  posTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyClosedCard: {
+    marginHorizontal: 16,
+    marginVertical: 14,
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyClosedTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  emptyClosedSub: {
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  closedMiniBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+    marginTop: 2,
+  },
+  closedMiniBadgeText: {
+    fontSize: 9,
+    fontWeight: '600',
   },
   categoryBlockFull: {
     borderBottomWidth: 1,
