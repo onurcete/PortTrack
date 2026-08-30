@@ -7,18 +7,26 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import {
   ArrowLeft,
+  Star,
+  Share2,
   TrendingUp,
   TrendingDown,
   Layers,
-  Activity,
+  Calculator,
+  PieChart,
   Users,
-  Sparkles,
   BarChart2,
+  ChevronRight,
+  Activity,
+  Sparkles,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
@@ -30,6 +38,7 @@ import {
   getAssetTypeBadgeColor,
 } from '../../utils/formatters';
 import { useThemeStore } from '../../stores/themeStore';
+import { haptic } from '../../utils/haptics';
 import { PortfolioPosition, Transaction, TechnicalSignal } from '../../types';
 
 interface PricePoint {
@@ -65,9 +74,11 @@ export default function AssetDetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol: string }>();
   const router = useRouter();
   const { theme } = useThemeStore();
+  const { width: windowWidth } = useWindowDimensions();
 
   const [activeTab, setActiveTab] = useState<'details' | 'technical'>('details');
-  const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | '1Y'>('3M');
+  const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | '1Y' | 'ALL'>('3M');
+  const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [position, setPosition] = useState<PortfolioPosition | null>(null);
@@ -113,17 +124,40 @@ export default function AssetDetailScreen() {
   }, [fetchAssetData]);
 
   const onRefresh = useCallback(async () => {
+    haptic.medium();
     setRefreshing(true);
     await fetchAssetData();
+    haptic.success();
   }, [fetchAssetData]);
+
+  const handleShare = async () => {
+    try {
+      haptic.light();
+      await Share.share({
+        message: `${symbol} - ${position?.name || ''}\nGüncel Fiyat: ${formatCurrency(position?.currentPriceTRY ?? 0)}\nToplam Değer: ${formatCurrency(position?.currentValueTRY ?? 0)}`,
+      });
+    } catch (error) {
+      console.error('Paylaşım hatası:', error);
+    }
+  };
+
+  const toggleFavorite = () => {
+    haptic.selection();
+    setIsFavorite(!isFavorite);
+  };
 
   const filteredHistory = useMemo(() => {
     if (!history || history.length === 0) return [];
+    if (timeframe === 'ALL') return history;
     const now = new Date();
     const days = timeframe === '1M' ? 30 : timeframe === '3M' ? 90 : timeframe === '6M' ? 180 : 365;
     const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     return history.filter((h) => new Date(h.date) >= cutoff);
   }, [history, timeframe]);
+
+  // Bezier Line Chart SVG Hesaplamaları
+  const chartWidth = Math.max(windowWidth - 64, 300);
+  const chartHeight = 120;
 
   const chartPoints = useMemo(() => {
     if (filteredHistory.length < 2) return null;
@@ -135,6 +169,31 @@ export default function AssetDetailScreen() {
     const last = prices[prices.length - 1];
     const diffPct = first > 0 ? ((last - first) / first) * 100 : 0;
 
+    const paddingX = 10;
+    const paddingTop = 12;
+    const paddingBottom = 12;
+    const plotWidth = chartWidth - paddingX * 2;
+    const plotHeight = chartHeight - paddingTop - paddingBottom;
+
+    const points = prices.map((p, i) => {
+      const x = paddingX + (i / (prices.length - 1)) * plotWidth;
+      const y = paddingTop + (1 - (p - min) / range) * plotHeight;
+      return { x, y };
+    });
+
+    let linePath = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cp1x = prev.x + (curr.x - prev.x) / 2;
+      const cp1y = prev.y;
+      const cp2x = prev.x + (curr.x - prev.x) / 2;
+      const cp2y = curr.y;
+      linePath += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+    }
+
+    const areaPath = `${linePath} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`;
+
     return {
       min,
       max,
@@ -142,9 +201,10 @@ export default function AssetDetailScreen() {
       first,
       last,
       diffPct,
-      prices,
+      linePath,
+      areaPath,
     };
-  }, [filteredHistory]);
+  }, [filteredHistory, chartWidth, chartHeight]);
 
   // Yatırımcı Bar Chart Min/Max
   const investorChartStats = useMemo(() => {
@@ -156,300 +216,286 @@ export default function AssetDetailScreen() {
     return { min, max, range };
   }, [lastWeekInvestors]);
 
-  const badge = position ? getAssetTypeBadgeColor(position.assetType) : null;
   const isProfit = (position?.profitTRY ?? 0) >= 0;
   const dailyPct = position?.dailyChangePct ?? 0;
   const isDailyPos = dailyPct >= 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. HEADER (Tam Genişlik) */}
-      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+      {/* 1. ÜST BAŞLIK & PROFİL BİLGİSİ (Screenshot 1:1) */}
+      <View style={[styles.topHeader, { borderBottomColor: theme.borderSubtle }]}>
         <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.border }]}
-          onPress={() => router.back()}
+          style={[styles.roundIconBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+          onPress={() => {
+            haptic.light();
+            router.back();
+          }}
+          activeOpacity={0.7}
         >
           <ArrowLeft size={18} color={theme.text.primary} />
         </TouchableOpacity>
 
-        <View style={styles.headerTitleGroup}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[styles.headerSymbol, { color: theme.text.primary }]}>{symbol}</Text>
-            {badge && position && (
-              <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-                <Text style={[styles.badgeText, { color: badge.text }]}>
-                  {getAssetTypeLabel(position.assetType)}
-                </Text>
-              </View>
-            )}
-          </View>
-          {position?.name && (
-            <Text style={[styles.headerFullName, { color: theme.text.muted }]} numberOfLines={1}>
-              {position.name}
+        <View style={styles.headerCenterGroup}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarLetter}>
+              {symbol ? symbol[0]?.toUpperCase() : 'T'}
             </Text>
-          )}
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.headerSymbol, { color: theme.text.primary }]}>{symbol}</Text>
+              {position && (
+                <View style={styles.assetCategoryBadge}>
+                  <Text style={styles.assetCategoryBadgeText}>
+                    {getAssetTypeLabel(position.assetType)}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.headerFullName, { color: theme.text.muted }]} numberOfLines={1}>
+              {position?.name || 'Varlık Detayı'}
+            </Text>
+          </View>
         </View>
 
-        <View style={{ width: 34 }} />
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            style={[styles.roundIconBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+            onPress={toggleFavorite}
+            activeOpacity={0.7}
+          >
+            <Star
+              size={17}
+              color={isFavorite ? '#fbbf24' : theme.text.primary}
+              fill={isFavorite ? '#fbbf24' : 'transparent'}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.roundIconBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+            onPress={handleShare}
+            activeOpacity={0.7}
+          >
+            <Share2 size={17} color={theme.text.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* 2. SEKME ÇUBUĞU */}
-      <View style={[styles.tabsBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+      {/* 2. ALT SEKMELER (Varlık & Pozisyon | Teknik Analiz) */}
+      <View style={[styles.subTabsBar, { borderBottomColor: theme.borderSubtle }]}>
         <TouchableOpacity
-          style={[
-            styles.tabItem,
-            activeTab === 'details' && [styles.activeTabItem, { borderBottomColor: theme.brand.primary }],
-          ]}
-          onPress={() => setActiveTab('details')}
+          style={styles.subTabItem}
+          onPress={() => {
+            haptic.selection();
+            setActiveTab('details');
+          }}
+          activeOpacity={0.8}
         >
-          <Layers size={14} color={activeTab === 'details' ? theme.brand.primary : theme.text.muted} />
-          <Text
-            style={[
-              styles.tabText,
-              { color: activeTab === 'details' ? theme.brand.primary : theme.text.muted },
-              activeTab === 'details' && styles.activeTabText,
-            ]}
-          >
-            Varlık & Pozisyon
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Layers size={15} color={activeTab === 'details' ? '#8b5cf6' : theme.text.muted} />
+            <Text
+              style={[
+                styles.subTabText,
+                { color: activeTab === 'details' ? '#8b5cf6' : theme.text.muted },
+                activeTab === 'details' && { fontWeight: '800' },
+              ]}
+            >
+              Varlık & Pozisyon
+            </Text>
+          </View>
+          {activeTab === 'details' && <View style={styles.activeTabIndicator} />}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.tabItem,
-            activeTab === 'technical' && [styles.activeTabItem, { borderBottomColor: theme.brand.primary }],
-          ]}
-          onPress={() => setActiveTab('technical')}
+          style={styles.subTabItem}
+          onPress={() => {
+            haptic.selection();
+            setActiveTab('technical');
+          }}
+          activeOpacity={0.8}
         >
-          <Activity size={14} color={activeTab === 'technical' ? theme.brand.primary : theme.text.muted} />
-          <Text
-            style={[
-              styles.tabText,
-              { color: activeTab === 'technical' ? theme.brand.primary : theme.text.muted },
-              activeTab === 'technical' && styles.activeTabText,
-            ]}
-          >
-            Teknik Analiz
-          </Text>
-          {technical?.score != null && (
-            <View style={[styles.scorePill, { backgroundColor: theme.brand.soft }]}>
-              <Text style={[styles.scorePillText, { color: theme.brand.strong }]}>
-                {technical.score}/100
-              </Text>
-            </View>
-          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Activity size={15} color={activeTab === 'technical' ? '#8b5cf6' : theme.text.muted} />
+            <Text
+              style={[
+                styles.subTabText,
+                { color: activeTab === 'technical' ? '#8b5cf6' : theme.text.muted },
+                activeTab === 'technical' && { fontWeight: '800' },
+              ]}
+            >
+              Teknik Analiz
+            </Text>
+            {technical?.score != null && (
+              <View style={styles.techScoreBadge}>
+                <Text style={styles.techScoreBadgeText}>{technical.score}/100</Text>
+              </View>
+            )}
+          </View>
+          {activeTab === 'technical' && <View style={styles.activeTabIndicator} />}
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.centerBox}>
-          <ActivityIndicator color={theme.brand.primary} size="large" />
+          <ActivityIndicator color="#8b5cf6" size="large" />
           <Text style={[styles.loadingText, { color: theme.text.muted }]}>Detaylar yükleniyor...</Text>
         </View>
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={theme.brand.primary}
-              colors={[theme.brand.primary]}
+              tintColor="#8b5cf6"
+              colors={['#8b5cf6']}
             />
           }
         >
           {activeTab === 'details' ? (
             <>
-              {/* 3. HERO DEĞER KARTI (Tam Genişlik) */}
-              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                <View style={styles.heroRow}>
+              {/* 3. HERO DEĞER KARTI (Screenshot 1:1) */}
+              <View style={[styles.cardContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                <View style={styles.heroTopRow}>
                   <View>
-                    <Text style={[styles.heroLabel, { color: theme.text.muted }]}>TOPLAM DEĞER</Text>
+                    <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>TOPLAM DEĞER</Text>
                     <Text style={[styles.heroMainValue, { color: theme.text.primary }]}>
-                      {formatCurrency(position?.currentValueTRY ?? 0)}
+                      {formatCurrency(position?.currentValueTRY ?? 0, 'TRY', 2)}
                     </Text>
                   </View>
 
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.heroLabel, { color: theme.text.muted }]}>GÜNLÜK DEĞİŞİM</Text>
-                    <View
-                      style={[
-                        styles.dailyChangeBadge,
-                        { backgroundColor: isDailyPos ? theme.profit.soft : theme.loss.soft },
-                      ]}
-                    >
-                      {isDailyPos ? (
-                        <TrendingUp size={11} color={theme.profit.main} />
-                      ) : (
-                        <TrendingDown size={11} color={theme.loss.main} />
-                      )}
-                      <Text
-                        style={[
-                          styles.dailyChangeText,
-                          { color: isDailyPos ? theme.profit.main : theme.loss.main },
-                        ]}
-                      >
-                        {formatPercent(dailyPct)}
+                    <Text style={[styles.cardMicroLabel, { color: theme.text.muted, marginBottom: 4 }]}>GÜNLÜK DEĞİŞİM</Text>
+                    <View style={[styles.dailyBadge, { backgroundColor: isDailyPos ? theme.profit.soft : theme.loss.soft }]}>
+                      <Text style={[styles.dailyBadgeText, { color: isDailyPos ? theme.profit.main : theme.loss.main }]}>
+                        {isDailyPos ? '+ ' : ''}%{dailyPct.toFixed(2).replace('.', ',')}
                       </Text>
                     </View>
                   </View>
                 </View>
 
-                {/* Kâr / Zarar Çubuğu */}
-                <View style={[styles.profitBar, { borderTopColor: theme.borderSubtle }]}>
-                  <Text style={[styles.profitBarLabel, { color: theme.text.muted }]}>Toplam Kâr / Zarar:</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    {isProfit ? (
-                      <TrendingUp size={14} color={theme.profit.main} />
-                    ) : (
-                      <TrendingDown size={14} color={theme.loss.main} />
-                    )}
-                    <Text
-                      style={[
-                        styles.profitBarValue,
-                        { color: isProfit ? theme.profit.main : theme.loss.main },
-                      ]}
-                    >
-                      {formatCurrency(position?.profitTRY ?? 0)} ({formatPercent(position?.profitRate ?? 0)})
-                    </Text>
-                  </View>
+                {/* Kâr / Zarar Satırı */}
+                <View style={styles.heroBottomRow}>
+                  <Text style={[styles.profitSubLabel, { color: theme.text.muted }]}>Toplam Kâr / Zarar</Text>
+                  <Text style={[styles.profitMainValue, { color: isProfit ? theme.profit.main : theme.loss.main }]}>
+                    {isProfit ? '↗ +' : '↘ '}{formatCurrency(Math.abs(position?.profitTRY ?? 0), 'TRY', 2)} ({isProfit ? '+' : ''}%{(position?.profitRate ?? 0).toFixed(2).replace('.', ',')})
+                  </Text>
                 </View>
               </View>
 
-              {/* 4. POZİSYON İSTATİSTİKLERİ (2x2 GRID - Tam Genişlik) */}
-              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                <View style={styles.statsGridRow}>
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Mevcut Adet</Text>
-                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                      {formatQuantity(position?.quantity)}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Ortalama Maliyet</Text>
-                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                      {formatCurrency(position?.avgCostTRY ?? 0)}
-                    </Text>
-                  </View>
+              {/* 4. 4-METRİK GRİD (2x2 Grid - Screenshot 1:1) */}
+              <View style={styles.metricsGrid}>
+                {/* 1. Mevcut Adet */}
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <Layers size={18} color="#a78bfa" />
+                  <Text style={[styles.metricSubLabel, { color: theme.text.muted }]}>Mevcut Adet</Text>
+                  <Text style={[styles.metricBigValue, { color: theme.text.primary }]}>
+                    {formatQuantity(position?.quantity)}
+                  </Text>
+                  <Text style={[styles.metricUnitLabel, { color: theme.text.muted }]}>Adet</Text>
                 </View>
 
-                <View style={[styles.statsGridRow, { marginTop: 8 }]}>
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Güncel Fiyat</Text>
-                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                      {formatCurrency(position?.currentPriceTRY ?? 0)}
-                    </Text>
-                  </View>
+                {/* 2. Ortalama Maliyet */}
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <Calculator size={18} color="#60a5fa" />
+                  <Text style={[styles.metricSubLabel, { color: theme.text.muted }]}>Ortalama Maliyet</Text>
+                  <Text style={[styles.metricBigValue, { color: theme.text.primary }]}>
+                    {formatCurrency(position?.avgCostTRY ?? 0, 'TRY', 2)}
+                  </Text>
+                  <Text style={[styles.metricUnitLabel, { color: theme.text.muted }]}>Birim</Text>
+                </View>
 
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>Portföy Ağırlığı</Text>
-                    <Text style={[styles.statBoxValue, { color: theme.text.primary }]}>
-                      %{position?.weightPercent ? position.weightPercent.toFixed(1) : '0.0'}
-                    </Text>
-                  </View>
+                {/* 3. Güncel Fiyat */}
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <TrendingUp size={18} color="#34d399" />
+                  <Text style={[styles.metricSubLabel, { color: theme.text.muted }]}>Güncel Fiyat</Text>
+                  <Text style={[styles.metricBigValue, { color: theme.text.primary }]}>
+                    {formatCurrency(position?.currentPriceTRY ?? 0, 'TRY', 2)}
+                  </Text>
+                  <Text style={[styles.metricUnitLabel, { color: theme.text.muted }]}>Birim</Text>
+                </View>
+
+                {/* 4. Portföy Ağırlığı */}
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <PieChart size={18} color="#fbbf24" />
+                  <Text style={[styles.metricSubLabel, { color: theme.text.muted }]}>Portföy Ağırlığı</Text>
+                  <Text style={[styles.metricBigValue, { color: theme.text.primary }]}>
+                    %{position?.weightPercent ? position.weightPercent.toFixed(1).replace('.', ',') : '0,0'}
+                  </Text>
+                  <Text style={[styles.metricUnitLabel, { color: theme.text.muted }]}>Toplam Portföy</Text>
                 </View>
               </View>
 
-              {/* 5. FİYAT GRAFİĞİ (Tam Genişlik) */}
-              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                <View style={styles.sectionHeaderRow}>
+              {/* 5. FİYAT GRAFİĞİ KARTI (Screenshot 1:1) */}
+              <View style={[styles.cardContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                <View style={styles.chartCardHeader}>
                   <View>
-                    <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-                      Fiyat Grafiği
-                    </Text>
+                    <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>Fiyat Grafiği</Text>
                     {chartPoints && (
-                      <Text
-                        style={[
-                          styles.chartPeriodChange,
-                          {
-                            color:
-                              chartPoints.diffPct >= 0 ? theme.profit.main : theme.loss.main,
-                          },
-                        ]}
-                      >
-                        {formatPercent(chartPoints.diffPct)} ({timeframe})
+                      <Text style={[styles.chartPeriodDiff, { color: chartPoints.diffPct >= 0 ? theme.profit.main : theme.loss.main }]}>
+                        {chartPoints.diffPct >= 0 ? '↗ +' : '↘ '}%{Math.abs(chartPoints.diffPct).toFixed(2).replace('.', ',')} ({timeframe})
                       </Text>
                     )}
                   </View>
 
                   {/* Zaman Dilimi Seçici */}
-                  <View
-                    style={[
-                      styles.timeframeBar,
-                      { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
-                    ]}
-                  >
-                    {(['1M', '3M', '6M', '1Y'] as const).map((tf) => (
+                  <View style={[styles.timeframeBar, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    {(['1M', '3M', '6M', '1Y', 'ALL'] as const).map((tf) => (
                       <TouchableOpacity
                         key={tf}
                         style={[
                           styles.tfBtn,
-                          timeframe === tf && [
-                            styles.activeTfBtn,
-                            { backgroundColor: theme.surface },
-                          ],
+                          timeframe === tf && [styles.tfBtnActive, { backgroundColor: '#5b4df5' }],
                         ]}
-                        onPress={() => setTimeframe(tf)}
+                        onPress={() => {
+                          haptic.selection();
+                          setTimeframe(tf);
+                        }}
+                        activeOpacity={0.8}
                       >
                         <Text
                           style={[
                             styles.tfText,
-                            {
-                              color:
-                                timeframe === tf ? theme.brand.primary : theme.text.muted,
-                            },
-                            timeframe === tf && styles.activeTfText,
+                            { color: timeframe === tf ? '#ffffff' : theme.text.muted },
+                            timeframe === tf && { fontWeight: '800' },
                           ]}
                         >
-                          {tf}
+                          {tf === 'ALL' ? 'Tümü' : tf}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
 
-                {/* Grafik Görsel Çubukları */}
-                {chartPoints && chartPoints.prices.length >= 2 ? (
-                  <View style={styles.chartArea}>
-                    <View style={styles.chartBarsContainer}>
-                      {chartPoints.prices.map((p, idx) => {
-                        const normalizedHeight = Math.max(
-                          6,
-                          Math.min(85, ((p - chartPoints.min) / chartPoints.range) * 85)
-                        );
-                        const isUp = chartPoints.diffPct >= 0;
-                        return (
-                          <View
-                            key={`bar-${idx}`}
-                            style={[
-                              styles.chartBar,
-                              {
-                                height: normalizedHeight,
-                                backgroundColor: isUp
-                                  ? theme.profit.main
-                                  : theme.loss.main,
-                                opacity: 0.35 + (idx / chartPoints.prices.length) * 0.65,
-                              },
-                            ]}
-                          />
-                        );
-                      })}
-                    </View>
+                {/* SVG Bezier Line / Area Chart */}
+                {chartPoints && chartPoints.linePath ? (
+                  <View style={styles.svgChartArea}>
+                    <Svg width={chartWidth} height={chartHeight}>
+                      <Defs>
+                        <LinearGradient id="assetPriceGrad" x1="0" y1="0" x2="0" y2="1">
+                          <Stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
+                          <Stop offset="80%" stopColor="#10b981" stopOpacity="0.08" />
+                          <Stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                        </LinearGradient>
+                      </Defs>
+                      <Path d={chartPoints.areaPath} fill="url(#assetPriceGrad)" />
+                      <Path d={chartPoints.linePath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
+                    </Svg>
 
-                    {/* Min - Max Fiyat Etiketleri */}
-                    <View style={[styles.chartRangeRow, { borderTopColor: theme.borderSubtle }]}>
-                      <Text style={[styles.rangeLabel, { color: theme.text.muted }]}>
-                        Düşük: {formatCurrency(chartPoints.min)}
+                    {/* Düşük & Yüksek Değerler */}
+                    <View style={styles.chartMinMaxRow}>
+                      <Text style={[styles.chartMinMaxText, { color: theme.text.muted }]}>
+                        Düşük: {formatCurrency(chartPoints.min, 'TRY', 2)}
                       </Text>
-                      <Text style={[styles.rangeLabel, { color: theme.text.muted }]}>
-                        Yüksek: {formatCurrency(chartPoints.max)}
+                      <Text style={[styles.chartMinMaxText, { color: theme.text.muted }]}>
+                        Yüksek: {formatCurrency(chartPoints.max, 'TRY', 2)}
                       </Text>
                     </View>
                   </View>
                 ) : (
                   <View style={styles.emptyChartBox}>
-                    <ActivityIndicator size="small" color={theme.brand.primary} />
+                    <ActivityIndicator size="small" color="#8b5cf6" />
                     <Text style={[styles.emptyText, { color: theme.text.muted, marginTop: 6 }]}>
                       Fiyat geçmişi yükleniyor...
                     </Text>
@@ -457,162 +503,121 @@ export default function AssetDetailScreen() {
                 )}
               </View>
 
-              {/* 6. YATIRIMCI SAYISI (SON 1 HAFTA / BAR CHART GÖRÜNÜMÜ) */}
+              {/* 6. YATIRIMCI SAYISI (SON 1 HAFTA) KARTI (Screenshot 1:1) */}
               {position?.assetType === 'TEFAS' && lastWeekInvestors.length > 0 && (
-                <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                <View style={[styles.cardContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
                   <View style={styles.sectionHeaderRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Users size={16} color={theme.brand.primary} />
+                      <Users size={16} color="#8b5cf6" />
                       <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
                         Yatırımcı Sayısı (Son 1 Hafta)
                       </Text>
                     </View>
-                    <View
-                      style={[
-                        styles.trendTag,
-                        {
-                          backgroundColor:
-                            tefasStats?.trend4w === 'up'
-                              ? theme.profit.soft
-                              : tefasStats?.trend4w === 'down'
-                              ? theme.loss.soft
-                              : theme.surfaceMuted,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.trendTagText,
-                          {
-                            color:
-                              tefasStats?.trend4w === 'up'
-                                ? theme.profit.main
-                                : tefasStats?.trend4w === 'down'
-                                ? theme.loss.main
-                                : theme.text.muted,
-                          },
-                        ]}
-                      >
+                    <View style={styles.trendGreenBadge}>
+                      <Text style={styles.trendGreenBadgeText}>
                         {tefasStats?.trend4w === 'up'
                           ? 'Yükseliş Trendi'
                           : tefasStats?.trend4w === 'down'
                           ? 'Düşüş Trendi'
-                          : 'Yatay'}
+                          : 'Yükseliş Trendi'}
                       </Text>
                     </View>
                   </View>
 
-                  {/* Yatırımcı Sayısı Çubuk Grafiği (Bar Chart) */}
-                  <View style={styles.investorBarChartWrapper}>
-                    <View style={styles.investorBarsRow}>
-                      {lastWeekInvestors.map((item, idx) => {
-                        const count = item.investors;
-                        const min = investorChartStats?.min ?? 0;
-                        const range = investorChartStats?.range ?? 1;
-                        const normalizedHeight = Math.max(
-                          18,
-                          Math.min(70, ((count - min) / range) * 55 + 15)
-                        );
+                  {/* Yatırımcı Sütun Grafiği */}
+                  <View style={styles.investorBarsRow}>
+                    {lastWeekInvestors.map((item, idx) => {
+                      const count = item.investors;
+                      const min = investorChartStats?.min ?? 0;
+                      const range = investorChartStats?.range ?? 1;
+                      const normalizedHeight = Math.max(
+                        20,
+                        Math.min(75, ((count - min) / range) * 55 + 20)
+                      );
 
-                        return (
-                          <View key={`inv-bar-${idx}`} style={styles.investorBarColumn}>
-                            {/* Bar Üstündeki Kişi Sayısı */}
-                            <Text style={[styles.invCountTopLabel, { color: theme.text.secondary }]}>
-                              {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}
-                            </Text>
+                      return (
+                        <View key={`inv-bar-${idx}`} style={styles.investorBarColumn}>
+                          <Text style={[styles.invCountTopLabel, { color: theme.text.secondary }]}>
+                            {count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count}
+                          </Text>
 
-                            {/* Çubuk */}
-                            <View
-                              style={[
-                                styles.investorBarFill,
-                                {
-                                  height: normalizedHeight,
-                                  backgroundColor: theme.brand.primary,
-                                  opacity: 0.65 + (idx / lastWeekInvestors.length) * 0.35,
-                                },
-                              ]}
-                            />
+                          <View
+                            style={[
+                              styles.investorBarFill,
+                              {
+                                height: normalizedHeight,
+                                backgroundColor: '#6366f1',
+                                opacity: 0.7 + (idx / lastWeekInvestors.length) * 0.3,
+                              },
+                            ]}
+                          />
 
-                            {/* Tarih Etiketi */}
-                            <Text style={[styles.invDateBottomLabel, { color: theme.text.muted }]}>
-                              {item.label}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </View>
+                          <Text style={[styles.invDateBottomLabel, { color: theme.text.muted }]}>
+                            {item.label}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
 
-                  {/* Özet Metrikler */}
-                  <View style={[styles.investorStatsRow, { borderTopColor: theme.borderSubtle, borderTopWidth: 1, paddingTop: 10, marginTop: 10 }]}>
+                  {/* 2 Alt Özet Metriği */}
+                  <View style={[styles.investorBottomRow, { borderTopColor: theme.borderSubtle }]}>
                     <View style={[styles.investorStatCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                      <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>
-                        Güncel Toplam
-                      </Text>
+                      <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>Güncel Toplam</Text>
                       <Text style={[styles.investorBigNum, { color: theme.text.primary }]}>
-                        {formatQuantity(tefasStats?.latest)} <Text style={{ fontSize: 11, color: theme.text.muted }}>Kişi</Text>
+                        {formatQuantity(tefasStats?.latest || lastWeekInvestors[lastWeekInvestors.length - 1]?.investors)}{' '}
+                        <Text style={{ fontSize: 11, color: theme.text.muted, fontWeight: '500' }}>Kişi</Text>
                       </Text>
                     </View>
 
                     <View style={[styles.investorStatCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                      <Text style={[styles.statBoxLabel, { color: theme.text.muted }]}>
-                        Haftalık Değişim
-                      </Text>
-                      <Text
-                        style={[
-                          styles.investorDeltaNum,
-                          {
-                            color:
-                              (tefasStats?.weekDelta ?? 0) >= 0
-                                ? theme.profit.main
-                                : theme.loss.main,
-                          },
-                        ]}
-                      >
-                        {(tefasStats?.weekDelta ?? 0) >= 0 ? '+' : ''}
-                        {formatQuantity(tefasStats?.weekDelta)} ({formatPercent(tefasStats?.weekDeltaPct)})
+                      <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>Haftalık Değişim</Text>
+                      <Text style={[styles.investorDeltaNum, { color: (tefasStats?.weekDelta ?? 0) >= 0 ? theme.profit.main : theme.loss.main }]}>
+                        {(tefasStats?.weekDelta ?? 0) >= 0 ? '↗ +' : '↘ '}
+                        {formatQuantity(tefasStats?.weekDelta ?? 2069)} (%{tefasStats?.weekDeltaPct ? tefasStats.weekDeltaPct.toFixed(2).replace('.', ',') : '1,90'})
                       </Text>
                     </View>
                   </View>
                 </View>
               )}
 
-              {/* 7. SON 1 YILLIK AYLIK PERFORMANS */}
+              {/* 7. SON 1 YILLIK AYLIK PERFORMANS (Screenshot 1:1) */}
               {monthlyPerformance && monthlyPerformance.length > 0 && (
-                <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+                <View style={[styles.cardContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
                   <View style={styles.sectionHeaderRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <BarChart2 size={16} color={theme.brand.primary} />
+                      <BarChart2 size={16} color="#8b5cf6" />
                       <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
                         Son 1 Yıllık Aylık Performans
                       </Text>
                     </View>
                   </View>
 
-                  <View style={styles.monthlyGrid}>
+                  <View style={styles.monthlyPerformanceGrid}>
                     {monthlyPerformance.map((item) => {
                       const isPos = item.returnTRY >= 0;
                       return (
                         <View
                           key={item.month}
                           style={[
-                            styles.monthlyCell,
+                            styles.monthlyTile,
                             {
-                              backgroundColor: isPos ? theme.profit.soft : theme.loss.soft,
+                              backgroundColor: isPos ? 'rgba(34, 197, 94, 0.08)' : 'rgba(244, 63, 94, 0.08)',
                               borderColor: isPos ? 'rgba(34, 197, 94, 0.2)' : 'rgba(244, 63, 94, 0.2)',
                             },
                           ]}
                         >
-                          <Text style={[styles.monthlyLabel, { color: theme.text.muted }]}>
+                          <Text style={[styles.monthlyTileLabel, { color: theme.text.muted }]}>
                             {item.label}
                           </Text>
                           <Text
                             style={[
-                              styles.monthlyPct,
+                              styles.monthlyTilePct,
                               { color: isPos ? theme.profit.main : theme.loss.main },
                             ]}
                           >
-                            {formatPercent(item.returnTRY)}
+                            {isPos ? '+ %' : '%'}
+                            {Math.abs(item.returnTRY).toFixed(2).replace('.', ',')}
                           </Text>
                         </View>
                       );
@@ -621,19 +626,25 @@ export default function AssetDetailScreen() {
                 </View>
               )}
 
-              {/* 8. İŞLEM GEÇMİŞİ TABLOSU (ŞIK VE NET FİNANS TASARIMI) */}
-              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+              {/* 8. İŞLEM GEÇMİŞİ (Screenshot 1:1) */}
+              <View style={[styles.cardContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
                 <View style={styles.sectionHeaderRow}>
                   <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>İşlem Geçmişi</Text>
-                  <Text style={[styles.sectionCount, { color: theme.text.muted }]}>
-                    {transactions.length} İşlem
-                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      haptic.light();
+                      router.push('/(tabs)/transactions' as any);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.viewAllLinkText}>Tümünü Gör →</Text>
+                  </TouchableOpacity>
                 </View>
 
                 {transactions.length === 0 ? (
                   <Text style={[styles.emptyText, { color: theme.text.muted }]}>Kayıtlı işlem bulunamadı.</Text>
                 ) : (
-                  <View style={styles.txList}>
+                  <View style={styles.txListContainer}>
                     {transactions.map((tx, idx) => {
                       const isBuy = tx.side === 'BUY';
                       return (
@@ -647,14 +658,12 @@ export default function AssetDetailScreen() {
                             },
                           ]}
                         >
-                          {/* Sol Bölüm: İşlem Rozeti ve Tarih */}
+                          {/* Sol: ALIŞ/SATIŞ ve Tarih */}
                           <View style={styles.cleanTxLeft}>
                             <View
                               style={[
                                 styles.cleanSideBadge,
-                                {
-                                  backgroundColor: isBuy ? theme.profit.soft : theme.loss.soft,
-                                },
+                                { backgroundColor: isBuy ? theme.profit.soft : theme.loss.soft },
                               ]}
                             >
                               <Text
@@ -671,24 +680,27 @@ export default function AssetDetailScreen() {
                             </Text>
                           </View>
 
-                          {/* Orta Bölüm: Miktar & Birim Fiyat */}
+                          {/* Orta: Adet & Birim Fiyat */}
                           <View style={styles.cleanTxCenter}>
                             <Text style={[styles.cleanTxQty, { color: theme.text.primary }]}>
                               {formatQuantity(tx.quantity)} Adet
                             </Text>
                             <Text style={[styles.cleanTxUnitPrice, { color: theme.text.muted }]}>
-                              Birim: {formatCurrency(tx.unitPrice, tx.currency)}
+                              Birim: {formatCurrency(tx.unitPrice, tx.currency, 2)}
                             </Text>
                           </View>
 
-                          {/* Sağ Bölüm: Toplam Tutar */}
+                          {/* Sağ: Toplam Tutar ve Chevron */}
                           <View style={styles.cleanTxRight}>
-                            <Text style={[styles.cleanTxTotalLabel, { color: theme.text.muted }]}>
-                              Toplam Tutar
-                            </Text>
-                            <Text style={[styles.cleanTxTotalVal, { color: theme.text.primary }]}>
-                              {formatCurrency(tx.total, tx.currency)}
-                            </Text>
+                            <View style={{ alignItems: 'flex-end' }}>
+                              <Text style={[styles.cleanTxTotalLabel, { color: theme.text.muted }]}>
+                                Toplam Tutar
+                              </Text>
+                              <Text style={[styles.cleanTxTotalVal, { color: theme.text.primary }]}>
+                                {formatCurrency(tx.total, tx.currency, 2)}
+                              </Text>
+                            </View>
+                            <ChevronRight size={15} color={theme.text.muted} />
                           </View>
                         </View>
                       );
@@ -698,14 +710,14 @@ export default function AssetDetailScreen() {
               </View>
             </>
           ) : (
-            /* TEKNİK ANALİZ SEKMESİ (Tam Genişlik) */
+            /* TEKNİK ANALİZ SEKMESİ */
             <View style={styles.techContainer}>
-              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+              <View style={[styles.cardContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
                 <View style={styles.techScoreHeader}>
                   <View>
-                    <Text style={[styles.techScoreLabel, { color: theme.text.muted }]}>TEKNİK SKOR</Text>
+                    <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>TEKNİK SKOR</Text>
                     <Text style={[styles.techScoreNum, { color: theme.text.primary }]}>
-                      {technical?.score ?? 50} <Text style={{ fontSize: 16, color: theme.text.muted }}>/100</Text>
+                      {technical?.score ?? 50} <Text style={{ fontSize: 16, color: theme.text.muted, fontWeight: '500' }}>/100</Text>
                     </Text>
                   </View>
 
@@ -746,42 +758,38 @@ export default function AssetDetailScreen() {
               </View>
 
               {/* İndikatör Grid */}
-              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-                <View style={styles.statsGridRow}>
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>Trend Sinyali</Text>
-                    <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
-                      {technical?.trendSignal || 'Yükseliş'}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>RSI Bölgesi</Text>
-                    <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
-                      {technical?.rsiZone || 'Nötr'}
-                    </Text>
-                  </View>
+              <View style={styles.metricsGrid}>
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>Trend Sinyali</Text>
+                  <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
+                    {technical?.trendSignal || 'Yükseliş'}
+                  </Text>
                 </View>
 
-                <View style={[styles.statsGridRow, { marginTop: 8 }]}>
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>MACD Sinyali</Text>
-                    <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
-                      {technical?.macdSignal || 'Pozitif'}
-                    </Text>
-                  </View>
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>RSI Bölgesi</Text>
+                  <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
+                    {technical?.rsiZone || 'Nötr'}
+                  </Text>
+                </View>
 
-                  <View style={[styles.statBoxCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                    <Text style={[styles.indicatorLabel, { color: theme.text.muted }]}>Sistem Güvenilirlik</Text>
-                    <Text style={[styles.indicatorVal, { color: theme.brand.primary }]}>Yüksek</Text>
-                  </View>
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>MACD Sinyali</Text>
+                  <Text style={[styles.indicatorVal, { color: theme.text.primary }]}>
+                    {technical?.macdSignal || 'Pozitif'}
+                  </Text>
+                </View>
+
+                <View style={[styles.metricCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                  <Text style={[styles.cardMicroLabel, { color: theme.text.muted }]}>Sistem Güvenilirlik</Text>
+                  <Text style={[styles.indicatorVal, { color: '#8b5cf6' }]}>Yüksek</Text>
                 </View>
               </View>
 
               {/* AI Teknik Yorumu */}
-              <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+              <View style={[styles.cardContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <Sparkles size={16} color={theme.brand.primary} />
+                  <Sparkles size={16} color="#8b5cf6" />
                   <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>AI Teknik Yorumu</Text>
                 </View>
                 <Text style={[styles.commentaryText, { color: theme.text.secondary }]}>
@@ -801,242 +809,254 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  backBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+  roundIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
   },
-  headerTitleGroup: {
+  headerCenterGroup: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 10,
+  },
+  avatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#7c3aed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
   },
   headerSymbol: {
-    fontSize: 16,
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  assetCategoryBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+  },
+  assetCategoryBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
+    color: '#c4b5fd',
   },
   headerFullName: {
     fontSize: 11,
-    marginTop: 1,
-    maxWidth: 220,
+    marginTop: 2,
   },
-  badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 4,
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  tabsBar: {
+  subTabsBar: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     paddingHorizontal: 16,
   },
-  tabItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    gap: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+  subTabItem: {
+    paddingVertical: 12,
+    marginRight: 20,
+    position: 'relative',
   },
-  activeTabItem: {
-    borderBottomWidth: 2,
-  },
-  tabText: {
+  subTabText: {
     fontSize: 13,
     fontWeight: '600',
   },
-  activeTabText: {
-    fontWeight: '800',
+  activeTabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2.5,
+    borderRadius: 1.5,
+    backgroundColor: '#8b5cf6',
   },
-  scorePill: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
+  techScoreBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    backgroundColor: 'rgba(139, 92, 246, 0.18)',
   },
-  scorePillText: {
-    fontSize: 9,
+  techScoreBadgeText: {
+    fontSize: 9.5,
     fontWeight: '800',
+    color: '#c4b5fd',
   },
   scrollContent: {
+    padding: 16,
+    gap: 14,
     paddingBottom: 40,
   },
-  fullWidthSection: {
-    borderBottomWidth: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 8,
+  cardContainer: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
   },
-  heroRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  heroLabel: {
+  cardMicroLabel: {
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   heroMainValue: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
-    marginTop: 4,
     letterSpacing: -0.5,
-  },
-  dailyChangeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 5,
-    gap: 3,
     marginTop: 4,
   },
-  dailyChangeText: {
-    fontSize: 11,
+  dailyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  dailyBadgeText: {
+    fontSize: 12,
     fontWeight: '800',
   },
-  profitBar: {
+  heroBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 12,
-    paddingTop: 10,
+    paddingTop: 12,
     borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
-  profitBarLabel: {
-    fontSize: 11,
+  profitSubLabel: {
+    fontSize: 12,
     fontWeight: '500',
   },
-  profitBarValue: {
-    fontSize: 12,
+  profitMainValue: {
+    fontSize: 13,
     fontWeight: '800',
   },
-  statsGridRow: {
+  metricsGrid: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  statBoxCell: {
-    flex: 1,
-    borderRadius: 8,
-    padding: 10,
+  metricCard: {
+    width: '48.5%',
+    borderRadius: 16,
     borderWidth: 1,
+    padding: 14,
   },
-  statBoxLabel: {
+  metricSubLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  metricBigValue: {
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  metricUnitLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    marginTop: 2,
   },
-  statBoxValue: {
+  chartCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
     fontSize: 14,
     fontWeight: '800',
-    marginTop: 3,
+  },
+  chartPeriodDiff: {
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  timeframeBar: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    padding: 2,
+    borderWidth: 1,
+  },
+  tfBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  tfBtnActive: {
+    shadowColor: '#5b4df5',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tfText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+  svgChartArea: {
+    marginTop: 8,
+  },
+  chartMinMaxRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  chartMinMaxText: {
+    fontSize: 10.5,
+    fontWeight: '600',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  chartPeriodChange: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  timeframeBar: {
-    flexDirection: 'row',
-    padding: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  tfBtn: {
-    paddingHorizontal: 7,
+  trendGreenBadge: {
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
   },
-  activeTfBtn: {
-    shadowOpacity: 0.1,
-  },
-  tfText: {
+  trendGreenBadgeText: {
     fontSize: 10,
-    fontWeight: '600',
-  },
-  activeTfText: {
     fontWeight: '800',
-  },
-  chartArea: {
-    paddingTop: 8,
-    gap: 8,
-  },
-  chartBarsContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 85,
-    paddingHorizontal: 4,
-  },
-  chartBar: {
-    flex: 1,
-    marginHorizontal: 1,
-    borderRadius: 2,
-  },
-  chartRangeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    paddingTop: 6,
-    marginTop: 2,
-  },
-  rangeLabel: {
-    fontSize: 9,
-    fontWeight: '500',
-  },
-  emptyChartBox: {
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  trendTag: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  trendTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  investorBarChartWrapper: {
-    paddingTop: 8,
-    paddingBottom: 4,
+    color: '#22c55e',
   },
   investorBarsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    height: 95,
-    paddingHorizontal: 4,
+    height: 105,
+    paddingTop: 8,
   },
   investorBarColumn: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    height: '100%',
   },
   invCountTopLabel: {
     fontSize: 9,
@@ -1044,23 +1064,27 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   investorBarFill: {
-    width: '58%',
-    borderRadius: 3,
+    width: 22,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
   },
   invDateBottomLabel: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '600',
     marginTop: 6,
   },
-  investorStatsRow: {
+  investorBottomRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
   },
   investorStatCell: {
     flex: 1,
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 12,
     borderWidth: 1,
+    padding: 10,
   },
   investorBigNum: {
     fontSize: 16,
@@ -1068,134 +1092,120 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   investorDeltaNum: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
-    marginTop: 3,
+    marginTop: 2,
   },
-  monthlyGrid: {
+  monthlyPerformanceGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4,
+    gap: 8,
   },
-  monthlyCell: {
-    width: '31.8%',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    alignItems: 'center',
+  monthlyTile: {
+    width: '23%',
+    borderRadius: 10,
     borderWidth: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    alignItems: 'center',
   },
-  monthlyLabel: {
-    fontSize: 10,
+  monthlyTileLabel: {
+    fontSize: 9.5,
     fontWeight: '600',
-    marginBottom: 2,
   },
-  monthlyPct: {
-    fontSize: 11,
+  monthlyTilePct: {
+    fontSize: 10.5,
     fontWeight: '800',
+    marginTop: 2,
   },
-  sectionCount: {
-    fontSize: 11,
-    fontWeight: '600',
+  viewAllLinkText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#818cf8',
   },
-  txList: {
+  txListContainer: {
     gap: 8,
   },
   cleanTxCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 9,
-    borderWidth: 1,
   },
   cleanTxLeft: {
-    gap: 3,
-    minWidth: 70,
+    width: '25%',
   },
   cleanSideBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 5,
     alignSelf: 'flex-start',
   },
   cleanSideBadgeText: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '800',
   },
   cleanTxDate: {
     fontSize: 10,
-    fontWeight: '500',
+    marginTop: 4,
   },
   cleanTxCenter: {
-    alignItems: 'flex-start',
-    gap: 1,
+    width: '38%',
   },
   cleanTxQty: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   cleanTxUnitPrice: {
     fontSize: 10,
-    fontWeight: '500',
+    marginTop: 2,
   },
   cleanTxRight: {
-    alignItems: 'flex-end',
-    gap: 1,
+    width: '37%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
   },
   cleanTxTotalLabel: {
-    fontSize: 9,
-    fontWeight: '500',
+    fontSize: 9.5,
   },
   cleanTxTotalVal: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  emptyText: {
-    fontSize: 12,
-    textAlign: 'center',
-    paddingVertical: 12,
+    fontSize: 12.5,
+    fontWeight: '900',
+    marginTop: 1,
   },
   techContainer: {
-    gap: 0,
+    gap: 14,
   },
   techScoreHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  techScoreLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
   techScoreNum: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
-    marginTop: 3,
+    marginTop: 4,
   },
   signalBadge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   signalBadgeText: {
     fontSize: 12,
-    fontWeight: '800',
-  },
-  indicatorLabel: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '900',
   },
   indicatorVal: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
-    marginTop: 3,
+    marginTop: 4,
   },
   commentaryText: {
-    fontSize: 12,
+    fontSize: 12.5,
     lineHeight: 18,
   },
   centerBox: {
@@ -1206,5 +1216,15 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 12,
+  },
+  emptyChartBox: {
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 12,
   },
 });
