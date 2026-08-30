@@ -45,13 +45,20 @@ export interface PortfolioPosition {
   assetType: AssetType;
   quantity: number;
   avgCostTRY: number;
+  avgCostUSD?: number;
   avgCostNative: number;
   currentPriceTRY: number;
+  currentPriceUSD?: number;
   currentPriceNative: number;
   totalCostTRY: number;
+  totalCostUSD?: number;
   currentValueTRY: number;
+  currentValueUSD?: number;
   profitTRY: number;
+  profitUSD?: number;
   profitRate: number;
+  profitRateTRY?: number;
+  profitRateUSD?: number;
   dailyChangePct?: number | null;
   currency: string;
   weightPercent: number;
@@ -80,21 +87,29 @@ export interface PeriodReturns {
   ytdAmtUSD?: number | null;
   oneYearTRY?: number | null;
   oneYearUSD?: number | null;
+  oneYearAmtTRY?: number | null;
+  oneYearAmtUSD?: number | null;
 }
 
 export interface PortfolioSummary {
   totalValueTRY: number;
+  totalValueUSD?: number;
   totalCostTRY: number;
+  totalCostUSD?: number;
   totalProfitTRY: number;
+  totalProfitUSD?: number;
   totalProfitPercent: number;
   dailyChangeTRY: number;
+  dailyChangeUSD?: number;
   dailyChangePercent: number;
+  currentUsdTry?: number;
   periodReturns?: PeriodReturns | null;
   positions: PortfolioPosition[];
   assetBreakdown: {
     type: AssetType;
     label: string;
     valueTRY: number;
+    valueUSD?: number;
     percent: number;
     color: string;
   }[];

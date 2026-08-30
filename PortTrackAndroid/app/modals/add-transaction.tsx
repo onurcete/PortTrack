@@ -29,6 +29,7 @@ import { useThemeStore } from '../../stores/themeStore';
 import { haptic } from '../../utils/haptics';
 import {
   formatCurrency,
+  formatQuantity,
   getAssetTypeLabel,
   getAssetTypeBadgeColor,
 } from '../../utils/formatters';

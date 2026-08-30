@@ -106,9 +106,9 @@ export default function DashboardScreen() {
     return map;
   }, [portfolio]);
 
-  const totalValue = portfolio?.totalValueTRY ?? 0;
-  const pReturns = portfolio?.periodReturns;
   const isTRY = currency === 'TRY';
+  const totalValue = isTRY ? (portfolio?.totalValueTRY ?? 0) : (portfolio?.totalValueUSD ?? 0);
+  const pReturns = portfolio?.periodReturns;
 
   // 2x2 Grid için 4 Ana Dönemsel Getiri
   const gridPeriods = [
@@ -239,14 +239,17 @@ export default function DashboardScreen() {
           <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             {/* Toplam Portföy Değeri */}
             <View style={styles.heroTopRow}>
-              <View>
+              <TouchableOpacity
+                onPress={() => setCurrency(currency === 'TRY' ? 'USD' : 'TRY')}
+                activeOpacity={0.7}
+              >
                 <Text style={[styles.heroLabel, { color: theme.text.muted }]}>
-                  TOPLAM PORTFÖY DEĞERİ
+                  TOPLAM PORTFÖY DEĞERİ ({currency})
                 </Text>
                 <Text style={[styles.heroMainValue, { color: theme.text.primary }]}>
-                  {showValues ? formatCurrency(totalValue, currency) : '•••••••• ₺'}
+                  {showValues ? formatCurrency(totalValue, currency, 0) : `•••••••• ${currency === 'TRY' ? '₺' : '$'}`}
                 </Text>
-              </View>
+              </TouchableOpacity>
               {portfolio?.lastUpdated && (
                 <Text style={[styles.heroDate, { color: theme.text.muted }]}>
                   Son: {new Date(portfolio.lastUpdated).toLocaleTimeString('tr-TR', {
@@ -297,7 +300,7 @@ export default function DashboardScreen() {
 
                       {item.amt !== null && item.amt !== undefined && (
                         <Text style={[styles.gridAmtText, { color: theme.text.primary }]}>
-                          {showValues ? formatCurrency(item.amt, currency) : '••••'}
+                          {showValues ? formatCurrency(item.amt, currency, 0) : '••••'}
                         </Text>
                       )}
                     </View>
@@ -343,7 +346,7 @@ export default function DashboardScreen() {
 
                       {item.amt !== null && item.amt !== undefined && (
                         <Text style={[styles.gridAmtText, { color: theme.text.primary }]}>
-                          {showValues ? formatCurrency(item.amt, currency) : '••••'}
+                          {showValues ? formatCurrency(item.amt, currency, 0) : '••••'}
                         </Text>
                       )}
                     </View>
@@ -425,7 +428,10 @@ export default function DashboardScreen() {
               if (items.length === 0) return null;
 
               const isCollapsed = collapsedSections[section.type];
-              const sectionTotalValue = items.reduce((acc, p) => acc + p.currentValueTRY, 0);
+              const sectionTotalValue = items.reduce(
+                (acc, p) => acc + (isTRY ? p.currentValueTRY : (p.currentValueUSD ?? (p.currentValueTRY / (portfolio?.currentUsdTry || 1)))),
+                0
+              );
               const badge = getAssetTypeBadgeColor(section.type);
 
               return (
@@ -458,7 +464,7 @@ export default function DashboardScreen() {
 
                     <View style={styles.catHeaderRight}>
                       <Text style={[styles.categoryValue, { color: theme.text.primary }]}>
-                        {showValues ? formatCurrency(sectionTotalValue, currency) : '••••••'}
+                        {showValues ? formatCurrency(sectionTotalValue, currency, 0) : '••••••'}
                       </Text>
                       <ChevronDown
                         size={16}
@@ -514,6 +520,9 @@ export default function DashboardScreen() {
                         const isTotalPos = pos.profitRate >= 0;
                         const totalProfitColor = isTotalPos ? theme.profit.main : theme.loss.main;
 
+                        const posPrice = isTRY ? pos.currentPriceTRY : (pos.currentPriceUSD ?? (pos.currentPriceTRY / (portfolio?.currentUsdTry || 1)));
+                        const posValue = isTRY ? pos.currentValueTRY : (pos.currentValueUSD ?? (pos.currentValueTRY / (portfolio?.currentUsdTry || 1)));
+
                         return (
                           <TouchableOpacity
                             key={`${pos.symbol}-${pIdx}`}
@@ -546,7 +555,7 @@ export default function DashboardScreen() {
                             {/* Kolon 2: Güncel Birim Fiyat */}
                             <View style={styles.colPrice}>
                               <Text style={[styles.centerPrice, { color: theme.text.secondary }]}>
-                                {formatCurrency(pos.currentPriceTRY, currency)}
+                                {formatCurrency(posPrice, currency)}
                               </Text>
                             </View>
 
@@ -572,7 +581,7 @@ export default function DashboardScreen() {
                             {/* Kolon 4: Üstte Total Tutar, Altta Total % K/Z */}
                             <View style={styles.colTotal}>
                               <Text style={[styles.rightValue, { color: theme.text.primary }]}>
-                                {showValues ? formatCurrency(pos.currentValueTRY, currency) : '••••••'}
+                                {showValues ? formatCurrency(posValue, currency, 0) : '••••••'}
                               </Text>
                               <Text style={[styles.totalProfitPctText, { color: totalProfitColor }]}>
                                 {showValues ? formatPercent(pos.profitRate) : '••••'}

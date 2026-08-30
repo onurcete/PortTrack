@@ -54,6 +54,12 @@ interface GrowthPoint {
   partialData?: boolean;
 }
 
+const SHORT_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+function getMonthShortLabel(monthKey: string): string {
+  const [, m] = monthKey.split('-').map(Number);
+  return SHORT_MONTHS[(m || 1) - 1] ?? monthKey;
+}
+
 const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
   { key: 'BES', label: 'BES' },
   { key: 'BIST', label: 'BIST' },
@@ -97,7 +103,10 @@ export default function GrowthScreen() {
           setSeries(res.data.series);
           // Tablo yılı için serideki en son yılı seç
           const lastYear = res.data.series[res.data.series.length - 1]?.month.slice(0, 4);
-          if (lastYear) setTableYear(lastYear);
+          if (lastYear) {
+            setTableYear(lastYear);
+            setChartYear(lastYear);
+          }
         }
         if (res.data.periodReturns) setPeriodReturns(res.data.periodReturns);
       }
@@ -142,7 +151,7 @@ export default function GrowthScreen() {
       const prev = idx > 0 ? (isTRY ? filtered[idx - 1].valueTRY : filtered[idx - 1].valueUSD) : null;
       const returnPct = prev && prev > 0 ? ((val / prev) - 1) * 100 : 0;
       const [yStr, mStr] = p.month.split('-');
-      const label = `${yStr}.${mStr}`;
+      const label = chartYear === 'ALL' ? `${yStr.slice(2)}.${mStr}` : getMonthShortLabel(p.month);
 
       return {
         month: p.month,
@@ -209,7 +218,7 @@ export default function GrowthScreen() {
 
     const years = Array.from(map.keys()).sort();
     for (const y of years) {
-      if (cumulFromYear !== 'ALL' && y < cumulFromYear) continue;
+      if (cumulFromYear !== 'ALL' && y !== cumulFromYear) continue;
       const data = map.get(y)!;
       const startTRY = data.start.valueTRY;
       const endTRY = data.end.valueTRY;
@@ -230,8 +239,8 @@ export default function GrowthScreen() {
       });
     }
 
-    // Toplam Satırı
-    if (rows.length > 0) {
+    // Toplam Satırı (Sadece tüm yıllar listeleniyorsa)
+    if (cumulFromYear === 'ALL' && rows.length > 1) {
       const firstRow = rows[0];
       const lastRow = rows[rows.length - 1];
       const totalRetTRY = firstRow.startTRY > 0 ? ((lastRow.endTRY / firstRow.startTRY) - 1) * 100 : 0;
@@ -505,84 +514,148 @@ export default function GrowthScreen() {
                         { color: chartYear === yr ? '#ffffff' : theme.text.muted },
                       ]}
                     >
-                      {yr === 'ALL' ? 'Tüm Zamanlar' : yr}
+                      {yr === 'ALL' ? 'Tüm Zamanlar' : `${yr} Yılı`}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
 
-            {/* ÇUBUK GRAFİK (BAR CHART - 0% Eksenli Yeşil/Kırmızı Çubuklar) */}
+            {/* ÇUBUK GRAFİK (BAR CHART) */}
             <View style={styles.barChartContainer}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
-                {chartData.map((item, idx) => {
-                  const isPos = item.returnPct >= 0;
-                  const isZero = Math.abs(item.returnPct) < 0.05;
+              {chartYear !== 'ALL' ? (
+                <View style={styles.barChartRowSingleYear}>
+                  {chartData.map((item, idx) => {
+                    const isPos = item.returnPct >= 0;
+                    const isZero = Math.abs(item.returnPct) < 0.05;
+                    const barHeight = Math.max(4, Math.min(50, Math.abs(item.returnPct) * 2 + 4));
 
-                  // Pozitif ve negatif çubuk yükseklikleri
-                  const barHeight = Math.max(6, Math.min(65, Math.abs(item.returnPct) * 2.5 + 4));
+                    return (
+                      <View key={`barchart-${item.month}-${idx}`} style={styles.barChartColSingleYear}>
+                        {/* Üst Alan */}
+                        <View style={styles.barTopHalf}>
+                          {isPos && !isZero && (
+                            <Text style={[styles.barPctLabelMini, { color: theme.profit.main }]}>
+                              +{item.returnPct.toFixed(0)}%
+                            </Text>
+                          )}
+                          {isPos && !isZero && (
+                            <View
+                              style={[
+                                styles.barStickMini,
+                                {
+                                  height: barHeight,
+                                  backgroundColor: theme.profit.main,
+                                  borderTopLeftRadius: 2,
+                                  borderTopRightRadius: 2,
+                                },
+                              ]}
+                            />
+                          )}
+                        </View>
 
-                  return (
-                    <View key={`barchart-${item.month}-${idx}`} style={styles.barChartCol}>
-                      {/* Üst Alan: Pozitif Yüzde ve Çubuk */}
-                      <View style={styles.barTopHalf}>
-                        {isPos && !isZero && (
-                          <Text style={[styles.barPctLabel, { color: theme.profit.main }]}>
-                            +{item.returnPct.toFixed(1)}%
-                          </Text>
-                        )}
-                        {isPos && !isZero && (
-                          <View
-                            style={[
-                              styles.barStick,
-                              {
-                                height: barHeight,
-                                backgroundColor: theme.profit.main,
-                                borderTopLeftRadius: 3,
-                                borderTopRightRadius: 3,
-                              },
-                            ]}
-                          />
-                        )}
+                        {/* Orta Sıfır Çizgisi Eksen */}
+                        <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
+
+                        {/* Alt Alan */}
+                        <View style={styles.barBottomHalf}>
+                          {!isPos && (
+                            <View
+                              style={[
+                                styles.barStickMini,
+                                {
+                                  height: barHeight,
+                                  backgroundColor: theme.loss.main,
+                                  borderBottomLeftRadius: 2,
+                                  borderBottomRightRadius: 2,
+                                },
+                              ]}
+                            />
+                          )}
+                          {!isPos && (
+                            <Text style={[styles.barPctLabelMini, { color: theme.loss.main, marginTop: 1 }]}>
+                              {item.returnPct.toFixed(0)}%
+                            </Text>
+                          )}
+                        </View>
+
+                        {/* X Ekseni Tarih Etiketi */}
+                        <Text style={[styles.barDateLabelMini, { color: theme.text.muted }]}>
+                          {item.label}
+                        </Text>
                       </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
+                  {chartData.map((item, idx) => {
+                    const isPos = item.returnPct >= 0;
+                    const isZero = Math.abs(item.returnPct) < 0.05;
+                    const barHeight = Math.max(6, Math.min(65, Math.abs(item.returnPct) * 2.5 + 4));
 
-                      {/* Orta Sıfır Çizgisi Eksen */}
-                      <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
+                    return (
+                      <View key={`barchart-${item.month}-${idx}`} style={styles.barChartCol}>
+                        {/* Üst Alan: Pozitif Yüzde ve Çubuk */}
+                        <View style={styles.barTopHalf}>
+                          {isPos && !isZero && (
+                            <Text style={[styles.barPctLabel, { color: theme.profit.main }]}>
+                              +{item.returnPct.toFixed(1)}%
+                            </Text>
+                          )}
+                          {isPos && !isZero && (
+                            <View
+                              style={[
+                                styles.barStick,
+                                {
+                                  height: barHeight,
+                                  backgroundColor: theme.profit.main,
+                                  borderTopLeftRadius: 3,
+                                  borderTopRightRadius: 3,
+                                },
+                              ]}
+                            />
+                          )}
+                        </View>
 
-                      {/* Alt Alan: Negatif Yüzde ve Çubuk */}
-                      <View style={styles.barBottomHalf}>
-                        {!isPos && (
-                          <View
-                            style={[
-                              styles.barStick,
-                              {
-                                height: barHeight,
-                                backgroundColor: theme.loss.main,
-                                borderBottomLeftRadius: 3,
-                                borderBottomRightRadius: 3,
-                              },
-                            ]}
-                          />
-                        )}
-                        {!isPos && (
-                          <Text style={[styles.barPctLabel, { color: theme.loss.main, marginTop: 2 }]}>
-                            {item.returnPct.toFixed(1)}%
-                          </Text>
-                        )}
+                        {/* Orta Sıfır Çizgisi Eksen */}
+                        <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
+
+                        {/* Alt Alan: Negatif Yüzde ve Çubuk */}
+                        <View style={styles.barBottomHalf}>
+                          {!isPos && (
+                            <View
+                              style={[
+                                styles.barStick,
+                                {
+                                  height: barHeight,
+                                  backgroundColor: theme.loss.main,
+                                  borderBottomLeftRadius: 3,
+                                  borderBottomRightRadius: 3,
+                                },
+                              ]}
+                            />
+                          )}
+                          {!isPos && (
+                            <Text style={[styles.barPctLabel, { color: theme.loss.main, marginTop: 2 }]}>
+                              {item.returnPct.toFixed(1)}%
+                            </Text>
+                          )}
+                        </View>
+
+                        {/* X Ekseni Tarih Etiketi */}
+                        <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
+                          {item.label}
+                        </Text>
                       </View>
-
-                      {/* X Ekseni Tarih Etiketi */}
-                      <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
-                        {item.label}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </ScrollView>
+                    );
+                  })}
+                </ScrollView>
+              )}
             </View>
           </View>
 
-          {/* 3. KÜMÜLATİF YILLIK ÖZET TABLOSU (SCREENSHOT 2) */}
+          {/* 3. KÜMÜLATİF YILLIK ÖZET TABLOSU */}
           <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             <View style={styles.sectionHeaderRow}>
               <View>
@@ -598,12 +671,13 @@ export default function GrowthScreen() {
               <TouchableOpacity
                 style={[styles.miniYearFilterBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
                 onPress={() => {
-                  const nextIdx = (availableYears.indexOf(cumulFromYear) + 1) % (availableYears.length + 1);
-                  setCumulFromYear(nextIdx === 0 ? 'ALL' : availableYears[nextIdx - 1]);
+                  const allChoices = ['ALL', ...availableYears];
+                  const nextIdx = (allChoices.indexOf(cumulFromYear) + 1) % allChoices.length;
+                  setCumulFromYear(allChoices[nextIdx]);
                 }}
               >
                 <Text style={[styles.miniYearFilterText, { color: theme.text.primary }]}>
-                  {cumulFromYear === 'ALL' ? 'Tüm yıllar' : `${cumulFromYear}+`}
+                  {cumulFromYear === 'ALL' ? 'Tüm Yıllar (Kümülatif)' : `${cumulFromYear} Yılı`}
                 </Text>
                 <ChevronDown size={12} color={theme.text.muted} />
               </TouchableOpacity>
@@ -686,7 +760,7 @@ export default function GrowthScreen() {
             </ScrollView>
           </View>
 
-          {/* 4. AYLIK DAĞILIM TABLOSU (SCREENSHOT 3) */}
+          {/* 4. AYLIK DAĞILIM TABLOSU */}
           <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             <View style={styles.sectionHeaderRow}>
               <View>
@@ -712,7 +786,7 @@ export default function GrowthScreen() {
                 }}
               >
                 <Text style={[styles.miniYearFilterText, { color: theme.text.primary }]}>
-                  Yıl {tableYear}
+                  {tableYear} Yılı
                 </Text>
                 <ChevronDown size={12} color={theme.text.muted} />
               </TouchableOpacity>
@@ -1100,6 +1174,33 @@ const styles = StyleSheet.create({
   barChartContainer: {
     marginTop: 6,
     paddingTop: 6,
+  },
+  barChartRowSingleYear: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    height: 145,
+    paddingHorizontal: 2,
+  },
+  barChartColSingleYear: {
+    flex: 1,
+    alignItems: 'center',
+    height: '100%',
+  },
+  barStickMini: {
+    width: '75%',
+    maxWidth: 16,
+  },
+  barPctLabelMini: {
+    fontSize: 7.5,
+    fontWeight: '800',
+    marginBottom: 1,
+  },
+  barDateLabelMini: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    marginTop: 3,
   },
   barChartScroll: {
     flexDirection: 'row',

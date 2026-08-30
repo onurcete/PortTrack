@@ -117,23 +117,12 @@ export default function TransactionsScreen() {
     });
   }, [transactions, selectedType, selectedSide, searchQuery]);
 
-  // Özet İstatistikler (KPI)
-  const stats = useMemo(() => {
-    let totalBuy = 0;
-    let totalSell = 0;
-    for (const tx of transactions) {
-      if (tx.side === 'BUY') {
-        totalBuy += tx.total;
-      } else {
-        totalSell += tx.total;
-      }
+  const countsByType = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of transactions) {
+      map.set(t.assetType, (map.get(t.assetType) ?? 0) + 1);
     }
-    return {
-      totalBuy,
-      totalSell,
-      netVolume: totalBuy - totalSell,
-      count: transactions.length,
-    };
+    return map;
   }, [transactions]);
 
   return (
@@ -143,7 +132,7 @@ export default function TransactionsScreen() {
         <View>
           <Text style={[styles.pageTitle, { color: theme.text.primary }]}>İşlemler</Text>
           <Text style={[styles.pageSubtitle, { color: theme.text.muted }]}>
-            {stats.count} Kayıtlı Hareket
+            {transactions.length} Kayıtlı Hareket
           </Text>
         </View>
 
@@ -157,33 +146,7 @@ export default function TransactionsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 2. ÖZET KPI ÇUBUĞU (Tam Genişlik) */}
-      <View style={[styles.kpiBarSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View style={styles.kpiRow}>
-          <View style={[styles.kpiCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-            <Text style={[styles.kpiLabel, { color: theme.text.muted }]}>Toplam Alış</Text>
-            <Text style={[styles.kpiValue, { color: theme.profit.main }]}>
-              {formatCurrency(stats.totalBuy)}
-            </Text>
-          </View>
-
-          <View style={[styles.kpiCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-            <Text style={[styles.kpiLabel, { color: theme.text.muted }]}>Toplam Satış</Text>
-            <Text style={[styles.kpiValue, { color: theme.loss.main }]}>
-              {formatCurrency(stats.totalSell)}
-            </Text>
-          </View>
-
-          <View style={[styles.kpiCell, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-            <Text style={[styles.kpiLabel, { color: theme.text.muted }]}>Net Yatırım</Text>
-            <Text style={[styles.kpiValue, { color: theme.text.primary }]}>
-              {formatCurrency(stats.netVolume)}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 3. ARAMA & FİLTRE BÖLÜMÜ */}
+      {/* 2. ARAMA & FİLTRE BÖLÜMÜ */}
       <View style={[styles.filterSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         {/* Arama Kutusu */}
         <View style={[styles.searchBox, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
@@ -248,27 +211,41 @@ export default function TransactionsScreen() {
         >
           {ASSET_TYPE_FILTERS.map((f) => {
             const isSelected = selectedType === f.key;
+            const count = f.key === 'ALL' ? transactions.length : (countsByType.get(f.key) ?? 0);
+            if (f.key !== 'ALL' && count === 0 && selectedType !== f.key) return null;
+            const badge = f.key !== 'ALL' ? getAssetTypeBadgeColor(f.key) : { bg: theme.brand.soft, text: theme.brand.primary };
+
             return (
               <TouchableOpacity
                 key={f.key}
                 style={[
                   styles.typeChip,
                   {
-                    backgroundColor: isSelected ? theme.brand.primary : theme.surfaceMuted,
+                    backgroundColor: isSelected ? theme.surface : theme.surfaceMuted,
                     borderColor: isSelected ? theme.brand.primary : theme.borderSubtle,
+                    borderWidth: isSelected ? 1.5 : 1,
                   },
                 ]}
                 onPress={() => setSelectedType(f.key)}
+                activeOpacity={0.7}
               >
+                {f.key !== 'ALL' && (
+                  <View style={[styles.chipDot, { backgroundColor: badge.text }]} />
+                )}
                 <Text
                   style={[
                     styles.typeChipText,
-                    { color: isSelected ? '#ffffff' : theme.text.secondary },
-                    isSelected && { fontWeight: '700' },
+                    { color: isSelected ? theme.text.primary : theme.text.secondary },
+                    isSelected && { fontWeight: '800' },
                   ]}
                 >
                   {f.label}
                 </Text>
+                <View style={[styles.countBadge, { backgroundColor: isSelected ? theme.brand.soft : theme.surface }]}>
+                  <Text style={[styles.countBadgeText, { color: isSelected ? theme.brand.primary : theme.text.muted }]}>
+                    {count}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -512,14 +489,30 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   typeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  chipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   typeChipText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  countBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  countBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
   },
   listScrollContent: {
     paddingBottom: 40,
