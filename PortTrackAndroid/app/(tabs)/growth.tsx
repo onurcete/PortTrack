@@ -63,6 +63,27 @@ function prevMonthKey(key: string): string {
   return `${y}-${String(m - 1).padStart(2, '0')}`;
 }
 
+function formatCompactMoney(value: number, currency: 'TRY' | 'USD'): string {
+  const sym = currency === 'TRY' ? '₺' : '$';
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(0)}K`;
+  }
+  return `${value.toFixed(0)}`;
+}
+
+const ASSET_COLORS: Record<AssetType, string> = {
+  BES: '#8b5cf6',
+  BIST: '#3b82f6',
+  TEFAS: '#10b981',
+  FOREIGN: '#f59e0b',
+  FX: '#06b6d4',
+  METAL: '#eab308',
+  CRYPTO: '#ec4899',
+};
+
 const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
   { key: 'BES', label: 'BES' },
   { key: 'BIST', label: 'BIST' },
@@ -75,7 +96,7 @@ const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
 
 export default function GrowthScreen() {
   const { theme } = useThemeStore();
-  const { currency, isTRY, toggleCurrency } = useCurrencyStore();
+  const { currency, isTRY } = useCurrencyStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -146,7 +167,7 @@ export default function GrowthScreen() {
   }, [series]);
 
   // Ay bazında lookup map
-  const seriesByMonth = useMemo(() => {
+  const fullByMonth = useMemo(() => {
     const map = new Map<string, GrowthPoint>();
     for (const p of series) {
       map.set(p.month, p);
@@ -168,7 +189,7 @@ export default function GrowthScreen() {
       let prev = idx > 0 ? sorted[idx - 1] : null;
       if (!prev) {
         const pk = prevMonthKey(p.month);
-        prev = pk ? (seriesByMonth.get(pk) ?? null) : null;
+        prev = pk ? (fullByMonth.get(pk) ?? null) : null;
       }
       const prevVal = prev ? (isTRY ? prev.valueTRY : prev.valueUSD) : null;
       const returnPct = prevVal != null && prevVal > 0 ? ((val / prevVal) - 1) * 100 : 0;
@@ -181,9 +202,10 @@ export default function GrowthScreen() {
         value: val,
         cost: isTRY ? p.costTRY : p.costUSD,
         returnPct,
+        byType: p.byType,
       };
     });
-  }, [series, chartYear, isTRY, seriesByMonth]);
+  }, [series, chartYear, isTRY, fullByMonth]);
 
   // Listbox Seçenekleri
   const chartYearOptions: SelectOption[] = useMemo(() => [
@@ -203,13 +225,19 @@ export default function GrowthScreen() {
   // Dönem Özet Metrikleri (Hero)
   const periodSummary = useMemo(() => {
     if (chartData.length === 0) return null;
-    const first = chartData[0];
-    const last = chartData[chartData.length - 1];
+    const sorted = chartData.slice().sort((a, b) => a.month.localeCompare(b.month));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
 
     const totalCurrentTRY = series[series.length - 1]?.valueTRY ?? 0;
     const totalCurrentUSD = series[series.length - 1]?.valueUSD ?? 0;
 
-    const startVal = first.value;
+    let baselinePoint: GrowthPoint | null = null;
+    if (chartYear !== 'ALL') {
+      baselinePoint = fullByMonth.get(`${Number(chartYear) - 1}-12`) ?? null;
+    }
+
+    const startVal = baselinePoint ? (isTRY ? baselinePoint.valueTRY : baselinePoint.valueUSD) : first.value;
     const endVal = last.value;
     const gainVal = endVal - startVal;
     const gainPct = startVal > 0 ? (gainVal / startVal) * 100 : 0;
@@ -220,27 +248,25 @@ export default function GrowthScreen() {
     return {
       totalCurrentTRY,
       totalCurrentUSD,
-      startDateLabel: `1 ${firstM}.${firstY}`,
-      endDateLabel: `1 ${lastM}.${lastY}`,
+      startDateLabel: baselinePoint ? `31 Ara ${Number(firstY) - 1}` : `1 ${firstM}.${firstY}`,
+      endDateLabel: `31 ${firstM}.${lastY}`,
       startVal,
       endVal,
       gainVal,
       gainPct,
       usdReturnPct: periodReturns?.oneYearUSD ?? 0,
     };
-  }, [chartData, series, periodReturns]);
+  }, [chartData, series, periodReturns, chartYear, isTRY, fullByMonth]);
 
-  // Kümülatif Yıllık Tablo Satırları (Screenshot 2 ile birebir)
+  // Kümülatif Yıllık Tablo Satırları (Web ile %100 Birebir Aralık Sonu Karşılaştırması)
   const cumulativeYearlyRows = useMemo(() => {
-    const map = new Map<string, { start: GrowthPoint; end: GrowthPoint }>();
+    const byYear = new Map<string, GrowthPoint[]>();
     for (const p of series) {
+      if (p.partialData && !p.valueTRY) continue;
       const y = p.month.slice(0, 4);
-      const existing = map.get(y);
-      if (!existing) {
-        map.set(y, { start: p, end: p });
-      } else {
-        existing.end = p;
-      }
+      const arr = byYear.get(y) ?? [];
+      arr.push(p);
+      byYear.set(y, arr);
     }
 
     const rows: {
@@ -253,17 +279,28 @@ export default function GrowthScreen() {
       returnUSD: number | null;
     }[] = [];
 
-    const years = Array.from(map.keys()).sort();
-    for (const y of years) {
-      if (cumulFromYear !== 'ALL' && y !== cumulFromYear) continue;
-      const data = map.get(y)!;
-      const startTRY = data.start.valueTRY;
-      const endTRY = data.end.valueTRY;
-      const startUSD = data.start.valueUSD;
-      const endUSD = data.end.valueUSD;
+    const allYears = Array.from(byYear.keys()).sort();
+    let totalStartPoint: GrowthPoint | null = null;
 
-      const returnTRY = startTRY > 0 ? ((endTRY / startTRY) - 1) * 100 : 0;
-      const returnUSD = startUSD > 0 ? ((endUSD / startUSD) - 1) * 100 : 0;
+    for (const y of allYears) {
+      if (cumulFromYear !== 'ALL' && y !== cumulFromYear) continue;
+
+      const months = byYear.get(y)!.sort((a, b) => a.month.localeCompare(b.month));
+      const last = months[months.length - 1];
+
+      // Web ile birebir: Yılın başlangıcı = Bir önceki yılın 31 Aralık sonu
+      const prevDec = fullByMonth.get(`${Number(y) - 1}-12`);
+      const startPoint = prevDec ?? months[0];
+
+      if (!totalStartPoint) totalStartPoint = startPoint;
+
+      const startTRY = startPoint.valueTRY;
+      const endTRY = last.valueTRY;
+      const startUSD = startPoint.valueUSD;
+      const endUSD = last.valueUSD;
+
+      const returnTRY = startTRY > 0 ? ((endTRY / startTRY) - 1) * 100 : null;
+      const returnUSD = startUSD > 0 ? ((endUSD / startUSD) - 1) * 100 : null;
 
       rows.push({
         year: y,
@@ -277,36 +314,49 @@ export default function GrowthScreen() {
     }
 
     // Toplam Satırı (Sadece tüm yıllar listeleniyorsa)
-    if (cumulFromYear === 'ALL' && rows.length > 1) {
-      const firstRow = rows[0];
-      const lastRow = rows[rows.length - 1];
-      const totalRetTRY = firstRow.startTRY > 0 ? ((lastRow.endTRY / firstRow.startTRY) - 1) * 100 : 0;
-      const totalRetUSD = firstRow.startUSD > 0 ? ((lastRow.endUSD / firstRow.startUSD) - 1) * 100 : 0;
+    if (cumulFromYear === 'ALL' && rows.length > 1 && totalStartPoint) {
+      const allMonths = series.slice().sort((a, b) => a.month.localeCompare(b.month));
+      const totalLast = allMonths[allMonths.length - 1];
+
+      const startTRY = totalStartPoint.valueTRY;
+      const endTRY = totalLast.valueTRY;
+      const startUSD = totalStartPoint.valueUSD;
+      const endUSD = totalLast.valueUSD;
+
+      const totalRetTRY = startTRY > 0 ? ((endTRY / startTRY) - 1) * 100 : null;
+      const totalRetUSD = startUSD > 0 ? ((endUSD / startUSD) - 1) * 100 : null;
 
       rows.push({
         year: 'TOPLAM',
-        startTRY: firstRow.startTRY,
-        endTRY: lastRow.endTRY,
-        startUSD: firstRow.startUSD,
-        endUSD: lastRow.endUSD,
+        startTRY,
+        endTRY,
+        startUSD,
+        endUSD,
         returnTRY: totalRetTRY,
         returnUSD: totalRetUSD,
       });
     }
 
     return rows;
-  }, [series, cumulFromYear]);
+  }, [series, cumulFromYear, fullByMonth]);
 
-  // Aylık Dağılım Tablosu Verileri (Screenshot 3 ile birebir)
+  // Aylık Dağılım Tablosu Verileri (Web ile %100 Birebir)
   const monthlyTableData = useMemo(() => {
-    const yearPoints = series.filter((p) => p.month.startsWith(tableYear));
+    const yearPoints = series
+      .filter((p) => p.month.startsWith(tableYear))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
     if (yearPoints.length === 0) return { rows: [], yearSummary: null };
 
     const rows = yearPoints.map((p, idx) => {
-      const prev = idx > 0 ? yearPoints[idx - 1] : null;
+      // Ocak ayı için bir önceki yılın Aralık ayını al
+      const prev = idx > 0 ? yearPoints[idx - 1] : fullByMonth.get(`${Number(tableYear) - 1}-12`);
+
       const totalVal = isTRY ? p.valueTRY : p.valueUSD;
       const prevTotal = prev ? (isTRY ? prev.valueTRY : prev.valueUSD) : null;
-      const totalReturnPct = prevTotal && prevTotal > 0 ? ((totalVal / prevTotal) - 1) * 100 : null;
+      const totalReturnPct = (totalVal > 0 && prevTotal && prevTotal > 0)
+        ? ((totalVal / prevTotal) - 1) * 100
+        : null;
 
       const cells: Record<
         AssetType,
@@ -320,7 +370,10 @@ export default function GrowthScreen() {
         const amount = typeData ? (isTRY ? typeData.valueTRY : typeData.valueUSD) : 0;
         const prevAmount = prevTypeData ? (isTRY ? prevTypeData.valueTRY : prevTypeData.valueUSD) : null;
 
-        const returnPct = prevAmount && prevAmount > 0 && amount > 0 ? ((amount / prevAmount) - 1) * 100 : null;
+        const returnPct =
+          prevAmount && prevAmount > 0 && amount > 0
+            ? ((amount / prevAmount) - 1) * 100
+            : null;
         const sharePct = totalVal > 0 ? (amount / totalVal) * 100 : 0;
 
         cells[item.key] = { amount, returnPct, sharePct };
@@ -334,16 +387,19 @@ export default function GrowthScreen() {
       };
     });
 
-    // Yıl Sonu Toplamı Satırı
+    // Yıl Sonu Toplam Getirisi Satırı (Aralık sonu vs önceki yıl Aralık sonu)
     const firstPoint = yearPoints[0];
     const lastPoint = yearPoints[yearPoints.length - 1];
-    const totalStart = isTRY ? firstPoint.valueTRY : firstPoint.valueUSD;
+    const prevDecPoint = fullByMonth.get(`${Number(tableYear) - 1}-12`);
+    const startPoint = prevDecPoint ?? firstPoint;
+
+    const totalStart = isTRY ? startPoint.valueTRY : startPoint.valueUSD;
     const totalEnd = isTRY ? lastPoint.valueTRY : lastPoint.valueUSD;
-    const yearTotalReturn = totalStart > 0 ? ((totalEnd / totalStart) - 1) * 100 : 0;
+    const yearTotalReturn = (totalStart > 0 && totalEnd > 0) ? ((totalEnd / totalStart) - 1) * 100 : 0;
 
     const summaryCells: Record<AssetType, { returnPct: number | null }> = {} as any;
     for (const item of ASSET_COLUMN_KEYS) {
-      const sItem = firstPoint.byType?.[item.key];
+      const sItem = startPoint.byType?.[item.key];
       const eItem = lastPoint.byType?.[item.key];
       const sVal = sItem ? (isTRY ? sItem.valueTRY : sItem.valueUSD) : 0;
       const eVal = eItem ? (isTRY ? eItem.valueTRY : eItem.valueUSD) : 0;
@@ -359,11 +415,15 @@ export default function GrowthScreen() {
         cells: summaryCells,
       },
     };
-  }, [series, tableYear, isTRY]);
+  }, [series, tableYear, isTRY, fullByMonth]);
+
+  const maxValInChart = useMemo(() => {
+    return Math.max(...chartData.map((d) => d.value), 1);
+  }, [chartData]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. ÜST HEADER (Tam Genişlik) */}
+      {/* 1. ÜST HEADER (Başlık & Açıklama - Dolar/TL butonu olmadan temiz) */}
       <View style={[styles.topHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View>
           <Text style={[styles.pageTitle, { color: theme.text.primary }]}>Portföy Gelişimi</Text>
@@ -371,20 +431,6 @@ export default function GrowthScreen() {
             Aylık büyüme, getiri grafikleri ve yıllık özet
           </Text>
         </View>
-
-        <TouchableOpacity
-          style={[styles.currencyToggleBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.border }]}
-          onPress={() => {
-            haptic.selection();
-            toggleCurrency();
-          }}
-          activeOpacity={0.8}
-        >
-          <Coins size={13} color={theme.brand.primary} />
-          <Text style={[styles.currencyToggleText, { color: theme.brand.primary }]}>
-            {currency === 'TRY' ? '₺ TL' : '$ USD'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -434,7 +480,10 @@ export default function GrowthScreen() {
                     styles.chartTabBtn,
                     chartMetric === 'return' && [styles.activeChartTabBtn, { backgroundColor: theme.surface }],
                   ]}
-                  onPress={() => setChartMetric('return')}
+                  onPress={() => {
+                    haptic.selection();
+                    setChartMetric('return');
+                  }}
                 >
                   <Text
                     style={[
@@ -452,7 +501,10 @@ export default function GrowthScreen() {
                     styles.chartTabBtn,
                     chartMetric === 'value' && [styles.activeChartTabBtn, { backgroundColor: theme.surface }],
                   ]}
-                  onPress={() => setChartMetric('value')}
+                  onPress={() => {
+                    haptic.selection();
+                    setChartMetric('value');
+                  }}
                 >
                   <Text
                     style={[
@@ -462,6 +514,27 @@ export default function GrowthScreen() {
                     ]}
                   >
                     Portföy Değeri
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.chartTabBtn,
+                    chartMetric === 'allocation' && [styles.activeChartTabBtn, { backgroundColor: theme.surface }],
+                  ]}
+                  onPress={() => {
+                    haptic.selection();
+                    setChartMetric('allocation');
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.chartTabText,
+                      { color: chartMetric === 'allocation' ? theme.brand.primary : theme.text.muted },
+                      chartMetric === 'allocation' && { fontWeight: '800' },
+                    ]}
+                  >
+                    Varlık Dağılımı
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -556,136 +629,277 @@ export default function GrowthScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* ÇUBUK GRAFİK (BAR CHART) */}
+            {/* ÇUBUK GRAFİK (BAR CHART - DİNAMİK METRİK DESTEĞİ) */}
             <View style={styles.barChartContainer}>
-              {chartYear !== 'ALL' ? (
-                <View style={styles.barChartRowSingleYear}>
-                  {chartData.map((item, idx) => {
-                    const isPos = item.returnPct >= 0;
-                    const isZero = Math.abs(item.returnPct) < 0.05;
-                    const barHeight = Math.max(4, Math.min(50, Math.abs(item.returnPct) * 2 + 4));
+              {chartMetric === 'return' ? (
+                /* 1. METRİK: AYLIK GETİRİ YÜZDESİ GRAFİĞİ */
+                chartYear !== 'ALL' ? (
+                  <View style={styles.barChartRowSingleYear}>
+                    {chartData.map((item, idx) => {
+                      const isPos = item.returnPct >= 0;
+                      const isZero = Math.abs(item.returnPct) < 0.05;
+                      const barHeight = Math.max(4, Math.min(50, Math.abs(item.returnPct) * 2 + 4));
 
-                    return (
-                      <View key={`barchart-${item.month}-${idx}`} style={styles.barChartColSingleYear}>
-                        {/* Üst Alan */}
-                        <View style={styles.barTopHalf}>
-                          {isPos && !isZero && (
-                            <Text style={[styles.barPctLabelMini, { color: theme.profit.main }]}>
-                              +{item.returnPct.toFixed(0)}%
+                      return (
+                        <View key={`barchart-ret-${item.month}-${idx}`} style={styles.barChartColSingleYear}>
+                          <View style={styles.barTopHalf}>
+                            {isPos && !isZero && (
+                              <Text style={[styles.barPctLabelMini, { color: theme.profit.main }]}>
+                                +{item.returnPct.toFixed(0)}%
+                              </Text>
+                            )}
+                            {isPos && !isZero && (
+                              <View
+                                style={[
+                                  styles.barStickMini,
+                                  {
+                                    height: barHeight,
+                                    backgroundColor: theme.profit.main,
+                                    borderTopLeftRadius: 2,
+                                    borderTopRightRadius: 2,
+                                  },
+                                ]}
+                              />
+                            )}
+                          </View>
+
+                          <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
+
+                          <View style={styles.barBottomHalf}>
+                            {!isPos && (
+                              <View
+                                style={[
+                                  styles.barStickMini,
+                                  {
+                                    height: barHeight,
+                                    backgroundColor: theme.loss.main,
+                                    borderBottomLeftRadius: 2,
+                                    borderBottomRightRadius: 2,
+                                  },
+                                ]}
+                              />
+                            )}
+                            {!isPos && (
+                              <Text style={[styles.barPctLabelMini, { color: theme.loss.main, marginTop: 1 }]}>
+                                {item.returnPct.toFixed(0)}%
+                              </Text>
+                            )}
+                          </View>
+
+                          <Text style={[styles.barDateLabelMini, { color: theme.text.muted }]}>
+                            {item.label}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
+                    {chartData.map((item, idx) => {
+                      const isPos = item.returnPct >= 0;
+                      const isZero = Math.abs(item.returnPct) < 0.05;
+                      const barHeight = Math.max(6, Math.min(65, Math.abs(item.returnPct) * 2.5 + 4));
+
+                      return (
+                        <View key={`barchart-ret-all-${item.month}-${idx}`} style={styles.barChartCol}>
+                          <View style={styles.barTopHalf}>
+                            {isPos && !isZero && (
+                              <Text style={[styles.barPctLabel, { color: theme.profit.main }]}>
+                                +{item.returnPct.toFixed(1)}%
+                              </Text>
+                            )}
+                            {isPos && !isZero && (
+                              <View
+                                style={[
+                                  styles.barStick,
+                                  {
+                                    height: barHeight,
+                                    backgroundColor: theme.profit.main,
+                                    borderTopLeftRadius: 3,
+                                    borderTopRightRadius: 3,
+                                  },
+                                ]}
+                              />
+                            )}
+                          </View>
+
+                          <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
+
+                          <View style={styles.barBottomHalf}>
+                            {!isPos && (
+                              <View
+                                style={[
+                                  styles.barStick,
+                                  {
+                                    height: barHeight,
+                                    backgroundColor: theme.loss.main,
+                                    borderBottomLeftRadius: 3,
+                                    borderBottomRightRadius: 3,
+                                  },
+                                ]}
+                              />
+                            )}
+                            {!isPos && (
+                              <Text style={[styles.barPctLabel, { color: theme.loss.main, marginTop: 2 }]}>
+                                {item.returnPct.toFixed(1)}%
+                              </Text>
+                            )}
+                          </View>
+
+                          <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
+                            {item.label}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                )
+              ) : chartMetric === 'value' ? (
+                /* 2. METRİK: PORTFÖY DEĞERİ GRAFİĞİ */
+                chartYear !== 'ALL' ? (
+                  <View style={styles.barChartRowSingleYear}>
+                    {chartData.map((item, idx) => {
+                      const barHeight = Math.max(6, (item.value / maxValInChart) * 90);
+
+                      return (
+                        <View key={`barchart-val-${item.month}-${idx}`} style={styles.barChartColSingleYear}>
+                          <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
+                            <Text style={[styles.barPctLabelMini, { color: theme.brand.primary, fontSize: 6.8 }]}>
+                              {formatCompactMoney(item.value, currency)}
                             </Text>
-                          )}
-                          {isPos && !isZero && (
                             <View
                               style={[
                                 styles.barStickMini,
                                 {
                                   height: barHeight,
-                                  backgroundColor: theme.profit.main,
-                                  borderTopLeftRadius: 2,
-                                  borderTopRightRadius: 2,
-                                },
-                              ]}
-                            />
-                          )}
-                        </View>
-
-                        {/* Orta Sıfır Çizgisi Eksen */}
-                        <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
-
-                        {/* Alt Alan */}
-                        <View style={styles.barBottomHalf}>
-                          {!isPos && (
-                            <View
-                              style={[
-                                styles.barStickMini,
-                                {
-                                  height: barHeight,
-                                  backgroundColor: theme.loss.main,
-                                  borderBottomLeftRadius: 2,
-                                  borderBottomRightRadius: 2,
-                                },
-                              ]}
-                            />
-                          )}
-                          {!isPos && (
-                            <Text style={[styles.barPctLabelMini, { color: theme.loss.main, marginTop: 1 }]}>
-                              {item.returnPct.toFixed(0)}%
-                            </Text>
-                          )}
-                        </View>
-
-                        {/* X Ekseni Tarih Etiketi */}
-                        <Text style={[styles.barDateLabelMini, { color: theme.text.muted }]}>
-                          {item.label}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
-                  {chartData.map((item, idx) => {
-                    const isPos = item.returnPct >= 0;
-                    const isZero = Math.abs(item.returnPct) < 0.05;
-                    const barHeight = Math.max(6, Math.min(65, Math.abs(item.returnPct) * 2.5 + 4));
-
-                    return (
-                      <View key={`barchart-${item.month}-${idx}`} style={styles.barChartCol}>
-                        {/* Üst Alan: Pozitif Yüzde ve Çubuk */}
-                        <View style={styles.barTopHalf}>
-                          {isPos && !isZero && (
-                            <Text style={[styles.barPctLabel, { color: theme.profit.main }]}>
-                              +{item.returnPct.toFixed(1)}%
-                            </Text>
-                          )}
-                          {isPos && !isZero && (
-                            <View
-                              style={[
-                                styles.barStick,
-                                {
-                                  height: barHeight,
-                                  backgroundColor: theme.profit.main,
+                                  backgroundColor: theme.brand.primary,
                                   borderTopLeftRadius: 3,
                                   borderTopRightRadius: 3,
                                 },
                               ]}
                             />
-                          )}
+                          </View>
+                          <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle, marginTop: 2 }]} />
+                          <Text style={[styles.barDateLabelMini, { color: theme.text.muted }]}>
+                            {item.label}
+                          </Text>
                         </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
+                    {chartData.map((item, idx) => {
+                      const barHeight = Math.max(8, (item.value / maxValInChart) * 110);
 
-                        {/* Orta Sıfır Çizgisi Eksen */}
-                        <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
-
-                        {/* Alt Alan: Negatif Yüzde ve Çubuk */}
-                        <View style={styles.barBottomHalf}>
-                          {!isPos && (
+                      return (
+                        <View key={`barchart-val-all-${item.month}-${idx}`} style={styles.barChartCol}>
+                          <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
+                            <Text style={[styles.barPctLabel, { color: theme.brand.primary, fontSize: 8 }]}>
+                              {formatCompactMoney(item.value, currency)}
+                            </Text>
                             <View
                               style={[
                                 styles.barStick,
                                 {
                                   height: barHeight,
-                                  backgroundColor: theme.loss.main,
-                                  borderBottomLeftRadius: 3,
-                                  borderBottomRightRadius: 3,
+                                  backgroundColor: theme.brand.primary,
+                                  borderTopLeftRadius: 4,
+                                  borderTopRightRadius: 4,
                                 },
                               ]}
                             />
-                          )}
-                          {!isPos && (
-                            <Text style={[styles.barPctLabel, { color: theme.loss.main, marginTop: 2 }]}>
-                              {item.returnPct.toFixed(1)}%
-                            </Text>
-                          )}
+                          </View>
+                          <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle, marginTop: 2 }]} />
+                          <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
+                            {item.label}
+                          </Text>
                         </View>
+                      );
+                    })}
+                  </ScrollView>
+                )
+              ) : (
+                /* 3. METRİK: VARLIK DAĞILIMI (STACKED BAR) */
+                <View>
+                  {chartYear !== 'ALL' ? (
+                    <View style={styles.barChartRowSingleYear}>
+                      {chartData.map((item, idx) => {
+                        return (
+                          <View key={`barchart-alloc-${item.month}-${idx}`} style={styles.barChartColSingleYear}>
+                            <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
+                              <View style={[styles.barStickMini, { height: 95, borderRadius: 3, overflow: 'hidden', backgroundColor: theme.surfaceMuted }]}>
+                                {ASSET_COLUMN_KEYS.map((col) => {
+                                  const byTypeItem = item.byType?.[col.key];
+                                  const typeVal = byTypeItem ? (isTRY ? byTypeItem.valueTRY : byTypeItem.valueUSD) : 0;
+                                  const segHeight = item.value > 0 ? (typeVal / item.value) * 95 : 0;
+                                  if (segHeight <= 0) return null;
+                                  return (
+                                    <View
+                                      key={col.key}
+                                      style={{
+                                        height: segHeight,
+                                        width: '100%',
+                                        backgroundColor: ASSET_COLORS[col.key],
+                                      }}
+                                    />
+                                  );
+                                })}
+                              </View>
+                            </View>
+                            <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle, marginTop: 2 }]} />
+                            <Text style={[styles.barDateLabelMini, { color: theme.text.muted }]}>
+                              {item.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
+                      {chartData.map((item, idx) => {
+                        return (
+                          <View key={`barchart-alloc-all-${item.month}-${idx}`} style={styles.barChartCol}>
+                            <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
+                              <View style={[styles.barStick, { height: 110, borderRadius: 4, overflow: 'hidden', backgroundColor: theme.surfaceMuted }]}>
+                                {ASSET_COLUMN_KEYS.map((col) => {
+                                  const byTypeItem = item.byType?.[col.key];
+                                  const typeVal = byTypeItem ? (isTRY ? byTypeItem.valueTRY : byTypeItem.valueUSD) : 0;
+                                  const segHeight = item.value > 0 ? (typeVal / item.value) * 110 : 0;
+                                  if (segHeight <= 0) return null;
+                                  return (
+                                    <View
+                                      key={col.key}
+                                      style={{
+                                        height: segHeight,
+                                        width: '100%',
+                                        backgroundColor: ASSET_COLORS[col.key],
+                                      }}
+                                    />
+                                  );
+                                })}
+                              </View>
+                            </View>
+                            <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle, marginTop: 2 }]} />
+                            <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
+                              {item.label}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+                  )}
 
-                        {/* X Ekseni Tarih Etiketi */}
-                        <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
-                          {item.label}
-                        </Text>
+                  {/* Varlık Lejantı */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+                    {ASSET_COLUMN_KEYS.map((col) => (
+                      <View key={`legend-${col.key}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: ASSET_COLORS[col.key] }} />
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: theme.text.muted }}>{col.label}</Text>
                       </View>
-                    );
-                  })}
-                </ScrollView>
+                    ))}
+                  </View>
+                </View>
               )}
             </View>
           </View>
