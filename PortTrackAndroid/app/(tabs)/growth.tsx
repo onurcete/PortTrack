@@ -14,7 +14,6 @@ import Svg, { Path, Defs, LinearGradient, Stop, Circle, Text as SvgText } from '
 import {
   TrendingUp,
   Calendar,
-  Filter,
   ChevronDown,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
@@ -512,55 +511,23 @@ export default function GrowthScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. ÜST BAŞLIK & İKONLAR */}
+      {/* 1. ÜST BAŞLIK & TAKVİM BUTONU */}
       <View style={styles.topHeader}>
-        <View>
-          <View style={styles.titleRow}>
-            <TrendingUp size={24} color="#8b5cf6" />
-            <Text style={[styles.pageTitle, { color: theme.text.primary }]}>Gelişim</Text>
-          </View>
-          <Text style={[styles.pageSubtitle, { color: theme.text.muted }]}>
-            Portföyünün zaman içindeki performansı
-          </Text>
+        <View style={styles.titleRow}>
+          <TrendingUp size={24} color="#8b5cf6" />
+          <Text style={[styles.pageTitle, { color: theme.text.primary }]}>Gelişim</Text>
         </View>
 
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.headerIconBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
-            onPress={() => {
-              haptic.selection();
-              setChartYearModalOpen(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <Calendar size={17} color={theme.text.primary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.headerIconBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
-            onPress={() => {
-              haptic.selection();
-              setChartYearModalOpen(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <Filter size={17} color={theme.text.primary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.yearDropdownPill, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
-            onPress={() => {
-              haptic.selection();
-              setChartYearModalOpen(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.yearDropdownText, { color: theme.text.primary }]}>
-              {chartYear === 'ALL' ? 'Tüm Yıllar' : `${chartYear} Yılı`}
-            </Text>
-            <ChevronDown size={14} color={theme.text.muted} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.headerIconBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
+          onPress={() => {
+            haptic.selection();
+            setChartYearModalOpen(true);
+          }}
+          activeOpacity={0.7}
+        >
+          <Calendar size={17} color={theme.text.primary} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -1060,19 +1027,19 @@ export default function GrowthScreen() {
                 </Text>
               </View>
 
-              {/* Yıl Seçici Dropdown */}
+              {/* Yıl Seçici Takvim Butonu */}
               <TouchableOpacity
-                style={[styles.smallFilterPill, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+                style={[
+                  styles.headerIconBtn,
+                  { width: 34, height: 34, backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                ]}
                 onPress={() => {
                   haptic.selection();
                   setTableYearModalOpen(true);
                 }}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.smallFilterPillText, { color: theme.text.primary }]}>
-                  {tableYear} Yılı
-                </Text>
-                <ChevronDown size={13} color={theme.text.muted} />
+                <Calendar size={16} color={theme.text.primary} />
               </TouchableOpacity>
             </View>
 
