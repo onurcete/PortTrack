@@ -19,11 +19,9 @@ import {
   Trash2,
   Calendar,
   Filter,
-  FileText,
-  TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
@@ -34,17 +32,19 @@ import {
   getAssetTypeBadgeColor,
 } from '../../utils/formatters';
 import { useThemeStore } from '../../stores/themeStore';
+import { haptic } from '../../utils/haptics';
 import { Transaction, AssetType } from '../../types';
+import { PortTrackLogo } from '../../components/PortTrackLogo';
 
 const ASSET_TYPE_FILTERS: { key: AssetType | 'ALL'; label: string }[] = [
   { key: 'ALL', label: 'Tüm Varlıklar' },
   { key: 'TEFAS', label: 'Fonlar (TEFAS)' },
   { key: 'FOREIGN', label: 'Yabancı Hisseler' },
   { key: 'BIST', label: 'BIST Hisseleri' },
-  { key: 'CRYPTO', label: 'Kripto' },
-  { key: 'METAL', label: 'Maden' },
+  { key: 'BES', label: 'Bireysel Emeklilik' },
+  { key: 'CRYPTO', label: 'Kripto Para' },
+  { key: 'METAL', label: 'Kıymetli Maden' },
   { key: 'FX', label: 'Döviz' },
-  { key: 'BES', label: 'BES' },
 ];
 
 export default function TransactionsScreen() {
@@ -77,11 +77,14 @@ export default function TransactionsScreen() {
   }, [fetchTransactions]);
 
   const onRefresh = useCallback(async () => {
+    haptic.medium();
     setRefreshing(true);
     await fetchTransactions();
+    haptic.success();
   }, [fetchTransactions]);
 
   const handleDelete = (id: string, symbol: string) => {
+    haptic.medium();
     Alert.alert(
       'İşlemi Sil',
       `${symbol} varlığına ait bu işlemi silmek istediğinize emin misiniz?`,
@@ -94,6 +97,7 @@ export default function TransactionsScreen() {
             try {
               await api.delete(`/transactions?id=${id}`);
               setTransactions((prev) => prev.filter((t) => t.id !== id));
+              haptic.success();
             } catch (err) {
               Alert.alert('Hata', 'İşlem silinirken bir hata oluştu.');
             }
@@ -127,29 +131,50 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. ÜST BAŞLIK & YENİ İŞLEM BUTONU (Tam Genişlik) */}
-      <View style={[styles.topHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View>
-          <Text style={[styles.pageTitle, { color: theme.text.primary }]}>İşlemler</Text>
-          <Text style={[styles.pageSubtitle, { color: theme.text.muted }]}>
-            {transactions.length} Kayıtlı Hareket
-          </Text>
+      {/* 1. ÜST HEADER (Logo + "+ Yeni İşlem" Butonu) */}
+      <View style={[styles.topHeader, { backgroundColor: theme.bg.primary }]}>
+        <View style={styles.headerLeft}>
+          <PortTrackLogo size={28} variant="horizontal" showTagline={false} />
         </View>
 
         <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: theme.brand.primary }]}
-          onPress={() => router.push('/modals/add-transaction' as any)}
+          style={[styles.addBtn, { backgroundColor: '#6366f1' }]}
+          onPress={() => {
+            haptic.selection();
+            router.push('/modals/add-transaction' as any);
+          }}
           activeOpacity={0.8}
         >
-          <Plus size={16} color="#ffffff" />
+          <Plus size={15} color="#ffffff" strokeWidth={3} />
           <Text style={styles.addBtnText}>Yeni İşlem</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 2. ARAMA & FİLTRE BÖLÜMÜ */}
-      <View style={[styles.filterSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        {/* Arama Kutusu */}
-        <View style={[styles.searchBox, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+      {/* 2. SAYFA BAŞLIĞI & İKONLAR */}
+      <View style={styles.pageTitleRow}>
+        <View>
+          <Text style={[styles.pageTitle, { color: theme.text.primary }]}>İşlemler</Text>
+          <View style={styles.subtitleRow}>
+            <Text style={[styles.pageSubtitle, { color: theme.text.muted }]}>
+              {transactions.length} Kayıtlı Hareket
+            </Text>
+            <View style={[styles.purpleDot, { backgroundColor: '#8b5cf6' }]} />
+          </View>
+        </View>
+
+        <View style={styles.titleActions}>
+          <View style={[styles.iconCircleBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+            <Search size={17} color={theme.text.primary} />
+          </View>
+          <View style={[styles.iconCircleBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+            <Filter size={17} color={theme.text.primary} />
+          </View>
+        </View>
+      </View>
+
+      {/* 3. ARAMA KUTUSU */}
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchBox, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
           <Search size={16} color={theme.text.muted} />
           <TextInput
             style={[styles.searchInput, { color: theme.text.primary }]}
@@ -165,45 +190,47 @@ export default function TransactionsScreen() {
             </TouchableOpacity>
           )}
         </View>
+      </View>
 
-        {/* İşlem Yönü Segmenti (Tümü / Alışlar / Satışlar) */}
-        <View style={styles.sideSegmentBar}>
-          {(['ALL', 'BUY', 'SELL'] as const).map((side) => {
-            const isSelected = selectedSide === side;
-            const label = side === 'ALL' ? 'Tümü' : side === 'BUY' ? 'Alışlar' : 'Satışlar';
-            return (
-              <TouchableOpacity
-                key={side}
+      {/* 4. İŞLEM TÜRÜ SEKMESİ (Tümü / Alışlar / Satışlar) */}
+      <View style={[styles.sideSegmentBar, { borderBottomColor: theme.borderSubtle }]}>
+        {(['ALL', 'BUY', 'SELL'] as const).map((side) => {
+          const isSelected = selectedSide === side;
+          const label = side === 'ALL' ? 'Tümü' : side === 'BUY' ? 'Alışlar' : 'Satışlar';
+          return (
+            <TouchableOpacity
+              key={side}
+              style={[
+                styles.sideSegmentBtn,
+                isSelected && styles.sideSegmentBtnActive,
+              ]}
+              onPress={() => {
+                haptic.selection();
+                setSelectedSide(side);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text
                 style={[
-                  styles.sideSegmentBtn,
-                  { backgroundColor: isSelected ? theme.surface : 'transparent' },
-                  isSelected && { borderColor: theme.border, borderWidth: 1 },
+                  styles.sideSegmentText,
+                  {
+                    color: isSelected
+                      ? theme.text.primary
+                      : theme.text.muted,
+                  },
+                  isSelected && { fontWeight: '900', color: theme.text.primary },
                 ]}
-                onPress={() => setSelectedSide(side)}
               >
-                <Text
-                  style={[
-                    styles.sideSegmentText,
-                    {
-                      color: isSelected
-                        ? side === 'BUY'
-                          ? theme.profit.main
-                          : side === 'SELL'
-                          ? theme.loss.main
-                          : theme.text.primary
-                        : theme.text.muted,
-                    },
-                    isSelected && { fontWeight: '800' },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                {label}
+              </Text>
+              {isSelected && <View style={[styles.activeTabIndicator, { backgroundColor: '#6366f1' }]} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
-        {/* Varlık Kategori Çipleri (Yatay Kaydırılabilir) */}
+      {/* 5. VARLIK KATEGORİ ÇİPLERİ (Yatay Kaydırılabilir) */}
+      <View style={styles.chipsSection}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -213,7 +240,7 @@ export default function TransactionsScreen() {
             const isSelected = selectedType === f.key;
             const count = f.key === 'ALL' ? transactions.length : (countsByType.get(f.key) ?? 0);
             if (f.key !== 'ALL' && count === 0 && selectedType !== f.key) return null;
-            const badge = f.key !== 'ALL' ? getAssetTypeBadgeColor(f.key) : { bg: theme.brand.soft, text: theme.brand.primary };
+            const badge = f.key !== 'ALL' ? getAssetTypeBadgeColor(f.key) : { bg: 'rgba(99, 102, 241, 0.15)', text: '#8b5cf6' };
 
             return (
               <TouchableOpacity
@@ -221,28 +248,28 @@ export default function TransactionsScreen() {
                 style={[
                   styles.typeChip,
                   {
-                    backgroundColor: isSelected ? theme.surface : theme.surfaceMuted,
-                    borderColor: isSelected ? theme.brand.primary : theme.borderSubtle,
-                    borderWidth: isSelected ? 1.5 : 1,
+                    backgroundColor: isSelected ? '#1e1b4b' : theme.surface,
+                    borderColor: isSelected ? '#6366f1' : theme.borderSubtle,
                   },
                 ]}
-                onPress={() => setSelectedType(f.key)}
+                onPress={() => {
+                  haptic.selection();
+                  setSelectedType(f.key);
+                }}
                 activeOpacity={0.7}
               >
-                {f.key !== 'ALL' && (
-                  <View style={[styles.chipDot, { backgroundColor: badge.text }]} />
-                )}
+                <View style={[styles.chipDot, { backgroundColor: badge.text }]} />
                 <Text
                   style={[
                     styles.typeChipText,
-                    { color: isSelected ? theme.text.primary : theme.text.secondary },
+                    { color: isSelected ? '#ffffff' : theme.text.secondary },
                     isSelected && { fontWeight: '800' },
                   ]}
                 >
                   {f.label}
                 </Text>
-                <View style={[styles.countBadge, { backgroundColor: isSelected ? theme.brand.soft : theme.surface }]}>
-                  <Text style={[styles.countBadgeText, { color: isSelected ? theme.brand.primary : theme.text.muted }]}>
+                <View style={[styles.countBadge, { backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.3)' : theme.surfaceMuted }]}>
+                  <Text style={[styles.countBadgeText, { color: isSelected ? '#c7d2fe' : theme.text.muted }]}>
                     {count}
                   </Text>
                 </View>
@@ -252,7 +279,7 @@ export default function TransactionsScreen() {
         </ScrollView>
       </View>
 
-      {/* 4. İŞLEM LİSTESİ (Tam Genişlik, Ekranla Bütün) */}
+      {/* 6. İŞLEM KARTLARI LİSTESİ */}
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={theme.brand.primary} />
@@ -288,55 +315,63 @@ export default function TransactionsScreen() {
                   <TouchableOpacity
                     key={tx.id || `tx-${idx}`}
                     style={[
-                      styles.txFullCard,
+                      styles.txCard,
                       {
                         backgroundColor: theme.surface,
-                        borderBottomColor: theme.border,
+                        borderColor: theme.borderSubtle,
                       },
                     ]}
                     onPress={() => router.push(`/asset/${tx.symbol}` as any)}
                     activeOpacity={0.7}
                   >
-                    {/* Üst Satır: Rozetler, Sembol ve Toplam Tutar */}
-                    <View style={styles.txTopRow}>
-                      <View style={styles.txTopLeft}>
-                        {/* Alış / Satış Rozeti */}
-                        <View
+                    {/* Sol Kısım: Alış/Satış Kutusu + Varlık Tipi + Sembol + Adet */}
+                    <View style={styles.txLeftGroup}>
+                      {/* Alış / Satış Kutusu */}
+                      <View
+                        style={[
+                          styles.sideSquare,
+                          {
+                            backgroundColor: isBuy ? 'rgba(34, 197, 94, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                          },
+                        ]}
+                      >
+                        {isBuy ? (
+                          <ArrowDownLeft size={16} color="#22c55e" strokeWidth={2.5} />
+                        ) : (
+                          <ArrowUpRight size={16} color="#f43f5e" strokeWidth={2.5} />
+                        )}
+                        <Text
                           style={[
-                            styles.sidePill,
-                            { backgroundColor: isBuy ? theme.profit.soft : theme.loss.soft },
+                            styles.sideSquareText,
+                            { color: isBuy ? '#22c55e' : '#f43f5e' },
                           ]}
                         >
-                          {isBuy ? (
-                            <ArrowDownLeft size={11} color={theme.profit.main} />
-                          ) : (
-                            <ArrowUpRight size={11} color={theme.loss.main} />
-                          )}
-                          <Text
-                            style={[
-                              styles.sidePillText,
-                              { color: isBuy ? theme.profit.main : theme.loss.main },
-                            ]}
-                          >
-                            {isBuy ? 'ALIŞ' : 'SATIŞ'}
-                          </Text>
-                        </View>
-
-                        {/* Kategori Rozeti */}
-                        <View style={[styles.assetTypePill, { backgroundColor: badge.bg }]}>
-                          <Text style={[styles.assetTypePillText, { color: badge.text }]}>
-                            {getAssetTypeLabel(tx.assetType)}
-                          </Text>
-                        </View>
-
-                        {/* Sembol */}
-                        <Text style={[styles.txSymbolText, { color: theme.text.primary }]}>
-                          {tx.symbol}
+                          {isBuy ? 'ALIŞ' : 'SATIŞ'}
                         </Text>
                       </View>
 
-                      {/* Sağ Taraf: Toplam Tutar & Silme Butonu */}
-                      <View style={styles.txTopRight}>
+                      {/* Varlık Bilgileri */}
+                      <View style={styles.txInfoGroup}>
+                        <View style={styles.txHeaderRow}>
+                          <View style={[styles.assetTypePill, { backgroundColor: badge.bg }]}>
+                            <Text style={[styles.assetTypePillText, { color: badge.text }]}>
+                              {getAssetTypeLabel(tx.assetType)}
+                            </Text>
+                          </View>
+                          <Text style={[styles.txSymbolText, { color: theme.text.primary }]}>
+                            {tx.symbol}
+                          </Text>
+                        </View>
+
+                        <Text style={[styles.txSubDetail, { color: theme.text.muted }]}>
+                          {formatQuantity(tx.quantity)} Adet • Birim: {formatCurrency(tx.unitPrice, tx.currency)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Sağ Kısım: Tutar + Çöp Kutusu + Tarih + Ok */}
+                    <View style={styles.txRightGroup}>
+                      <View style={styles.txAmountRow}>
                         <Text style={[styles.txTotalVal, { color: theme.text.primary }]}>
                           {formatCurrency(tx.total, tx.currency)}
                         </Text>
@@ -345,40 +380,18 @@ export default function TransactionsScreen() {
                           onPress={() => handleDelete(tx.id, tx.symbol)}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                          <Trash2 size={13} color={theme.loss.main} />
+                          <Trash2 size={14} color="#f43f5e" />
                         </TouchableOpacity>
                       </View>
-                    </View>
 
-                    {/* Alt Satır: Adet, Birim Fiyat ve Tarih */}
-                    <View style={styles.txBottomRow}>
-                      <View style={styles.txDetailItems}>
-                        <Text style={[styles.txSubDetail, { color: theme.text.secondary }]}>
-                          <Text style={{ fontWeight: '700' }}>{formatQuantity(tx.quantity)}</Text> Adet
-                        </Text>
-                        <Text style={[styles.txDotSeparator, { color: theme.text.muted }]}>•</Text>
-                        <Text style={[styles.txSubDetail, { color: theme.text.muted }]}>
-                          Birim: {formatCurrency(tx.unitPrice, tx.currency)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.txDateWrapper}>
-                        <Calendar size={11} color={theme.text.muted} />
+                      <View style={styles.txDateRow}>
+                        <Calendar size={12} color={theme.text.muted} />
                         <Text style={[styles.txDateText, { color: theme.text.muted }]}>
                           {formatDate(tx.date)}
                         </Text>
+                        <ChevronRight size={14} color={theme.text.muted} style={{ marginLeft: 2 }} />
                       </View>
                     </View>
-
-                    {/* Varsa Not Alanı */}
-                    {tx.note && (
-                      <View style={[styles.txNoteBox, { backgroundColor: theme.surfaceMuted }]}>
-                        <FileText size={10} color={theme.text.muted} />
-                        <Text style={[styles.txNoteText, { color: theme.text.secondary }]} numberOfLines={1}>
-                          {tx.note}
-                        </Text>
-                      </View>
-                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -400,101 +413,130 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderBottomWidth: 1,
   },
-  pageTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  pageSubtitle: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 1,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    gap: 5,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
   },
   addBtnText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '700',
-  },
-  kpiBarSection: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  kpiRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  kpiCell: {
-    flex: 1,
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  kpiLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-  },
-  kpiValue: {
-    fontSize: 12,
     fontWeight: '800',
+  },
+  pageTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginTop: 2,
   },
-  filterSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
+  pageSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  purpleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  titleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  iconCircleBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 10,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
     gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     paddingVertical: 0,
+    fontWeight: '500',
   },
   sideSegmentBar: {
     flexDirection: 'row',
-    padding: 2,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    marginBottom: 10,
   },
   sideSegmentBtn: {
     flex: 1,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
+  sideSegmentBtnActive: {},
   sideSegmentText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
   },
+  activeTabIndicator: {
+    position: 'absolute',
+    bottom: -1,
+    left: 20,
+    right: 20,
+    height: 2.5,
+    borderRadius: 1.5,
+  },
+  chipsSection: {
+    marginBottom: 8,
+  },
   typeChipsScroll: {
-    gap: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 16,
+    gap: 8,
   },
   typeChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
   },
   chipDot: {
     width: 6,
@@ -506,110 +548,98 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   countBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 10,
   },
   countBadgeText: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '800',
   },
   listScrollContent: {
+    paddingHorizontal: 16,
     paddingBottom: 40,
   },
   transactionsContainer: {
-    gap: 0,
+    gap: 9,
   },
-  txFullCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    gap: 6,
-  },
-  txTopRow: {
+  txCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 13,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  txTopLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sidePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    gap: 2,
-  },
-  sidePillText: {
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  assetTypePill: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  assetTypePillText: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  txSymbolText: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  txTopRight: {
+  txLeftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
-  txTotalVal: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  deleteBtn: {
-    padding: 4,
-  },
-  txBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  sideSquare: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 1,
   },
-  txDetailItems: {
+  sideSquareText: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
+  txInfoGroup: {
+    flex: 1,
+    gap: 3,
+  },
+  txHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+  },
+  assetTypePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  assetTypePillText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  txSymbolText: {
+    fontSize: 14.5,
+    fontWeight: '900',
   },
   txSubDetail: {
     fontSize: 11,
+    fontWeight: '500',
   },
-  txDotSeparator: {
-    fontSize: 11,
+  txRightGroup: {
+    alignItems: 'flex-end',
+    gap: 4,
   },
-  txDateWrapper: {
+  txAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  txTotalVal: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  deleteBtn: {
+    padding: 2,
+  },
+  txDateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   txDateText: {
     fontSize: 10,
-    fontWeight: '500',
-  },
-  txNoteBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    gap: 5,
-    marginTop: 2,
-  },
-  txNoteText: {
-    fontSize: 10,
-    fontStyle: 'italic',
+    fontWeight: '600',
   },
   centerLoading: {
     flex: 1,
