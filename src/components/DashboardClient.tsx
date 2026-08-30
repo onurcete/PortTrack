@@ -510,15 +510,15 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
       {/* Arka plan güncelleme bildirimi */}
       <BackfillStatusBanner />
 
-      {/* Kombine Portföy Değeri & Getiriler Kartı */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 card overflow-hidden">
+      {/* Kombine Portföy Değeri & Getiriler Kartı (Obsidian Luxe Cockpit) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 card overflow-hidden relative before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-transparent before:via-emerald-500/50 before:to-transparent bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface)] to-[var(--color-surface-muted)]/40 shadow-xl">
         {/* Sol Kısım: Toplam Portföy Değeri ve Günlük Getiri */}
-        <div className="lg:col-span-2 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--color-border)]/70">
+        <div className="lg:col-span-2 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[var(--color-border)]/80">
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-[var(--color-foreground)]/80">
               TOPLAM PORTFÖY
             </span>
-            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[var(--color-foreground)] mt-2 tabular-nums">
+            <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[var(--color-foreground)] mt-2 tabular-nums drop-shadow-sm">
               {formatMoney(totalValue, currency)}
             </h2>
             <div className="mt-1">
@@ -533,8 +533,8 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
                   className={cn(
                     "px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 border tabular-nums shadow-xs",
                     dailyChangePct >= 0
-                      ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/20"
-                      : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/20"
+                      ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+                      : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/30 shadow-[0_0_12px_rgba(244,63,94,0.15)]"
                   )}
                 >
                   <span className="text-[10px] select-none">{dailyChangePct >= 0 ? "▲" : "▼"}</span>
@@ -557,7 +557,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
                     return (
                       <div key={item.key} className="flex items-center justify-between text-xs font-semibold">
                         <div className="flex items-center gap-2 text-[var(--color-muted)] font-medium">
-                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                          <span className="h-2 w-2 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: item.color, boxShadow: `0 0 6px ${item.color}80` }} />
                           <span>{item.label}</span>
                         </div>
                         <div className={cn("tabular-nums font-bold", positive ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
@@ -582,7 +582,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             amt={weeklyAmt ?? null}
             currency={currency}
             assetReturns={getAssetTypePeriodReturnsList("1W", isTRY, data.periodReturns)}
-            borderClasses="sm:border-r sm:border-b border-[var(--color-border)]/70"
+            borderClasses="sm:border-r sm:border-b border-[var(--color-border)]/80 hover:bg-[var(--color-surface-muted)]/30"
           />
           <CombinedReturnCell
             label="MTD - CARİ AY"
@@ -590,7 +590,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             amt={monthlyAmt ?? null}
             currency={currency}
             assetReturns={getAssetTypePeriodReturnsList("1M", isTRY, data.periodReturns)}
-            borderClasses="sm:border-b border-[var(--color-border)]/70"
+            borderClasses="sm:border-b border-[var(--color-border)]/80 hover:bg-[var(--color-surface-muted)]/30"
           />
           <CombinedReturnCell
             label="YTD - YIL BAŞINDAN BERİ"
@@ -598,21 +598,21 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
             amt={ytdAmt ?? null}
             currency={currency}
             assetReturns={getAssetTypePeriodReturnsList("YTD", isTRY, data.periodReturns)}
-            borderClasses="sm:border-r border-[var(--color-border)]/70 sm:border-b-0 border-b"
+            borderClasses="sm:border-r border-[var(--color-border)]/80 sm:border-b-0 border-b hover:bg-[var(--color-surface-muted)]/30"
           />
           <CombinedReturnCell
             label="1 YIL (SON 365 GÜN)"
             pct={oneYearPct ?? null}
             amt={oneYearAmt ?? null}
             currency={currency}
-            borderClasses=""
+            borderClasses="hover:bg-[var(--color-surface-muted)]/30"
             xirrTRY={data.portfolioXirrTRY}
             xirrUSD={data.portfolioXirrUSD}
           />
         </div>
       </div>
 
-      {/* Varlık Dağılımı — kompakt yatay bar */}
+      {/* Varlık Dağılımı — kompakt lüks yatay bar */}
       <AllocationStrip
         data={allocationData}
         totalValue={totalValue}
@@ -672,20 +672,20 @@ function AllocationStrip({
   currency: "TRY" | "USD";
 }) {
   return (
-    <Card className="p-5">
+    <Card className="p-5 relative overflow-hidden bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-surface-muted)]/30 border border-[var(--color-border)]">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold text-sm">Varlık Dağılımı</h2>
-        <span className="text-sm font-bold tabular-nums text-[var(--color-muted)]">
+        <h2 className="font-bold text-sm tracking-tight text-[var(--color-foreground)]">Varlık Dağılımı</h2>
+        <span className="text-xs font-extrabold tabular-nums text-[var(--color-muted)]">
           {formatMoney(totalValue, currency)}
         </span>
       </div>
 
       {/* Yatay segment barı */}
-      <div className="flex h-3 rounded-full overflow-hidden gap-[2px] mb-4 bg-[var(--color-surface-muted)] p-[2px]">
+      <div className="flex h-3 rounded-full overflow-hidden gap-[3px] mb-4 bg-[var(--color-surface-muted)] p-[2px] border border-[var(--color-border)]/50">
         {data.map((d) => (
           <div
             key={d.assetType}
-            className="h-full rounded-full transition-all duration-500 hover:opacity-80"
+            className="h-full rounded-full transition-all duration-500 hover:opacity-95 shadow-xs"
             style={{
               width: `${Math.max(d.pct, 1.5)}%`,
               backgroundColor: d.color,
@@ -696,22 +696,22 @@ function AllocationStrip({
       </div>
 
       {/* Detay satırları — grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
         {data.map((d) => (
-          <div key={d.assetType} className="flex items-center gap-2 min-w-0">
+          <div key={d.assetType} className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/50 hover:border-[var(--color-border)] transition-all min-w-0">
             <span
-              className="h-2.5 w-2.5 rounded-full shrink-0 ring-2 ring-[var(--color-surface-muted)]"
-              style={{ backgroundColor: d.color }}
+              className="h-2 w-2 rounded-full shrink-0 shadow-sm"
+              style={{ backgroundColor: d.color, boxShadow: `0 0 6px ${d.color}90` }}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium truncate text-[var(--color-foreground)]">
+              <p className="text-[11px] font-bold truncate text-[var(--color-foreground)]/90">
                 {d.label}
               </p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-[11px] font-bold tabular-nums text-[var(--color-foreground)]">
-                  {formatMoney(d.value, currency)}
+              <div className="flex items-baseline justify-between gap-1 mt-0.5">
+                <span className="text-[11px] font-black tabular-nums text-[var(--color-foreground)]">
+                  {formatMoney(d.value, currency, { decimals: 0 })}
                 </span>
-                <span className="text-[10px] text-[var(--color-muted)] tabular-nums">
+                <span className="text-[10px] font-bold text-[var(--color-muted)] tabular-nums">
                   %{formatNumber(d.pct, 1)}
                 </span>
               </div>

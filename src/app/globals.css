@@ -79,6 +79,25 @@ textarea {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .glass-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glow-profit {
+    text-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+  }
+
+  .glow-loss {
+    text-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
   }
 
   .btn {
@@ -94,18 +113,21 @@ textarea {
       background 0.15s ease,
       border-color 0.15s ease,
       color 0.15s ease,
-      transform 0.05s ease;
+      transform 0.05s ease,
+      box-shadow 0.15s ease;
     cursor: pointer;
   }
   .btn:active {
     transform: translateY(1px);
   }
   .btn-primary {
-    background: var(--color-brand);
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
     color: var(--color-on-brand);
+    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
   }
   .btn-primary:hover {
-    background: var(--color-brand-strong);
+    background: linear-gradient(135deg, #4f46e5, #4338ca);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
   }
   .btn-ghost {
     background: transparent;
@@ -122,6 +144,7 @@ textarea {
   }
   .btn-outline:hover {
     background: var(--color-surface-muted);
+    border-color: rgba(255, 255, 255, 0.15);
   }
   .btn:disabled {
     opacity: 0.55;
@@ -167,16 +190,16 @@ textarea {
   }
 }
 
-/* Koyu (indigo) */
+/* Koyu — Obsidian Luxe & Emerald Glow */
 .dark {
   color-scheme: dark;
-  --color-bg: #090d16;
-  --color-surface: #111726;
-  --color-surface-muted: #1b2234;
-  --color-surface-hover: #202940;
-  --color-table-header: #171e2e;
-  --color-inset: #0c1220;
-  --color-border: #242d42;
+  --color-bg: #06080f;
+  --color-surface: rgba(13, 19, 32, 0.82);
+  --color-surface-muted: rgba(20, 28, 46, 0.75);
+  --color-surface-hover: rgba(28, 38, 62, 0.85);
+  --color-table-header: rgba(16, 23, 38, 0.92);
+  --color-inset: #090d16;
+  --color-border: rgba(255, 255, 255, 0.08);
   --color-foreground: #f8fafc;
   --color-text: #f8fafc;
   --color-muted: #94a3b8;
@@ -184,21 +207,30 @@ textarea {
   --color-brand: #6366f1;
   --color-brand-strong: #818cf8;
   --color-brand-hover: #818cf8;
-  --color-brand-soft: rgba(99, 102, 241, 0.15);
+  --color-brand-soft: rgba(99, 102, 241, 0.18);
   --color-on-brand: #ffffff;
 
   --color-neutral: #94a3b8;
   --color-neutral-soft: rgba(148, 163, 184, 0.1);
-  --color-chart-muted: #94a3b8;
+  --color-chart-muted: #64748b;
 
-  --color-profit: #22c55e;
-  --color-profit-soft: rgba(34, 197, 94, 0.12);
+  --color-profit: #10b981;
+  --color-profit-soft: rgba(16, 185, 129, 0.14);
   --color-loss: #f43f5e;
-  --color-loss-soft: rgba(244, 63, 94, 0.12);
+  --color-loss-soft: rgba(244, 63, 94, 0.14);
 
   --shadow-card:
-    0 1px 2px rgba(0, 0, 0, 0.25),
-    0 10px 28px rgba(0, 0, 0, 0.28);
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+.dark body {
+  background-color: #06080f;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.08), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 10%, rgba(16, 185, 129, 0.04), transparent 60%);
+  background-attachment: fixed;
 }
 
 /* Solarized Light — klasik base3 zemin + base2 yuzeyler (beyaz yok) */
