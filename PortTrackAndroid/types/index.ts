@@ -81,6 +81,10 @@ export interface PeriodReturns {
   monthlyUSD?: number | null;
   monthlyAmtTRY?: number | null;
   monthlyAmtUSD?: number | null;
+  threeMonthsTRY?: number | null;
+  threeMonthsUSD?: number | null;
+  threeMonthsAmtTRY?: number | null;
+  threeMonthsAmtUSD?: number | null;
   ytdTRY?: number | null;
   ytdUSD?: number | null;
   ytdAmtTRY?: number | null;
