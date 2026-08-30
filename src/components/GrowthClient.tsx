@@ -76,6 +76,13 @@ function monthTableLabel(key: string): string {
   return `${y}.${m}`;
 }
 
+const SHORT_MONTHS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+function monthShortName(key: string): string {
+  const parts = key.split("-");
+  const m = Number(parts[1]);
+  return SHORT_MONTHS[(m || 1) - 1] ?? key;
+}
+
 /** Özet kart tarihi: 1 Haziran 2026 */
 function formatPeriodDate(monthKey: string): string {
   const [y, m] = monthKey.split("-").map(Number);
@@ -513,7 +520,7 @@ export function GrowthClient({
         (p) =>
           !p.isSyntheticBaseline &&
           (cumulativeFromValue === YEAR_FILTER_ALL ||
-            p.month.slice(0, 4) >= cumulativeFromValue),
+            p.month.slice(0, 4) === cumulativeFromValue),
       )
       .sort((a, b) => a.month.localeCompare(b.month));
     if (pts.length === 0) return [];
@@ -555,18 +562,20 @@ export function GrowthClient({
       });
     }
 
-    const totalLast = pts[pts.length - 1];
-    const totalStart = totalStartPoint ?? pts[0];
-    rows.push({
-      label: "TOPLAM",
-      startTRY: totalStart.valueTRY,
-      endTRY: totalLast.valueTRY,
-      startUSD: totalStart.valueUSD,
-      endUSD: totalLast.valueUSD,
-      returnTRY: periodReturnPct(totalStart.valueTRY, totalLast.valueTRY),
-      returnUSD: periodReturnPct(totalStart.valueUSD, totalLast.valueUSD),
-      isTotal: true,
-    });
+    if (cumulativeFromValue === YEAR_FILTER_ALL && rows.length > 1) {
+      const totalLast = pts[pts.length - 1];
+      const totalStart = totalStartPoint ?? pts[0];
+      rows.push({
+        label: "TOPLAM",
+        startTRY: totalStart.valueTRY,
+        endTRY: totalLast.valueTRY,
+        startUSD: totalStart.valueUSD,
+        endUSD: totalLast.valueUSD,
+        returnTRY: periodReturnPct(totalStart.valueTRY, totalLast.valueTRY),
+        returnUSD: periodReturnPct(totalStart.valueUSD, totalLast.valueUSD),
+        isTotal: true,
+      });
+    }
 
     return rows;
   }, [series, cumulativeFromValue]);
@@ -631,7 +640,7 @@ export function GrowthClient({
       }
 
       return {
-        month: monthTableLabel(p.month),
+        month: chartYearValue === YEAR_FILTER_ALL ? monthTableLabel(p.month) : monthShortName(p.month),
         value,
         cost,
         returnPct,
@@ -903,108 +912,127 @@ export function GrowthClient({
                 </div>
               </div>
 
-              {/* Toolbar Controls (Mobilde Taşmayı Önleyen Şerit) */}
-              <div className="flex flex-wrap items-center gap-2 max-w-full">
-                {/* Descriptive View Mode Selector */}
-                <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50 shadow-2xs overflow-x-auto max-w-full">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChartMetric("return");
-                      setChartType("bar");
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap",
-                      chartMetric === "return"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
-                    )}
-                  >
-                    <BarChart2 size={13} />
-                    <span>Aylık Getiri %</span>
-                  </button>
+              {/* Toolbar Controls (Görünüm Modları & Ayrı Yıl Çipleri) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+                {/* Sol/Üst: Görünüm Modu Seçici & Grafik Türü */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50 shadow-2xs overflow-x-auto max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChartMetric("return");
+                        setChartType("bar");
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap cursor-pointer",
+                        chartMetric === "return"
+                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                      )}
+                    >
+                      <BarChart2 size={13} />
+                      <span>Aylık Getiri %</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChartMetric("value");
-                      setChartType("area");
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap",
-                      chartMetric === "value"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
-                    )}
-                  >
-                    <DollarSign size={13} />
-                    <span>Portföy Değeri</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChartMetric("value");
+                        setChartType("area");
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap cursor-pointer",
+                        chartMetric === "value"
+                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                      )}
+                    >
+                      <DollarSign size={13} />
+                      <span>Portföy Değeri</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChartMetric("allocation");
-                      setChartType("area");
-                    }}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap",
-                      chartMetric === "allocation"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
-                    )}
-                  >
-                    <PieChart size={13} />
-                    <span>Varlık Dağılımı</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChartMetric("allocation");
+                        setChartType("area");
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg px-2.5 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-extrabold transition-all duration-200 whitespace-nowrap cursor-pointer",
+                        chartMetric === "allocation"
+                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-xs border border-[var(--color-border)]/50"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                      )}
+                    >
+                      <PieChart size={13} />
+                      <span>Varlık Dağılımı</span>
+                    </button>
+                  </div>
+
+                  {/* Alan / Çubuk Geçişi */}
+                  <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50">
+                    <button
+                      type="button"
+                      onClick={() => setChartType("bar")}
+                      title="Çubuk Grafik Görünümü"
+                      className={cn(
+                        "p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                        chartType === "bar"
+                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-2xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                      )}
+                    >
+                      <BarChart2 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartType("area")}
+                      title="Alan (Çizgi) Grafik Görünümü"
+                      className={cn(
+                        "p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                        chartType === "area"
+                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-2xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                      )}
+                    >
+                      <Activity size={14} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Compact Year Selector Dropdown with Calendar Icon */}
-                <div className="flex items-center gap-2 bg-[var(--color-surface-muted)] px-3 py-1.5 rounded-xl border border-[var(--color-border)]/50 shadow-2xs">
-                  <Calendar size={13} className="text-[var(--color-brand-strong)]" />
-                  <select
-                    id="chart-year"
-                    value={chartYearValue}
-                    onChange={(e) => setChartYearFilter(e.target.value)}
-                    className="bg-transparent text-xs font-extrabold text-[var(--color-foreground)] outline-none cursor-pointer"
-                  >
-                    <option value={YEAR_FILTER_ALL}>Tüm Zamanlar</option>
-                    {years.map((y) => (
-                      <option key={y} value={y}>
-                        {y} Yılı
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Subtle Chart Format Toggle (Alan / Çubuk) */}
-                <div className="inline-flex rounded-xl bg-[var(--color-surface-muted)] p-1 border border-[var(--color-border)]/50">
+                {/* Sağ/Alt: Ayrı Şık Yıl Seçici Çipleri */}
+                <div className="inline-flex items-center gap-1 bg-[var(--color-surface-muted)]/70 p-1 rounded-xl border border-[var(--color-border)]/60 shadow-2xs overflow-x-auto max-w-full">
+                  <span className="text-[10px] font-extrabold uppercase text-[var(--color-muted)] px-2 flex items-center gap-1 shrink-0">
+                    <Calendar size={11} className="text-[var(--color-brand-strong)]" />
+                    <span>Yıl:</span>
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setChartType("bar")}
-                    title="Çubuk Grafik Görünümü"
+                    onClick={() => setChartYearFilter(YEAR_FILTER_ALL)}
                     className={cn(
-                      "p-1.5 rounded-lg text-xs font-bold transition-all",
-                      chartType === "bar"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-2xs"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+                      "px-2.5 py-1 rounded-lg text-[11px] font-black transition-all whitespace-nowrap cursor-pointer",
+                      chartYearValue === YEAR_FILTER_ALL
+                        ? "bg-[var(--color-brand)] text-white shadow-xs"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)]"
                     )}
                   >
-                    <BarChart2 size={14} />
+                    Tümü
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartType("area")}
-                    title="Alan (Çizgi) Grafik Görünümü"
-                    className={cn(
-                      "p-1.5 rounded-lg text-xs font-bold transition-all",
-                      chartType === "area"
-                        ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-2xs"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]",
-                    )}
-                  >
-                    <Activity size={14} />
-                  </button>
+                  {years.map((y) => (
+                    <button
+                      key={y}
+                      type="button"
+                      onClick={() => setChartYearFilter(y)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-[11px] font-black transition-all whitespace-nowrap cursor-pointer",
+                        chartYearValue === y
+                          ? "bg-[var(--color-brand)] text-white shadow-xs"
+                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)]"
+                      )}
+                    >
+                      {y}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1227,10 +1255,11 @@ export function GrowthClient({
                       />
                       <XAxis
                         dataKey="month"
-                        tick={{ fontSize: 10, fill: "var(--color-muted)", fontWeight: 700 }}
+                        tick={{ fontSize: chartYearValue !== YEAR_FILTER_ALL ? 10 : 9, fill: "var(--color-muted)", fontWeight: 700 }}
                         tickLine={false}
                         axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.6 }}
-                        minTickGap={20}
+                        interval={0}
+                        minTickGap={0}
                       />
                       <YAxis
                         tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
@@ -1355,18 +1384,18 @@ export function GrowthClient({
                     htmlFor="cumulative-from-year"
                     className="text-xs font-semibold text-[var(--color-muted)]"
                   >
-                    Gösterim başlangıcı
+                    Yıl Filtresi
                   </label>
                   <select
                     id="cumulative-from-year"
                     value={cumulativeFromValue}
                     onChange={(e) => setCumulativeFromYear(e.target.value)}
-                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] transition-colors duration-200"
+                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] transition-colors duration-200 cursor-pointer"
                   >
-                    <option value={YEAR_FILTER_ALL}>Tüm yıllar</option>
+                    <option value={YEAR_FILTER_ALL}>Tüm Yıllar (Kümülatif)</option>
                     {cumulativeYears.map((y) => (
                       <option key={y} value={y}>
-                        {y} ve sonrası
+                        {y} Yılı
                       </option>
                     ))}
                   </select>
@@ -1564,12 +1593,12 @@ export function GrowthClient({
                     id="growth-year"
                     value={selectYearValue}
                     onChange={(e) => setYearFilter(e.target.value)}
-                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] transition-colors duration-200"
+                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-bold outline-none focus:border-[var(--color-brand)] transition-colors duration-200 cursor-pointer"
                   >
-                    <option value={YEAR_FILTER_ALL}>Tümü</option>
+                    <option value={YEAR_FILTER_ALL}>Tüm Yıllar</option>
                     {years.map((y) => (
                       <option key={y} value={y}>
-                        {y}
+                        {y} Yılı
                       </option>
                     ))}
                   </select>

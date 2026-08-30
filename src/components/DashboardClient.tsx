@@ -296,7 +296,7 @@ function CombinedReturnCell({
           </div>
           <span className={cn("text-xs font-bold tabular-nums block mt-1 leading-none", positive ? "text-[var(--color-profit)]/90" : negative ? "text-[var(--color-loss)]/90" : "text-[var(--color-muted)]")}>
             {positive ? "+" : ""}
-            {formatMoney(amt, currency)}
+            {formatMoney(amt, currency, { decimals: 0 })}
           </span>
         </div>
       </div>
@@ -360,7 +360,7 @@ function CombinedReturnCell({
 }
 
 export function DashboardClient({ data }: { data: DashboardDTO }) {
-  const { currency } = useCurrency();
+  const { currency, toggle: toggleCurrency } = useCurrency();
   const isTRY = currency === "TRY";
   const [selectedPosition, setSelectedPosition] = useState<PositionDTO | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -519,12 +519,18 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
               TOPLAM PORTFÖY
             </span>
             <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-[var(--color-foreground)] mt-2 tabular-nums drop-shadow-sm">
-              {formatMoney(totalValue, currency)}
+              {formatMoney(totalValue, currency, { decimals: 0 })}
             </h2>
             <div className="mt-1">
-              <span className="text-xs font-bold text-[var(--color-muted)] tabular-nums">
-                {isTRY ? formatMoney(data.totals.valueUSD, "USD") : formatMoney(data.totals.valueTRY, "TRY")}
-              </span>
+              <button
+                type="button"
+                onClick={toggleCurrency}
+                className="text-xs font-bold text-[var(--color-muted)] hover:text-[var(--color-brand-strong)] tabular-nums transition-colors cursor-pointer inline-flex items-center gap-1 group"
+                title="Para birimini değiştirmek için tıklayın"
+              >
+                <span>{isTRY ? formatMoney(data.totals.valueUSD, "USD", { decimals: 0 }) : formatMoney(data.totals.valueTRY, "TRY", { decimals: 0 })}</span>
+                <span className="text-[10px] opacity-60 group-hover:opacity-100 font-normal">⇄</span>
+              </button>
             </div>
 
             {dailyChangePct !== undefined && dailyChangePct !== null && dailyChangeAmt !== undefined && dailyChangeAmt !== null && (
@@ -539,7 +545,7 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
                 >
                   <span className="text-[10px] select-none">{dailyChangePct >= 0 ? "▲" : "▼"}</span>
                   <span className="font-extrabold">BUGÜN</span>
-                  <span>{dailyChangeAmt >= 0 ? "+" : ""}{formatMoney(dailyChangeAmt, currency)}</span>
+                  <span>{dailyChangeAmt >= 0 ? "+" : ""}{formatMoney(dailyChangeAmt, currency, { decimals: 0 })}</span>
                   <span>({formatPercent(dailyChangePct)})</span>
                 </span>
               </div>

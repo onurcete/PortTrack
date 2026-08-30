@@ -22,6 +22,7 @@ import {
   Copy,
   Zap,
   Table,
+  X,
 } from "lucide-react";
 import { Modal } from "./Modal";
 import { Badge } from "./ui";
@@ -395,98 +396,115 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
         </div>
       </div>
 
-      {/* İşlem Özet Kartları */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md flex items-center justify-between backdrop-blur-xl">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">Filtrelenen İşlemler</p>
-            <p className="text-xl font-black mt-0.5 tabular-nums text-[var(--color-foreground)]">{stats.total} adet</p>
+      {/* Arama ve Dışa Aktarma Çubuğu */}
+      <div className="space-y-3 mb-6">
+        <div className="flex items-center justify-between gap-2 bg-[var(--color-surface)]/80 backdrop-blur-xl p-2.5 sm:p-3 rounded-2xl border border-[var(--color-border)] shadow-md">
+          {/* Sol: Sembol Arama + Temizle */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+              />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Sembol veya not ara..."
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/50 py-1.5 pl-9 pr-3 text-xs outline-none focus:border-[var(--color-brand)] font-semibold text-[var(--color-foreground)] transition-colors"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Filtreleri Temizle */}
+            {(query || filter !== "ALL") && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  setFilter("ALL");
+                }}
+                title="Filtreleri Sıfırla"
+                className="px-2.5 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors shrink-0 inline-flex items-center gap-1"
+              >
+                <RotateCcw size={12} />
+                <span className="hidden sm:inline">Sıfırla</span>
+              </button>
+            )}
           </div>
-          <Badge className="bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-bold border border-[var(--color-brand)]/20">Toplam</Badge>
-        </div>
 
-        <div className="bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md flex items-center justify-between backdrop-blur-xl">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">Alış / Satış Dağılımı</p>
-            <p className="text-xl font-black mt-0.5 tabular-nums">
-              <span className="text-[var(--color-profit)]">{stats.buyCount} Al</span>
-              <span className="text-[var(--color-muted)] mx-1.5 font-normal">/</span>
-              <span className="text-[var(--color-loss)]">{stats.sellCount} Sat</span>
-            </p>
-          </div>
-          <Badge className="bg-[var(--color-surface-muted)] text-[var(--color-muted)] font-bold border border-[var(--color-border)]">İşlem Yönü</Badge>
-        </div>
-      </div>
-
-      {/* Arama, Filtreleme ve Dışa Aktarma Çubuğu (Mobilde Tek Satır) */}
-      <div className="flex items-center justify-between gap-1.5 mb-6 bg-[var(--color-surface)]/80 backdrop-blur-xl p-2.5 sm:p-3 rounded-2xl border border-[var(--color-border)] shadow-md">
-        {/* Sol: Sembol Arama + Tür Seçici + Sıfırla */}
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {/* Sembol Arama Input */}
-          <div className="relative flex-1 min-w-[90px] max-w-[170px] sm:max-w-[200px]">
-            <Search
-              size={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
-            />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Sembol..."
-              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-1.5 pl-8 pr-2 text-xs outline-none focus:border-[var(--color-brand)] font-semibold"
-            />
-          </div>
-
-          {/* Tür Filtresi Dropdown */}
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as AssetType | "ALL")}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-semibold outline-none focus:border-[var(--color-brand)] cursor-pointer min-w-[85px] sm:min-w-[120px]"
-          >
-            <option value="ALL">Tüm türler</option>
-            {ASSET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {ASSET_META[t].label}
-              </option>
-            ))}
-          </select>
-
-          {/* Filtreleri Temizle */}
-          {(query || filter !== "ALL") && (
+          {/* Sağ: Excel & CSV İndir Butonları */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => {
-                setQuery("");
-                setFilter("ALL");
-              }}
-              title="Filtreleri Sıfırla"
-              className="p-1.5 rounded-xl border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)] transition-colors shrink-0"
+              onClick={exportToExcel}
+              disabled={filtered.length === 0}
+              title="Excel olarak indir"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold hover:bg-[var(--color-surface-muted)] transition-colors disabled:opacity-40"
             >
-              <RotateCcw size={13} />
+              <FileSpreadsheet size={14} className="text-emerald-500 shrink-0" />
+              <span className="hidden sm:inline">Excel</span>
             </button>
-          )}
+            <button
+              onClick={exportToCSV}
+              disabled={filtered.length === 0}
+              title="CSV olarak indir"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold hover:bg-[var(--color-surface-muted)] transition-colors disabled:opacity-40"
+            >
+              <Download size={14} className="text-blue-500 shrink-0" />
+              <span className="hidden sm:inline">CSV</span>
+            </button>
+          </div>
         </div>
 
-        {/* Sağ: Excel & CSV İndir Butonları */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Yatay Kategori Hapları (Modern Segmented Chips) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full scrollbar-none select-none">
           <button
-            onClick={exportToExcel}
-            disabled={filtered.length === 0}
-            title="Excel olarak indir"
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold hover:bg-[var(--color-surface-muted)] transition-colors disabled:opacity-40"
+            type="button"
+            onClick={() => setFilter("ALL")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-150 whitespace-nowrap cursor-pointer shrink-0 border",
+              filter === "ALL"
+                ? "bg-[var(--color-brand)] text-white border-[var(--color-brand)] shadow-xs"
+                : "bg-[var(--color-surface)]/80 text-[var(--color-muted)] hover:text-[var(--color-foreground)] border-[var(--color-border)] hover:bg-[var(--color-surface-muted)]"
+            )}
           >
-            <FileSpreadsheet size={14} className="text-emerald-500 shrink-0" />
-            <span className="hidden sm:inline">Excel İndir</span>
-            <span className="sm:hidden">Excel</span>
+            <span>Tümü</span>
+            <span className={cn("text-[10px] px-1.5 py-0.2 rounded-full font-black", filter === "ALL" ? "bg-white/20 text-white" : "bg-[var(--color-surface-muted)] text-[var(--color-muted)]")}>
+              {transactions.length}
+            </span>
           </button>
-          <button
-            onClick={exportToCSV}
-            disabled={filtered.length === 0}
-            title="CSV olarak indir"
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-[var(--color-border)] text-xs font-bold hover:bg-[var(--color-surface-muted)] transition-colors disabled:opacity-40"
-          >
-            <Download size={14} className="text-blue-500 shrink-0" />
-            <span className="hidden sm:inline">CSV İndir</span>
-            <span className="sm:hidden">CSV</span>
-          </button>
+
+          {ASSET_TYPES.map((t) => {
+            const count = transactions.filter((tx) => tx.assetType === t).length;
+            if (count === 0 && filter !== t) return null;
+            const meta = ASSET_META[t];
+            const isSelected = filter === t;
+
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setFilter(t)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-150 whitespace-nowrap cursor-pointer shrink-0 border",
+                  isSelected
+                    ? "bg-[var(--color-surface)] text-[var(--color-foreground)] border-[var(--color-brand)] shadow-xs ring-1 ring-[var(--color-brand)]/40"
+                    : "bg-[var(--color-surface)]/80 text-[var(--color-muted)] hover:text-[var(--color-foreground)] border-[var(--color-border)] hover:bg-[var(--color-surface-muted)]"
+                )}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: meta.color, boxShadow: `0 0 6px ${meta.color}80` }} />
+                <span>{meta.label}</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-black bg-[var(--color-surface-muted)] text-[var(--color-muted)]">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
