@@ -19,7 +19,9 @@ import {
   Layers,
   Coins,
   ChevronDown,
-  Sparkles,
+  DollarSign,
+  Activity,
+  Table,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
@@ -52,14 +54,14 @@ interface GrowthPoint {
   partialData?: boolean;
 }
 
-const ASSET_TYPE_KEYS: AssetType[] = [
-  'BES',
-  'BIST',
-  'TEFAS',
-  'FOREIGN',
-  'FX',
-  'METAL',
-  'CRYPTO',
+const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
+  { key: 'BES', label: 'BES' },
+  { key: 'BIST', label: 'BIST' },
+  { key: 'TEFAS', label: 'TEFAS FON' },
+  { key: 'FOREIGN', label: 'YABANCI' },
+  { key: 'FX', label: 'DÖVİZ' },
+  { key: 'METAL', label: 'MADEN' },
+  { key: 'CRYPTO', label: 'KRİPTO' },
 ];
 
 export default function GrowthScreen() {
@@ -68,8 +70,17 @@ export default function GrowthScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
-  const [selectedMetric, setSelectedMetric] = useState<'value' | 'return' | 'allocation'>('value');
-  const [selectedYear, setSelectedYear] = useState<string>('ALL');
+
+  // Grafik Seçenekleri
+  const [chartMetric, setChartMetric] = useState<'return' | 'value' | 'allocation'>('return');
+  const [chartYear, setChartYear] = useState<string>('ALL');
+
+  // Aylık Dağılım Tablosu Seçenekleri
+  const [monthlyViewMode, setMonthlyViewMode] = useState<'return' | 'amount' | 'share'>('return');
+  const [tableYear, setTableYear] = useState<string>('2026');
+
+  // Kümülatif Yıllık Başlangıç Filtresi
+  const [cumulFromYear, setCumulFromYear] = useState<string>('ALL');
 
   const [series, setSeries] = useState<GrowthPoint[]>([]);
   const [periodReturns, setPeriodReturns] = useState<PeriodReturns | null>(null);
@@ -82,7 +93,12 @@ export default function GrowthScreen() {
       }>('/growth/snapshots');
 
       if (res.data) {
-        if (res.data.series) setSeries(res.data.series);
+        if (res.data.series) {
+          setSeries(res.data.series);
+          // Tablo yılı için serideki en son yılı seç
+          const lastYear = res.data.series[res.data.series.length - 1]?.month.slice(0, 4);
+          if (lastYear) setTableYear(lastYear);
+        }
         if (res.data.periodReturns) setPeriodReturns(res.data.periodReturns);
       }
     } catch (err) {
@@ -111,57 +127,65 @@ export default function GrowthScreen() {
       const y = p.month.slice(0, 4);
       if (y) yearsSet.add(y);
     }
-    return ['ALL', ...Array.from(yearsSet).sort().reverse()];
+    return Array.from(yearsSet).sort();
   }, [series]);
 
-  // Filtrelenmiş Seri
-  const filteredSeries = useMemo(() => {
-    if (selectedYear === 'ALL') return series;
-    return series.filter((p) => p.month.startsWith(selectedYear));
-  }, [series, selectedYear]);
+  // Filtrelenmiş Grafik Verileri
+  const chartData = useMemo(() => {
+    const filtered =
+      chartYear === 'ALL'
+        ? series
+        : series.filter((p) => p.month.startsWith(chartYear));
 
-  // En güncel ve ilk veri noktaları
-  const latestPoint = series.length > 0 ? series[series.length - 1] : null;
-  const prevPoint = series.length > 1 ? series[series.length - 2] : null;
-
-  const currentValue = latestPoint ? (isTRY ? latestPoint.valueTRY : latestPoint.valueUSD) : 0;
-  const currentCost = latestPoint ? (isTRY ? latestPoint.costTRY : latestPoint.costUSD) : 0;
-  const totalProfit = currentValue - currentCost;
-  const totalProfitRate = currentCost > 0 ? (totalProfit / currentCost) * 100 : 0;
-
-  const besValue = latestPoint?.byType?.BES ? (isTRY ? latestPoint.byType.BES.valueTRY : latestPoint.byType.BES.valueUSD) : 0;
-
-  // Grafiğe Göre Çubuk Verileri
-  const chartBars = useMemo(() => {
-    if (filteredSeries.length === 0) return [];
-
-    const values = filteredSeries.map((p) => (isTRY ? p.valueTRY : p.valueUSD));
-    const minVal = Math.min(...values);
-    const maxVal = Math.max(...values);
-    const valRange = maxVal - minVal || 1;
-
-    return filteredSeries.map((p, idx) => {
+    return filtered.map((p, idx) => {
       const val = isTRY ? p.valueTRY : p.valueUSD;
-      const prev = idx > 0 ? (isTRY ? filteredSeries[idx - 1].valueTRY : filteredSeries[idx - 1].valueUSD) : null;
-      const retPct = prev && prev > 0 ? ((val / prev) - 1) * 100 : 0;
-      const height = Math.max(12, Math.min(85, ((val - minVal) / valRange) * 75 + 10));
-
+      const prev = idx > 0 ? (isTRY ? filtered[idx - 1].valueTRY : filtered[idx - 1].valueUSD) : null;
+      const returnPct = prev && prev > 0 ? ((val / prev) - 1) * 100 : 0;
       const [yStr, mStr] = p.month.split('-');
-      const label = `${mStr}/${yStr.slice(2)}`;
+      const label = `${yStr}.${mStr}`;
 
       return {
         month: p.month,
         label,
         value: val,
         cost: isTRY ? p.costTRY : p.costUSD,
-        retPct,
-        height,
+        returnPct,
       };
     });
-  }, [filteredSeries, isTRY]);
+  }, [series, chartYear, isTRY]);
 
-  // Yıllık Kümülatif Getiri Tablosu
-  const yearRows = useMemo(() => {
+  // Dönem Özet Metrikleri (Hero)
+  const periodSummary = useMemo(() => {
+    if (chartData.length === 0) return null;
+    const first = chartData[0];
+    const last = chartData[chartData.length - 1];
+
+    const totalCurrentTRY = series[series.length - 1]?.valueTRY ?? 0;
+    const totalCurrentUSD = series[series.length - 1]?.valueUSD ?? 0;
+
+    const startVal = first.value;
+    const endVal = last.value;
+    const gainVal = endVal - startVal;
+    const gainPct = startVal > 0 ? (gainVal / startVal) * 100 : 0;
+
+    const [firstY, firstM] = first.month.split('-');
+    const [lastY, lastM] = last.month.split('-');
+
+    return {
+      totalCurrentTRY,
+      totalCurrentUSD,
+      startDateLabel: `1 ${firstM}.${firstY}`,
+      endDateLabel: `1 ${lastM}.${lastY}`,
+      startVal,
+      endVal,
+      gainVal,
+      gainPct,
+      usdReturnPct: periodReturns?.oneYearUSD ?? 0,
+    };
+  }, [chartData, series, periodReturns]);
+
+  // Kümülatif Yıllık Tablo Satırları (Screenshot 2 ile birebir)
+  const cumulativeYearlyRows = useMemo(() => {
     const map = new Map<string, { start: GrowthPoint; end: GrowthPoint }>();
     for (const p of series) {
       const y = p.month.slice(0, 4);
@@ -173,15 +197,121 @@ export default function GrowthScreen() {
       }
     }
 
-    const rows: { year: string; startVal: number; endVal: number; retPct: number }[] = [];
-    for (const [y, data] of map.entries()) {
-      const start = isTRY ? data.start.valueTRY : data.start.valueUSD;
-      const end = isTRY ? data.end.valueTRY : data.end.valueUSD;
-      const retPct = start > 0 ? ((end / start) - 1) * 100 : 0;
-      rows.push({ year: y, startVal: start, endVal: end, retPct });
+    const rows: {
+      year: string;
+      startTRY: number;
+      endTRY: number;
+      startUSD: number;
+      endUSD: number;
+      returnTRY: number | null;
+      returnUSD: number | null;
+    }[] = [];
+
+    const years = Array.from(map.keys()).sort();
+    for (const y of years) {
+      if (cumulFromYear !== 'ALL' && y < cumulFromYear) continue;
+      const data = map.get(y)!;
+      const startTRY = data.start.valueTRY;
+      const endTRY = data.end.valueTRY;
+      const startUSD = data.start.valueUSD;
+      const endUSD = data.end.valueUSD;
+
+      const returnTRY = startTRY > 0 ? ((endTRY / startTRY) - 1) * 100 : 0;
+      const returnUSD = startUSD > 0 ? ((endUSD / startUSD) - 1) * 100 : 0;
+
+      rows.push({
+        year: y,
+        startTRY,
+        endTRY,
+        startUSD,
+        endUSD,
+        returnTRY,
+        returnUSD,
+      });
     }
-    return rows.reverse();
-  }, [series, isTRY]);
+
+    // Toplam Satırı
+    if (rows.length > 0) {
+      const firstRow = rows[0];
+      const lastRow = rows[rows.length - 1];
+      const totalRetTRY = firstRow.startTRY > 0 ? ((lastRow.endTRY / firstRow.startTRY) - 1) * 100 : 0;
+      const totalRetUSD = firstRow.startUSD > 0 ? ((lastRow.endUSD / firstRow.startUSD) - 1) * 100 : 0;
+
+      rows.push({
+        year: 'TOPLAM',
+        startTRY: firstRow.startTRY,
+        endTRY: lastRow.endTRY,
+        startUSD: firstRow.startUSD,
+        endUSD: lastRow.endUSD,
+        returnTRY: totalRetTRY,
+        returnUSD: totalRetUSD,
+      });
+    }
+
+    return rows;
+  }, [series, cumulFromYear]);
+
+  // Aylık Dağılım Tablosu Verileri (Screenshot 3 ile birebir)
+  const monthlyTableData = useMemo(() => {
+    const yearPoints = series.filter((p) => p.month.startsWith(tableYear));
+    if (yearPoints.length === 0) return { rows: [], yearSummary: null };
+
+    const rows = yearPoints.map((p, idx) => {
+      const prev = idx > 0 ? yearPoints[idx - 1] : null;
+      const totalVal = isTRY ? p.valueTRY : p.valueUSD;
+      const prevTotal = prev ? (isTRY ? prev.valueTRY : prev.valueUSD) : null;
+      const totalReturnPct = prevTotal && prevTotal > 0 ? ((totalVal / prevTotal) - 1) * 100 : null;
+
+      const cells: Record<
+        AssetType,
+        { amount: number; returnPct: number | null; sharePct: number }
+      > = {} as any;
+
+      for (const item of ASSET_COLUMN_KEYS) {
+        const typeData = p.byType?.[item.key];
+        const prevTypeData = prev?.byType?.[item.key];
+
+        const amount = typeData ? (isTRY ? typeData.valueTRY : typeData.valueUSD) : 0;
+        const prevAmount = prevTypeData ? (isTRY ? prevTypeData.valueTRY : prevTypeData.valueUSD) : null;
+
+        const returnPct = prevAmount && prevAmount > 0 && amount > 0 ? ((amount / prevAmount) - 1) * 100 : null;
+        const sharePct = totalVal > 0 ? (amount / totalVal) * 100 : 0;
+
+        cells[item.key] = { amount, returnPct, sharePct };
+      }
+
+      return {
+        monthKey: p.month,
+        totalVal,
+        totalReturnPct,
+        cells,
+      };
+    });
+
+    // Yıl Sonu Toplamı Satırı
+    const firstPoint = yearPoints[0];
+    const lastPoint = yearPoints[yearPoints.length - 1];
+    const totalStart = isTRY ? firstPoint.valueTRY : firstPoint.valueUSD;
+    const totalEnd = isTRY ? lastPoint.valueTRY : lastPoint.valueUSD;
+    const yearTotalReturn = totalStart > 0 ? ((totalEnd / totalStart) - 1) * 100 : 0;
+
+    const summaryCells: Record<AssetType, { returnPct: number | null }> = {} as any;
+    for (const item of ASSET_COLUMN_KEYS) {
+      const sVal = firstPoint.byType?.[item.key] ? (isTRY ? firstPoint.byType[item.key].valueTRY : firstPoint.byType[item.key].valueUSD) : 0;
+      const eVal = lastPoint.byType?.[item.key] ? (isTRY ? lastPoint.byType[item.key].valueTRY : lastPoint.byType[item.key].valueUSD) : 0;
+      const ret = sVal > 0 && eVal > 0 ? ((eVal / sVal) - 1) * 100 : null;
+      summaryCells[item.key] = { returnPct: ret };
+    }
+
+    return {
+      rows,
+      yearSummary: {
+        year: tableYear,
+        totalReturn: yearTotalReturn,
+        cells: summaryCells,
+      },
+    };
+  }, [series, tableYear, isTRY]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
@@ -190,7 +320,7 @@ export default function GrowthScreen() {
         <View>
           <Text style={[styles.pageTitle, { color: theme.text.primary }]}>Portföy Gelişimi</Text>
           <Text style={[styles.pageSubtitle, { color: theme.text.muted }]}>
-            Aylık büyüme ve varlık kırılımları
+            Aylık büyüme, getiri grafikleri ve yıllık özet
           </Text>
         </View>
 
@@ -207,7 +337,7 @@ export default function GrowthScreen() {
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={theme.brand.primary} />
-          <Text style={[styles.loadingText, { color: theme.text.muted }]}>Gelişim verileri hesaplanıyor...</Text>
+          <Text style={[styles.loadingText, { color: theme.text.muted }]}>Gelişim verileri yükleniyor...</Text>
         </View>
       ) : (
         <ScrollView
@@ -222,299 +352,610 @@ export default function GrowthScreen() {
             />
           }
         >
-          {/* 2. HERO KPI KARTLARI (3'lü Grid - Tam Genişlik) */}
+          {/* 2. AYLIK PORTFÖY GETİRİSİ KARTI & GRAFİK (SCREENSHOT 1) */}
           <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-            <View style={styles.kpiRow}>
-              {/* Toplam Portföy Değeri */}
-              <View style={[styles.kpiBox, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <Text style={[styles.kpiLabel, { color: theme.text.muted }]}>GÜNCEL DEĞER</Text>
-                <Text style={[styles.kpiBigVal, { color: theme.text.primary }]}>
-                  {formatCurrency(currentValue, currency)}
-                </Text>
-                <View style={styles.kpiBottomRow}>
-                  <Text style={[styles.kpiSubText, { color: theme.text.muted }]}>Toplam Maliyet:</Text>
-                  <Text style={[styles.kpiCostText, { color: theme.text.secondary }]}>
-                    {formatCurrency(currentCost, currency)}
+            {/* Başlık ve Metrik Seçici Butonlar */}
+            <View style={styles.chartHeaderBlock}>
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <BarChart2 size={16} color={theme.brand.primary} />
+                  <Text style={[styles.sectionMainTitle, { color: theme.text.primary }]}>
+                    {chartMetric === 'return'
+                      ? 'Aylık Portföy Getirisi (%)'
+                      : chartMetric === 'value'
+                      ? 'Aylık Değer ve Maliyet'
+                      : 'Varlık Bazında Değer'}
                   </Text>
                 </View>
+                <Text style={[styles.sectionSubTitle, { color: theme.text.muted }]}>
+                  {chartMetric === 'return'
+                    ? 'Her ayın yüzde kâr/zarar getiri oranları'
+                    : 'Portföy büyüklüğü ve maliyet gelişimi'}
+                </Text>
               </View>
-            </View>
 
-            <View style={[styles.kpiRow, { marginTop: 8 }]}>
-              {/* Toplam Kâr / Getiri */}
-              <View style={[styles.kpiBox, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle, flex: 1 }]}>
-                <Text style={[styles.kpiLabel, { color: theme.text.muted }]}>TOPLAM GETİRİ</Text>
-                <Text
+              {/* 3 Görünüm Tab'ı */}
+              <View style={[styles.chartTabsRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                <TouchableOpacity
                   style={[
-                    styles.kpiMidVal,
-                    { color: totalProfit >= 0 ? theme.profit.main : theme.loss.main },
+                    styles.chartTabBtn,
+                    chartMetric === 'return' && [styles.activeChartTabBtn, { backgroundColor: theme.surface }],
                   ]}
+                  onPress={() => setChartMetric('return')}
                 >
-                  {formatPercent(totalProfitRate)}
-                </Text>
-                <Text style={[styles.kpiProfitAmt, { color: totalProfit >= 0 ? theme.profit.main : theme.loss.main }]}>
-                  {formatCurrency(totalProfit, currency)}
-                </Text>
-              </View>
+                  <Text
+                    style={[
+                      styles.chartTabText,
+                      { color: chartMetric === 'return' ? theme.brand.primary : theme.text.muted },
+                      chartMetric === 'return' && { fontWeight: '800' },
+                    ]}
+                  >
+                    Aylık Getiri %
+                  </Text>
+                </TouchableOpacity>
 
-              {/* BES Birikimi */}
-              <View style={[styles.kpiBox, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle, flex: 1 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <ShieldCheck size={13} color={theme.amber.main} />
-                  <Text style={[styles.kpiLabel, { color: theme.text.muted }]}>BES BİRİKİMİ</Text>
-                </View>
-                <Text style={[styles.kpiMidVal, { color: theme.amber.main }]}>
-                  {formatCurrency(besValue, currency)}
-                </Text>
-                <Text style={[styles.kpiSubText, { color: theme.text.muted }]}>Emeklilik Fonları</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.chartTabBtn,
+                    chartMetric === 'value' && [styles.activeChartTabBtn, { backgroundColor: theme.surface }],
+                  ]}
+                  onPress={() => setChartMetric('value')}
+                >
+                  <Text
+                    style={[
+                      styles.chartTabText,
+                      { color: chartMetric === 'value' ? theme.brand.primary : theme.text.muted },
+                      chartMetric === 'value' && { fontWeight: '800' },
+                    ]}
+                  >
+                    Portföy Değeri
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </View>
 
-          {/* 3. GELİŞİM GRAFİĞİ & METRİK SEÇİCİ (Tam Genişlik) */}
-          <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <BarChart2 size={16} color={theme.brand.primary} />
-                <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-                  Büyüme Grafiği
-                </Text>
+            {/* Hero Dönem İstatistikleri (Screenshot 1 üstündeki 4'lü kutu) */}
+            {periodSummary && (
+              <View style={[styles.periodHeroContainer, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                <View style={styles.periodHeroRow}>
+                  {/* Toplam Portföy (TRY) */}
+                  <View style={styles.periodHeroCell}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.heroSubLabel, { color: theme.text.muted }]}>TOPLAM PORTFÖY</Text>
+                      <View style={[styles.miniBadge, { backgroundColor: theme.brand.soft }]}>
+                        <Text style={[styles.miniBadgeText, { color: theme.brand.strong }]}>TRY</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.heroBigVal, { color: theme.text.primary }]}>
+                      {formatCurrency(periodSummary.totalCurrentTRY, 'TRY')}
+                    </Text>
+                    <Text style={[styles.heroDateLabel, { color: theme.text.muted }]}>
+                      {periodSummary.endDateLabel}
+                    </Text>
+                  </View>
+
+                  {/* Dönem Getirisi */}
+                  <View style={styles.periodHeroCell}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.heroSubLabel, { color: theme.text.muted }]}>DÖNEM GETİRİSİ</Text>
+                      <View style={[styles.miniBadge, { backgroundColor: theme.profit.soft }]}>
+                        <Text style={[styles.miniBadgeText, { color: theme.profit.main }]}>
+                          +{periodSummary.gainPct.toFixed(1)}%
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.heroMidVal, { color: theme.profit.main }]}>
+                      +{formatCurrency(periodSummary.gainVal, currency)}
+                    </Text>
+                    <Text style={[styles.heroDateLabel, { color: theme.text.muted }]}>
+                      Net kazanç / kayıp
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.periodHeroRow, { borderTopWidth: 1, borderTopColor: theme.borderSubtle, paddingTop: 8, marginTop: 8 }]}>
+                  {/* Dönem Başlangıç */}
+                  <View style={styles.periodHeroCell}>
+                    <Text style={[styles.heroSubLabel, { color: theme.text.muted }]}>DÖNEM BAŞLANGIÇ</Text>
+                    <Text style={[styles.heroSubVal, { color: theme.text.secondary }]}>
+                      {formatCurrency(periodSummary.startVal, currency)}
+                    </Text>
+                    <Text style={[styles.heroDateLabel, { color: theme.text.muted }]}>
+                      {periodSummary.startDateLabel}
+                    </Text>
+                  </View>
+
+                  {/* Toplam Portföy (USD) */}
+                  <View style={styles.periodHeroCell}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.heroSubLabel, { color: theme.text.muted }]}>TOPLAM ($)</Text>
+                      <View style={[styles.miniBadge, { backgroundColor: theme.brand.soft }]}>
+                        <Text style={[styles.miniBadgeText, { color: theme.brand.strong }]}>USD</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.heroSubVal, { color: theme.text.primary }]}>
+                      {formatCurrency(periodSummary.totalCurrentUSD, 'USD')}
+                    </Text>
+                    <Text style={[styles.heroDateLabel, { color: theme.brand.primary }]}>
+                      USD Getiri: +{periodSummary.usdReturnPct.toFixed(1)}%
+                    </Text>
+                  </View>
+                </View>
               </View>
+            )}
 
-              {/* Yıl Filtresi */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4 }}>
-                {availableYears.map((yr) => (
+            {/* Yıl Filtresi */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10 }}>
+              <Text style={[styles.chartRangeLabel, { color: theme.text.muted }]}>Dönem Filtresi:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 5 }}>
+                {['ALL', ...availableYears].map((yr) => (
                   <TouchableOpacity
-                    key={yr}
+                    key={`chart-yr-${yr}`}
                     style={[
-                      styles.yearBtn,
-                      selectedYear === yr && [styles.activeYearBtn, { backgroundColor: theme.brand.primary }],
-                      selectedYear !== yr && { backgroundColor: theme.surfaceMuted },
+                      styles.chartYrBtn,
+                      chartYear === yr
+                        ? [styles.activeChartYrBtn, { backgroundColor: theme.brand.primary }]
+                        : { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle, borderWidth: 1 },
                     ]}
-                    onPress={() => setSelectedYear(yr)}
+                    onPress={() => setChartYear(yr)}
                   >
                     <Text
                       style={[
-                        styles.yearBtnText,
-                        { color: selectedYear === yr ? '#ffffff' : theme.text.muted },
+                        styles.chartYrBtnText,
+                        { color: chartYear === yr ? '#ffffff' : theme.text.muted },
                       ]}
                     >
-                      {yr === 'ALL' ? 'Tümü' : yr}
+                      {yr === 'ALL' ? 'Tüm Zamanlar' : yr}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
 
-            {/* Metrik Butonları (Değer / Aylık Getiri) */}
-            <View style={[styles.metricSegment, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-              <TouchableOpacity
-                style={[
-                  styles.metricBtn,
-                  selectedMetric === 'value' && [styles.activeMetricBtn, { backgroundColor: theme.surface }],
-                ]}
-                onPress={() => setSelectedMetric('value')}
-              >
-                <Text
-                  style={[
-                    styles.metricBtnText,
-                    { color: selectedMetric === 'value' ? theme.brand.primary : theme.text.muted },
-                    selectedMetric === 'value' && { fontWeight: '800' },
-                  ]}
-                >
-                  Portföy Değeri
-                </Text>
-              </TouchableOpacity>
+            {/* ÇUBUK GRAFİK (BAR CHART - 0% Eksenli Yeşil/Kırmızı Çubuklar) */}
+            <View style={styles.barChartContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
+                {chartData.map((item, idx) => {
+                  const isPos = item.returnPct >= 0;
+                  const isZero = Math.abs(item.returnPct) < 0.05;
 
-              <TouchableOpacity
-                style={[
-                  styles.metricBtn,
-                  selectedMetric === 'return' && [styles.activeMetricBtn, { backgroundColor: theme.surface }],
-                ]}
-                onPress={() => setSelectedMetric('return')}
-              >
-                <Text
-                  style={[
-                    styles.metricBtnText,
-                    { color: selectedMetric === 'return' ? theme.brand.primary : theme.text.muted },
-                    selectedMetric === 'return' && { fontWeight: '800' },
-                  ]}
-                >
-                  Aylık Getiri (%)
+                  // Pozitif ve negatif çubuk yükseklikleri
+                  const barHeight = Math.max(6, Math.min(65, Math.abs(item.returnPct) * 2.5 + 4));
+
+                  return (
+                    <View key={`barchart-${item.month}-${idx}`} style={styles.barChartCol}>
+                      {/* Üst Alan: Pozitif Yüzde ve Çubuk */}
+                      <View style={styles.barTopHalf}>
+                        {isPos && !isZero && (
+                          <Text style={[styles.barPctLabel, { color: theme.profit.main }]}>
+                            +{item.returnPct.toFixed(1)}%
+                          </Text>
+                        )}
+                        {isPos && !isZero && (
+                          <View
+                            style={[
+                              styles.barStick,
+                              {
+                                height: barHeight,
+                                backgroundColor: theme.profit.main,
+                                borderTopLeftRadius: 3,
+                                borderTopRightRadius: 3,
+                              },
+                            ]}
+                          />
+                        )}
+                      </View>
+
+                      {/* Orta Sıfır Çizgisi Eksen */}
+                      <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle }]} />
+
+                      {/* Alt Alan: Negatif Yüzde ve Çubuk */}
+                      <View style={styles.barBottomHalf}>
+                        {!isPos && (
+                          <View
+                            style={[
+                              styles.barStick,
+                              {
+                                height: barHeight,
+                                backgroundColor: theme.loss.main,
+                                borderBottomLeftRadius: 3,
+                                borderBottomRightRadius: 3,
+                              },
+                            ]}
+                          />
+                        )}
+                        {!isPos && (
+                          <Text style={[styles.barPctLabel, { color: theme.loss.main, marginTop: 2 }]}>
+                            {item.returnPct.toFixed(1)}%
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* X Ekseni Tarih Etiketi */}
+                      <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+
+          {/* 3. KÜMÜLATİF YILLIK ÖZET TABLOSU (SCREENSHOT 2) */}
+          <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={[styles.sectionMainTitle, { color: theme.text.primary }]}>
+                  Kümülatif Yıllık Özet
                 </Text>
+                <Text style={[styles.sectionSubTitle, { color: theme.text.muted }]}>
+                  Yıllara göre kümülatif büyüme ve net getiri
+                </Text>
+              </View>
+
+              {/* Yıl Filtresi Dropdown */}
+              <TouchableOpacity
+                style={[styles.miniYearFilterBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+                onPress={() => {
+                  const nextIdx = (availableYears.indexOf(cumulFromYear) + 1) % (availableYears.length + 1);
+                  setCumulFromYear(nextIdx === 0 ? 'ALL' : availableYears[nextIdx - 1]);
+                }}
+              >
+                <Text style={[styles.miniYearFilterText, { color: theme.text.primary }]}>
+                  {cumulFromYear === 'ALL' ? 'Tüm yıllar' : `${cumulFromYear}+`}
+                </Text>
+                <ChevronDown size={12} color={theme.text.muted} />
               </TouchableOpacity>
             </View>
 
-            {/* Çubuk Grafik Alanı */}
-            {chartBars.length > 0 ? (
-              <View style={styles.chartWrapper}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartBarsScroll}>
-                  {chartBars.map((bar, bIdx) => {
-                    const isPos = bar.retPct >= 0;
-                    const barColor =
-                      selectedMetric === 'value'
-                        ? theme.brand.primary
-                        : isPos
-                        ? theme.profit.main
-                        : theme.loss.main;
-
-                    return (
-                      <View key={`growth-bar-${bIdx}`} style={styles.chartColumn}>
-                        {/* Üst Yüzde / Değer Etiketi */}
-                        <Text style={[styles.chartTopLabel, { color: theme.text.muted }]}>
-                          {selectedMetric === 'value'
-                            ? (bar.value >= 1000 ? `${Math.round(bar.value / 1000)}k` : Math.round(bar.value))
-                            : formatPercent(bar.retPct)}
-                        </Text>
-
-                        {/* Bar Çubuğu */}
-                        <View
-                          style={[
-                            styles.chartBarFill,
-                            {
-                              height: selectedMetric === 'value' ? bar.height : Math.max(10, Math.min(80, Math.abs(bar.retPct) * 4 + 10)),
-                              backgroundColor: barColor,
-                              opacity: 0.75 + (bIdx / chartBars.length) * 0.25,
-                            },
-                          ]}
-                        />
-
-                        {/* Ay Etiketi */}
-                        <Text style={[styles.chartMonthLabel, { color: theme.text.muted }]}>
-                          {bar.label}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            ) : (
-              <View style={styles.emptyBox}>
-                <Text style={[styles.emptyText, { color: theme.text.muted }]}>Grafik verisi bulunamadı.</Text>
-              </View>
-            )}
-          </View>
-
-          {/* 4. YILLIK KÜMÜLATİF GETİRİLER TABLOSU */}
-          {yearRows.length > 0 && (
-            <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-              <View style={styles.sectionHeaderRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <TrendingUp size={16} color={theme.profit.main} />
-                  <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-                    Yıllık Kümülatif Getiriler
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.yearTable}>
-                <View style={[styles.yearTableHeader, { backgroundColor: theme.surfaceMuted }]}>
-                  <Text style={[styles.thYearText, { color: theme.text.muted, width: '22%' }]}>Yıl</Text>
-                  <Text style={[styles.thYearText, { color: theme.text.muted, width: '26%', textAlign: 'center' }]}>Başlangıç</Text>
-                  <Text style={[styles.thYearText, { color: theme.text.muted, width: '26%', textAlign: 'center' }]}>Kapanış</Text>
-                  <Text style={[styles.thYearText, { color: theme.text.muted, width: '26%', textAlign: 'right' }]}>Getiri %</Text>
+            {/* Yatay Kaydırılabilir Kümülatif Tablo */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+              <View style={styles.fullDataTable}>
+                {/* Tablo Başlıkları */}
+                <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                  <Text style={[styles.thCell, { width: 55, color: theme.text.muted }]}>YIL</Text>
+                  <Text style={[styles.thCell, { width: 95, textAlign: 'right', color: theme.text.muted }]}>BAŞLANGIÇ (₺)</Text>
+                  <Text style={[styles.thCell, { width: 95, textAlign: 'right', color: theme.text.muted }]}>BİTİŞ (₺)</Text>
+                  <Text style={[styles.thCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>BAŞLANGIÇ ($)</Text>
+                  <Text style={[styles.thCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>BİTİŞ ($)</Text>
+                  <Text style={[styles.thCell, { width: 100, textAlign: 'right', color: theme.text.muted }]}>KÜMÜLATİF (₺)</Text>
+                  <Text style={[styles.thCell, { width: 95, textAlign: 'right', color: theme.text.muted }]}>KÜMÜLATİF ($)</Text>
                 </View>
 
-                {yearRows.map((row) => {
-                  const isPos = row.retPct >= 0;
+                {/* Tablo Satırları */}
+                {cumulativeYearlyRows.map((row) => {
+                  const isTotal = row.year === 'TOPLAM';
+                  const isPosTRY = (row.returnTRY ?? 0) >= 0;
+                  const isPosUSD = (row.returnUSD ?? 0) >= 0;
+
                   return (
-                    <View key={row.year} style={[styles.yearTableRow, { borderBottomColor: theme.borderSubtle }]}>
-                      <Text style={[styles.tdYearText, { color: theme.text.primary, width: '22%' }]}>
+                    <View
+                      key={`cumul-row-${row.year}`}
+                      style={[
+                        styles.tableBodyRow,
+                        { borderBottomColor: theme.borderSubtle },
+                        isTotal && [styles.tableTotalRow, { backgroundColor: theme.surfaceMuted }],
+                      ]}
+                    >
+                      <Text style={[styles.tdCell, { width: 55, fontWeight: isTotal ? '900' : '700', color: isTotal ? theme.brand.primary : theme.text.primary }]}>
                         {row.year}
                       </Text>
-                      <Text style={[styles.tdValText, { color: theme.text.secondary, width: '26%', textAlign: 'center' }]}>
-                        {formatCurrency(row.startVal, currency)}
+                      <Text style={[styles.tdCell, { width: 95, textAlign: 'right', color: theme.text.secondary }]}>
+                        {formatCurrency(row.startTRY, 'TRY')}
                       </Text>
-                      <Text style={[styles.tdValText, { color: theme.text.primary, width: '26%', textAlign: 'center', fontWeight: '700' }]}>
-                        {formatCurrency(row.endVal, currency)}
+                      <Text style={[styles.tdCell, { width: 95, textAlign: 'right', fontWeight: '700', color: theme.text.primary }]}>
+                        {formatCurrency(row.endTRY, 'TRY')}
                       </Text>
-                      <View style={{ width: '26%', alignItems: 'flex-end' }}>
-                        <View style={[styles.retBadge, { backgroundColor: isPos ? theme.profit.soft : theme.loss.soft }]}>
-                          <Text style={[styles.retBadgeText, { color: isPos ? theme.profit.main : theme.loss.main }]}>
-                            {formatPercent(row.retPct)}
-                          </Text>
-                        </View>
-                      </View>
+                      <Text style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.secondary }]}>
+                        {formatCurrency(row.startUSD, 'USD')}
+                      </Text>
+                      <Text style={[styles.tdCell, { width: 85, textAlign: 'right', fontWeight: '700', color: theme.text.primary }]}>
+                        {formatCurrency(row.endUSD, 'USD')}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tdCell,
+                          {
+                            width: 100,
+                            textAlign: 'right',
+                            fontWeight: '800',
+                            color: isPosTRY ? theme.profit.main : theme.loss.main,
+                          },
+                        ]}
+                      >
+                        {formatPercent(row.returnTRY)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.tdCell,
+                          {
+                            width: 95,
+                            textAlign: 'right',
+                            fontWeight: '800',
+                            color: isPosUSD ? theme.profit.main : theme.loss.main,
+                          },
+                        ]}
+                      >
+                        {formatPercent(row.returnUSD)}
+                      </Text>
                     </View>
                   );
                 })}
               </View>
-            </View>
-          )}
+            </ScrollView>
+          </View>
 
-          {/* 5. AY SONU KAPANIKLARI & VARLIK DAĞILIMI DÖKÜMÜ */}
+          {/* 4. AYLIK DAĞILIM TABLOSU (SCREENSHOT 3) */}
           <View style={[styles.fullWidthSection, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             <View style={styles.sectionHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Calendar size={16} color={theme.brand.primary} />
-                <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
-                  Aylık Kapanış Dökümleri
+              <View>
+                <Text style={[styles.sectionMainTitle, { color: theme.text.primary }]}>
+                  Aylık Dağılım
+                </Text>
+                <Text style={[styles.sectionSubTitle, { color: theme.text.muted }]}>
+                  {monthlyViewMode === 'return'
+                    ? 'Varlıkların bir önceki aya göre getiri yüzdesi (%)'
+                    : monthlyViewMode === 'amount'
+                    ? 'Varlıkların ay sonu toplam tutarları'
+                    : 'Varlıkların portföy içindeki ağırlık payı (%)'}
                 </Text>
               </View>
-              <Text style={[styles.sectionCount, { color: theme.text.muted }]}>
-                {series.length} Ay
-              </Text>
+
+              {/* Yıl Seçici */}
+              <TouchableOpacity
+                style={[styles.miniYearFilterBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+                onPress={() => {
+                  const curIdx = availableYears.indexOf(tableYear);
+                  const nextYear = availableYears[(curIdx + 1) % availableYears.length] || '2026';
+                  setTableYear(nextYear);
+                }}
+              >
+                <Text style={[styles.miniYearFilterText, { color: theme.text.primary }]}>
+                  Yıl {tableYear}
+                </Text>
+                <ChevronDown size={12} color={theme.text.muted} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.monthlyListContainer}>
-              {[...series].reverse().map((point, pIdx) => {
-                const total = isTRY ? point.valueTRY : point.valueUSD;
-                const cost = isTRY ? point.costTRY : point.costUSD;
-                const [yStr, mStr] = point.month.split('-');
+            {/* Mod Seçici (Tutar / Değişim % / Portföy Payı %) */}
+            <View style={[styles.tableModeSegment, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+              <TouchableOpacity
+                style={[
+                  styles.tableModeBtn,
+                  monthlyViewMode === 'amount' && [styles.activeTableModeBtn, { backgroundColor: theme.surface }],
+                ]}
+                onPress={() => setMonthlyViewMode('amount')}
+              >
+                <Text
+                  style={[
+                    styles.tableModeBtnText,
+                    { color: monthlyViewMode === 'amount' ? theme.brand.primary : theme.text.muted },
+                    monthlyViewMode === 'amount' && { fontWeight: '800' },
+                  ]}
+                >
+                  Tutar ({currency})
+                </Text>
+              </TouchableOpacity>
 
-                return (
-                  <View
-                    key={`month-card-${point.month}-${pIdx}`}
-                    style={[
-                      styles.monthlyCard,
-                      { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
-                    ]}
-                  >
-                    {/* Ay Kartı Başlığı */}
-                    <View style={styles.monthlyCardHeader}>
-                      <View style={styles.monthBadge}>
-                        <Text style={[styles.monthBadgeText, { color: theme.brand.primary }]}>
-                          {mStr}.{yStr}
-                        </Text>
+              <TouchableOpacity
+                style={[
+                  styles.tableModeBtn,
+                  monthlyViewMode === 'return' && [styles.activeTableModeBtn, { backgroundColor: theme.surface }],
+                ]}
+                onPress={() => setMonthlyViewMode('return')}
+              >
+                <Text
+                  style={[
+                    styles.tableModeBtnText,
+                    { color: monthlyViewMode === 'return' ? theme.brand.primary : theme.text.muted },
+                    monthlyViewMode === 'return' && { fontWeight: '800' },
+                  ]}
+                >
+                  Değişim (%)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.tableModeBtn,
+                  monthlyViewMode === 'share' && [styles.activeTableModeBtn, { backgroundColor: theme.surface }],
+                ]}
+                onPress={() => setMonthlyViewMode('share')}
+              >
+                <Text
+                  style={[
+                    styles.tableModeBtnText,
+                    { color: monthlyViewMode === 'share' ? theme.brand.primary : theme.text.muted },
+                    monthlyViewMode === 'share' && { fontWeight: '800' },
+                  ]}
+                >
+                  Portföy Payı (%)
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Yatay Kaydırılabilir Aylık Dağılım Tablosu */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+              <View style={styles.fullDataTable}>
+                {/* Başlıklar */}
+                <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                  <Text style={[styles.thCell, { width: 65, color: theme.text.muted }]}>AY</Text>
+                  {ASSET_COLUMN_KEYS.map((col) => (
+                    <Text key={col.key} style={[styles.thCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>
+                      {col.label}
+                    </Text>
+                  ))}
+                  <Text style={[styles.thCell, { width: 85, textAlign: 'right', color: theme.text.primary, fontWeight: '800' }]}>
+                    TOPLAM
+                  </Text>
+                </View>
+
+                {/* Aylık Satırlar */}
+                {monthlyTableData.rows.map((row) => {
+                  const isTotalPos = (row.totalReturnPct ?? 0) >= 0;
+
+                  return (
+                    <View key={row.monthKey} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
+                      <Text style={[styles.tdCell, { width: 65, fontWeight: '800', color: theme.text.primary }]}>
+                        {row.monthKey.replace('-', '.')}
+                      </Text>
+
+                      {ASSET_COLUMN_KEYS.map((col) => {
+                        const cellData = row.cells[col.key];
+                        if (!cellData || cellData.amount <= 0) {
+                          return (
+                            <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>
+                              —
+                            </Text>
+                          );
+                        }
+
+                        if (monthlyViewMode === 'amount') {
+                          return (
+                            <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.secondary }]}>
+                              {formatCurrency(cellData.amount, currency)}
+                            </Text>
+                          );
+                        }
+
+                        if (monthlyViewMode === 'share') {
+                          return (
+                            <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', fontWeight: '700', color: theme.text.primary }]}>
+                              %{cellData.sharePct.toFixed(1)}
+                            </Text>
+                          );
+                        }
+
+                        // Değişim % Modu
+                        const ret = cellData.returnPct;
+                        if (ret == null) {
+                          return (
+                            <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>
+                              —
+                            </Text>
+                          );
+                        }
+
+                        const isPos = ret >= 0;
+                        return (
+                          <Text
+                            key={col.key}
+                            style={[
+                              styles.tdCell,
+                              {
+                                width: 85,
+                                textAlign: 'right',
+                                fontWeight: '700',
+                                color: isPos ? theme.profit.main : theme.loss.main,
+                              },
+                            ]}
+                          >
+                            {isPos ? '▲ +' : '▼ '}{Math.abs(ret).toFixed(1)}%
+                          </Text>
+                        );
+                      })}
+
+                      {/* Toplam Kolonu */}
+                      <View style={{ width: 85, alignItems: 'flex-end', justifyContent: 'center' }}>
+                        {monthlyViewMode === 'amount' ? (
+                          <Text style={[styles.tdCell, { width: '100%', textAlign: 'right', fontWeight: '800', color: theme.text.primary }]}>
+                            {formatCurrency(row.totalVal, currency)}
+                          </Text>
+                        ) : monthlyViewMode === 'share' ? (
+                          <Text style={[styles.tdCell, { width: '100%', textAlign: 'right', fontWeight: '800', color: theme.text.primary }]}>
+                            %100,0
+                          </Text>
+                        ) : (
+                          <View
+                            style={[
+                              styles.totalRetPill,
+                              { backgroundColor: isTotalPos ? theme.profit.soft : theme.loss.soft },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.totalRetPillText,
+                                { color: isTotalPos ? theme.profit.main : theme.loss.main },
+                              ]}
+                            >
+                              {isTotalPos ? '▲ +' : '▼ '}{Math.abs(row.totalReturnPct ?? 0).toFixed(1)}%
+                            </Text>
+                          </View>
+                        )}
                       </View>
+                    </View>
+                  );
+                })}
 
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[styles.monthCardTotal, { color: theme.text.primary }]}>
-                          {formatCurrency(total, currency)}
+                {/* Yıl Sonu Özet Satırı */}
+                {monthlyTableData.yearSummary && (
+                  <View style={[styles.tableBodyRow, styles.tableTotalRow, { backgroundColor: theme.surfaceMuted }]}>
+                    <Text style={[styles.tdCell, { width: 65, fontWeight: '900', color: theme.brand.primary }]}>
+                      {monthlyTableData.yearSummary.year} Getiri %
+                    </Text>
+
+                    {ASSET_COLUMN_KEYS.map((col) => {
+                      const ret = monthlyTableData.yearSummary?.cells[col.key]?.returnPct;
+                      if (ret == null) {
+                        return (
+                          <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>
+                            —
+                          </Text>
+                        );
+                      }
+                      const isPos = ret >= 0;
+                      return (
+                        <Text
+                          key={col.key}
+                          style={[
+                            styles.tdCell,
+                            {
+                              width: 85,
+                              textAlign: 'right',
+                              fontWeight: '800',
+                              color: isPos ? theme.profit.main : theme.loss.main,
+                            },
+                          ]}
+                        >
+                          {isPos ? '+' : ''}{ret.toFixed(2)}%
                         </Text>
-                        <Text style={[styles.monthCardCost, { color: theme.text.muted }]}>
-                          Maliyet: {formatCurrency(cost, currency)}
+                      );
+                    })}
+
+                    {/* Yıllık Toplam Getiri */}
+                    <View style={{ width: 85, alignItems: 'flex-end', justifyContent: 'center' }}>
+                      <View
+                        style={[
+                          styles.totalRetPill,
+                          {
+                            backgroundColor:
+                              (monthlyTableData.yearSummary.totalReturn ?? 0) >= 0
+                                ? theme.profit.soft
+                                : theme.loss.soft,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.totalRetPillText,
+                            {
+                              color:
+                                (monthlyTableData.yearSummary.totalReturn ?? 0) >= 0
+                                ? theme.profit.main
+                                : theme.loss.main,
+                            },
+                          ]}
+                        >
+                          {(monthlyTableData.yearSummary.totalReturn ?? 0) >= 0 ? '▲ +' : '▼ '}
+                          {Math.abs(monthlyTableData.yearSummary.totalReturn ?? 0).toFixed(1)}%
                         </Text>
                       </View>
                     </View>
-
-                    {/* Varlık Kırılım Çipleri */}
-                    {point.byType && (
-                      <View style={[styles.typesGrid, { borderTopColor: theme.borderSubtle, borderTopWidth: 1, paddingTop: 8, marginTop: 8 }]}>
-                        {ASSET_TYPE_KEYS.map((typeKey) => {
-                          const item = point.byType[typeKey];
-                          const itemVal = item ? (isTRY ? item.valueTRY : item.valueUSD) : 0;
-                          if (itemVal <= 0) return null;
-                          const badge = getAssetTypeBadgeColor(typeKey);
-
-                          return (
-                            <View key={typeKey} style={[styles.typeChipCell, { backgroundColor: theme.surface }]}>
-                              <View style={[styles.typeMiniDot, { backgroundColor: badge.text }]} />
-                              <Text style={[styles.typeChipLabel, { color: theme.text.muted }]}>
-                                {getAssetTypeLabel(typeKey)}:
-                              </Text>
-                              <Text style={[styles.typeChipVal, { color: theme.text.primary }]}>
-                                {formatCurrency(itemVal, currency)}
-                              </Text>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    )}
                   </View>
-                );
-              })}
-            </View>
+                )}
+              </View>
+            </ScrollView>
           </View>
         </ScrollView>
       )}
@@ -565,219 +1006,218 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 8,
   },
-  kpiRow: {
-    flexDirection: 'row',
-    gap: 8,
+  chartHeaderBlock: {
+    gap: 10,
   },
-  kpiBox: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 9,
-    borderWidth: 1,
+  sectionMainTitle: {
+    fontSize: 14,
+    fontWeight: '800',
   },
-  kpiLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  kpiBigVal: {
-    fontSize: 22,
-    fontWeight: '900',
-    marginTop: 4,
-    letterSpacing: -0.5,
-  },
-  kpiMidVal: {
-    fontSize: 16,
-    fontWeight: '900',
-    marginTop: 3,
-  },
-  kpiProfitAmt: {
+  sectionSubTitle: {
     fontSize: 11,
-    fontWeight: '700',
     marginTop: 1,
   },
-  kpiBottomRow: {
+  chartTabsRow: {
     flexDirection: 'row',
+    padding: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  chartTabBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 6,
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
   },
-  kpiSubText: {
+  activeChartTabBtn: {
+    shadowOpacity: 0.05,
+  },
+  chartTabText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  periodHeroContainer: {
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    marginTop: 12,
+  },
+  periodHeroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  periodHeroCell: {
+    flex: 1,
+  },
+  heroSubLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  heroBigVal: {
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 2,
+    letterSpacing: -0.4,
+  },
+  heroMidVal: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  heroSubVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  heroDateLabel: {
+    fontSize: 9,
+    marginTop: 1,
+  },
+  miniBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  miniBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+  },
+  chartRangeLabel: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  kpiCostText: {
+  chartYrBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  activeChartYrBtn: {},
+  chartYrBtnText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  barChartContainer: {
+    marginTop: 6,
+    paddingTop: 6,
+  },
+  barChartScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 4,
+    height: 165,
+  },
+  barChartCol: {
+    alignItems: 'center',
+    width: 44,
+    height: '100%',
+  },
+  barTopHalf: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    width: '100%',
+  },
+  zeroAxisLine: {
+    width: '100%',
+    height: 1.5,
+  },
+  barBottomHalf: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    width: '100%',
+  },
+  barStick: {
+    width: 20,
+  },
+  barPctLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  barDateLabel: {
+    fontSize: 8,
+    fontWeight: '600',
+    marginTop: 4,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  sectionCount: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  yearBtn: {
+  miniYearFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 4,
   },
-  activeYearBtn: {},
-  yearBtnText: {
-    fontSize: 10,
+  miniYearFilterText: {
+    fontSize: 11,
     fontWeight: '700',
   },
-  metricSegment: {
+  tableModeSegment: {
     flexDirection: 'row',
     padding: 2,
     borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 12,
+    marginTop: 6,
   },
-  metricBtn: {
+  tableModeBtn: {
     flex: 1,
     paddingVertical: 5,
     borderRadius: 6,
     alignItems: 'center',
   },
-  activeMetricBtn: {
+  activeTableModeBtn: {
     shadowOpacity: 0.05,
   },
-  metricBtnText: {
-    fontSize: 11,
+  tableModeBtnText: {
+    fontSize: 10,
     fontWeight: '600',
   },
-  chartWrapper: {
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  chartBarsScroll: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 120,
-    gap: 10,
-    paddingHorizontal: 4,
-  },
-  chartColumn: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    height: '100%',
-    width: 44,
-  },
-  chartTopLabel: {
-    fontSize: 8,
-    fontWeight: '700',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  chartBarFill: {
-    width: 24,
-    borderRadius: 4,
-  },
-  chartMonthLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    marginTop: 6,
-  },
-  yearTable: {
+  fullDataTable: {
     borderRadius: 8,
     overflow: 'hidden',
   },
-  yearTableHeader: {
+  tableHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-  },
-  thYearText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  yearTableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
   },
-  tdYearText: {
-    fontSize: 12,
-    fontWeight: '800',
+  thCell: {
+    fontSize: 9,
+    fontWeight: '700',
+    paddingHorizontal: 4,
   },
-  tdValText: {
-    fontSize: 11,
+  tableBodyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
   },
-  retBadge: {
-    paddingHorizontal: 6,
+  tableTotalRow: {
+    borderTopWidth: 1,
+  },
+  tdCell: {
+    fontSize: 10,
+    paddingHorizontal: 4,
+  },
+  totalRetPill: {
+    paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
   },
-  retBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  monthlyListContainer: {
-    gap: 8,
-  },
-  monthlyCard: {
-    padding: 12,
-    borderRadius: 9,
-    borderWidth: 1,
-  },
-  monthlyCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  monthBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  monthBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  monthCardTotal: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  monthCardCost: {
-    fontSize: 10,
-    marginTop: 1,
-  },
-  typesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  typeChipCell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 5,
-    gap: 4,
-  },
-  typeMiniDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  typeChipLabel: {
+  totalRetPillText: {
     fontSize: 9,
-    fontWeight: '500',
-  },
-  typeChipVal: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   centerLoading: {
     flex: 1,
@@ -786,13 +1226,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    fontSize: 12,
-  },
-  emptyBox: {
-    paddingVertical: 30,
-    alignItems: 'center',
-  },
-  emptyText: {
     fontSize: 12,
   },
 });
