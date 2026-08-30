@@ -86,3 +86,29 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const userId = await getUserId(req);
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Yetkisiz erişim." }, { status: 401 });
+    }
+
+    const id = req.nextUrl.searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ ok: false, error: "İşlem ID belirtilmedi." }, { status: 400 });
+    }
+
+    await prisma.transaction.deleteMany({
+      where: { id, userId },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error("❌ Transactions API DELETE Error:", err);
+    return NextResponse.json(
+      { ok: false, error: "İşlem silinemedi." },
+      { status: 500 }
+    );
+  }
+}
