@@ -16,7 +16,6 @@ import {
   Calendar,
   Filter,
   ChevronDown,
-  ChevronRight,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
@@ -45,9 +44,29 @@ interface GrowthPoint {
 }
 
 const SHORT_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const FULL_MONTHS = [
+  'Ocak',
+  'Şubat',
+  'Mart',
+  'Nisan',
+  'Mayıs',
+  'Haziran',
+  'Temmuz',
+  'Ağustos',
+  'Eylül',
+  'Ekim',
+  'Kasım',
+  'Aralık',
+];
+
 function getMonthShortLabel(monthKey: string): string {
   const [, m] = monthKey.split('-').map(Number);
   return SHORT_MONTHS[(m || 1) - 1] ?? monthKey;
+}
+
+function getMonthFullLabel(monthKey: string): string {
+  const [, m] = monthKey.split('-').map(Number);
+  return FULL_MONTHS[(m || 1) - 1] ?? monthKey;
 }
 
 function prevMonthKey(key: string): string {
@@ -237,7 +256,7 @@ export default function GrowthScreen() {
   const [chartMetric, setChartMetric] = useState<'return' | 'value' | 'allocation'>('return');
   const [chartYear, setChartYear] = useState<string>('2026');
 
-  // Aylık Dağılım Tablosu Seçenekleri
+  // Aylık Dağılım Tablosu Yılı
   const [tableYear, setTableYear] = useState<string>('2026');
 
   // Modallar
@@ -382,7 +401,7 @@ export default function GrowthScreen() {
     };
   }, [chartData, series, periodReturns, chartYear, isTRY, fullByMonth]);
 
-  // Kümülatif Yıllık Tablo Satırları (Temiz, Tek Satır, Yalın Gösterim)
+  // Kümülatif Yıllık Tablo Satırları
   const cumulativeYearlyRows = useMemo(() => {
     const byYear = new Map<string, GrowthPoint[]>();
     for (const p of series) {
@@ -429,7 +448,7 @@ export default function GrowthScreen() {
     return rows;
   }, [series, fullByMonth]);
 
-  // Aylık Dağılım Tablosu Verileri (Kümülatif Yıllık Formatında Toplam Değerler)
+  // Aylık Dağılım Tablosu Verileri
   const monthlyRows = useMemo(() => {
     const yearPoints = series
       .filter((p) => p.month.startsWith(tableYear))
@@ -450,6 +469,7 @@ export default function GrowthScreen() {
 
       return {
         monthKey: p.month,
+        monthName: getMonthFullLabel(p.month),
         valTRY,
         valUSD,
         returnTRY,
@@ -904,7 +924,7 @@ export default function GrowthScreen() {
             )}
           </View>
 
-          {/* 5. KÜMÜLATİF YILLIK ÖZET (Tek ve Yalın Tablo Gösterimi) */}
+          {/* 5. KÜMÜLATİF YILLIK ÖZET (Ayrık ve Net Getiri Kapsülleri) */}
           <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
             <View style={styles.sectionHeaderRow}>
               <View>
@@ -920,11 +940,11 @@ export default function GrowthScreen() {
             {/* Tablo Görünümü */}
             <View style={styles.tableWrapper}>
               <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <Text style={[styles.thCell, { width: '20%', color: theme.text.muted }]}>YIL</Text>
-                <Text style={[styles.thCell, { width: '27%', color: theme.text.muted }]}>TRY DEĞERİ</Text>
-                <Text style={[styles.thCell, { width: '23%', color: theme.text.muted }]}>USD DEĞERİ</Text>
-                <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (TRY)</Text>
-                <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (USD)</Text>
+                <Text style={[styles.thCell, { width: '24%', color: theme.text.muted }]}>YIL</Text>
+                <Text style={[styles.thCell, { width: '26%', color: theme.text.muted }]}>TRY DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '20%', color: theme.text.muted }]}>USD DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '15%', textAlign: 'center', color: theme.text.muted }]}>TRY %</Text>
+                <Text style={[styles.thCell, { width: '15%', textAlign: 'center', color: theme.text.muted }]}>USD %</Text>
               </View>
 
               {cumulativeYearlyRows.map((row) => {
@@ -933,39 +953,94 @@ export default function GrowthScreen() {
 
                 return (
                   <View key={row.year} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
-                    {/* Yıl Kolonu (Sade ve Tek Satır) */}
-                    <View style={{ width: '20%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {/* Yıl Kolonu */}
+                    <View style={{ width: '24%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <View style={[styles.rowDot, { backgroundColor: '#8b5cf6' }]} />
                       <Text style={[styles.rowYearText, { color: theme.text.primary }]}>{row.year}</Text>
                     </View>
 
-                    {/* TRY Değeri (Sade Tek Satır) */}
-                    <View style={{ width: '27%' }}>
+                    {/* TRY Değeri */}
+                    <View style={{ width: '26%' }}>
                       <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
                         {formatCurrency(row.endTRY, 'TRY', 0)}
                       </Text>
                     </View>
 
-                    {/* USD Değeri (Sade Tek Satır) */}
-                    <View style={{ width: '23%' }}>
+                    {/* USD Değeri */}
+                    <View style={{ width: '20%' }}>
                       <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
                         {formatCurrency(row.endUSD, 'USD', 0)}
                       </Text>
                     </View>
 
-                    {/* Getiri TRY % */}
-                    <View style={{ width: '15%', alignItems: 'flex-end', justifyContent: 'center' }}>
-                      <Text style={[styles.rowPctText, { color: isPosTRY ? theme.profit.main : theme.loss.main }]}>
-                        %{row.returnTRY != null ? row.returnTRY.toFixed(1).replace('.', ',') : '—'}
-                      </Text>
+                    {/* Getiri TRY % Kapsülü */}
+                    <View style={{ width: '15%', alignItems: 'center', justifyContent: 'center' }}>
+                      <View
+                        style={[
+                          styles.retPill,
+                          {
+                            backgroundColor:
+                              row.returnTRY == null
+                                ? 'transparent'
+                                : isPosTRY
+                                ? theme.profit.soft
+                                : theme.loss.soft,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.rowPctText,
+                            {
+                              color:
+                                row.returnTRY == null
+                                  ? theme.text.muted
+                                  : isPosTRY
+                                  ? theme.profit.main
+                                  : theme.loss.main,
+                            },
+                          ]}
+                        >
+                          {row.returnTRY != null
+                            ? `${isPosTRY ? '+' : ''}%${row.returnTRY.toFixed(1).replace('.', ',')}`
+                            : '—'}
+                        </Text>
+                      </View>
                     </View>
 
-                    {/* Getiri USD % */}
-                    <View style={{ width: '15%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-                      <Text style={[styles.rowPctText, { color: isPosUSD ? '#818cf8' : theme.loss.main }]}>
-                        %{row.returnUSD != null ? row.returnUSD.toFixed(1).replace('.', ',') : '—'}
-                      </Text>
-                      <ChevronRight size={12} color={theme.text.muted} />
+                    {/* Getiri USD % Kapsülü */}
+                    <View style={{ width: '15%', alignItems: 'center', justifyContent: 'center' }}>
+                      <View
+                        style={[
+                          styles.retPill,
+                          {
+                            backgroundColor:
+                              row.returnUSD == null
+                                ? 'transparent'
+                                : isPosUSD
+                                ? 'rgba(99, 102, 241, 0.15)'
+                                : theme.loss.soft,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.rowPctText,
+                            {
+                              color:
+                                row.returnUSD == null
+                                  ? theme.text.muted
+                                  : isPosUSD
+                                  ? '#818cf8'
+                                  : theme.loss.main,
+                            },
+                          ]}
+                        >
+                          {row.returnUSD != null
+                            ? `${isPosUSD ? '+' : ''}%${row.returnUSD.toFixed(1).replace('.', ',')}`
+                            : '—'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 );
@@ -973,7 +1048,7 @@ export default function GrowthScreen() {
             </View>
           </View>
 
-          {/* 6. AYLIK DAĞILIM (Kümülatif Formatında Toplam Portföy Tablosu) */}
+          {/* 6. AYLIK DAĞILIM (Ocak, Şubat Formatı ve Ayrık Net Kapsüller) */}
           <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
             <View style={styles.sectionHeaderRow}>
               <View>
@@ -1001,14 +1076,14 @@ export default function GrowthScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Tablo Görünümü (Kümülatif Yıllık İle Birebir Aynı Sütun Düzeni) */}
+            {/* Tablo Görünümü */}
             <View style={styles.tableWrapper}>
               <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <Text style={[styles.thCell, { width: '20%', color: theme.text.muted }]}>AY</Text>
-                <Text style={[styles.thCell, { width: '27%', color: theme.text.muted }]}>TRY DEĞERİ</Text>
-                <Text style={[styles.thCell, { width: '23%', color: theme.text.muted }]}>USD DEĞERİ</Text>
-                <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (TRY)</Text>
-                <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (USD)</Text>
+                <Text style={[styles.thCell, { width: '24%', color: theme.text.muted }]}>AY</Text>
+                <Text style={[styles.thCell, { width: '26%', color: theme.text.muted }]}>TRY DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '20%', color: theme.text.muted }]}>USD DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '15%', textAlign: 'center', color: theme.text.muted }]}>TRY %</Text>
+                <Text style={[styles.thCell, { width: '15%', textAlign: 'center', color: theme.text.muted }]}>USD %</Text>
               </View>
 
               {monthlyRows.map((row) => {
@@ -1017,45 +1092,96 @@ export default function GrowthScreen() {
 
                 return (
                   <View key={row.monthKey} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
-                    {/* Ay Kolonu */}
-                    <View style={{ width: '20%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {/* Ay Kolonu (Ocak, Şubat Yazıyla) */}
+                    <View style={{ width: '24%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <View style={[styles.rowDot, { backgroundColor: '#6366f1' }]} />
                       <Text style={[styles.rowYearText, { color: theme.text.primary }]}>
-                        {row.monthKey.replace('-', '.')}
+                        {row.monthName}
                       </Text>
                     </View>
 
                     {/* TRY Değeri */}
-                    <View style={{ width: '27%' }}>
+                    <View style={{ width: '26%' }}>
                       <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
                         {formatCurrency(row.valTRY, 'TRY', 0)}
                       </Text>
                     </View>
 
                     {/* USD Değeri */}
-                    <View style={{ width: '23%' }}>
+                    <View style={{ width: '20%' }}>
                       <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
                         {formatCurrency(row.valUSD, 'USD', 0)}
                       </Text>
                     </View>
 
-                    {/* Getiri TRY % */}
-                    <View style={{ width: '15%', alignItems: 'flex-end', justifyContent: 'center' }}>
-                      <Text style={[styles.rowPctText, { color: isPosTRY ? theme.profit.main : theme.loss.main }]}>
-                        {row.returnTRY != null
-                          ? `${isPosTRY ? '▲ %' : '▼ %'}${Math.abs(row.returnTRY).toFixed(1).replace('.', ',')}`
-                          : '—'}
-                      </Text>
+                    {/* Getiri TRY % Kapsülü */}
+                    <View style={{ width: '15%', alignItems: 'center', justifyContent: 'center' }}>
+                      <View
+                        style={[
+                          styles.retPill,
+                          {
+                            backgroundColor:
+                              row.returnTRY == null
+                                ? 'transparent'
+                                : isPosTRY
+                                ? theme.profit.soft
+                                : theme.loss.soft,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.rowPctText,
+                            {
+                              color:
+                                row.returnTRY == null
+                                  ? theme.text.muted
+                                  : isPosTRY
+                                  ? theme.profit.main
+                                  : theme.loss.main,
+                            },
+                          ]}
+                        >
+                          {row.returnTRY != null
+                            ? `${isPosTRY ? '+' : ''}%${row.returnTRY.toFixed(1).replace('.', ',')}`
+                            : '—'}
+                        </Text>
+                      </View>
                     </View>
 
-                    {/* Getiri USD % */}
-                    <View style={{ width: '15%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-                      <Text style={[styles.rowPctText, { color: isPosUSD ? '#818cf8' : theme.loss.main }]}>
-                        {row.returnUSD != null
-                          ? `${isPosUSD ? '▲ %' : '▼ %'}${Math.abs(row.returnUSD).toFixed(1).replace('.', ',')}`
-                          : '—'}
-                      </Text>
-                      <ChevronRight size={12} color={theme.text.muted} />
+                    {/* Getiri USD % Kapsülü */}
+                    <View style={{ width: '15%', alignItems: 'center', justifyContent: 'center' }}>
+                      <View
+                        style={[
+                          styles.retPill,
+                          {
+                            backgroundColor:
+                              row.returnUSD == null
+                                ? 'transparent'
+                                : isPosUSD
+                                ? 'rgba(99, 102, 241, 0.15)'
+                                : theme.loss.soft,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.rowPctText,
+                            {
+                              color:
+                                row.returnUSD == null
+                                  ? theme.text.muted
+                                  : isPosUSD
+                                  ? '#818cf8'
+                                  : theme.loss.main,
+                            },
+                          ]}
+                        >
+                          {row.returnUSD != null
+                            ? `${isPosUSD ? '+' : ''}%${row.returnUSD.toFixed(1).replace('.', ',')}`
+                            : '—'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 );
@@ -1356,7 +1482,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 8,
     marginBottom: 4,
   },
@@ -1368,8 +1494,8 @@ const styles = StyleSheet.create({
   tableBodyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
   },
   rowDot: {
@@ -1378,15 +1504,23 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   rowYearText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  rowValuePrimary: {
     fontSize: 12.5,
     fontWeight: '800',
   },
+  rowValuePrimary: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  retPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 2.5,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+  },
   rowPctText: {
-    fontSize: 11.5,
+    fontSize: 10,
     fontWeight: '800',
   },
   centerLoading: {
