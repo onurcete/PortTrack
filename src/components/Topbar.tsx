@@ -14,6 +14,7 @@ import {
   Activity,
   Shield,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
@@ -32,7 +33,7 @@ export function Topbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [refreshing, setRefreshing] = useState(false);
-  const [user, setUser] = useState<{ email: string; name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; name: string; role: string; isDemo?: boolean } | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -108,6 +109,18 @@ export function Topbar() {
 
           {/* Sağ Taraf: Butonlar */}
           <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            {/* Demo Kullanıcıya Özel Dikkat Çekici Üyelik Butonu */}
+            {user?.isDemo && (
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-105 transition-all duration-200"
+                title="Kendi portföyünüzü oluşturmak için hemen ücretsiz üye olun"
+              >
+                <Sparkles size={14} className="animate-pulse shrink-0" />
+                <span>Ücretsiz Üye Ol</span>
+              </Link>
+            )}
+
             <button
               type="button"
               onClick={handleRefresh}

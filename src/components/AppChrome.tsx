@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Topbar } from "@/components/Topbar";
+import { DemoBanner } from "@/components/DemoBanner";
 import { CookieBanner } from "@/components/CookieBanner";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { GlobalPortfolioAiModal } from "@/components/GlobalPortfolioAiModal";
@@ -54,6 +55,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col bg-[var(--color-bg)] text-[var(--color-foreground)]">
       <Topbar />
       <main className="flex-1 mx-auto w-full max-w-[1400px] px-5 py-7 md:px-10 md:py-9 pb-20 md:pb-9">
+        <DemoBanner />
         {children}
       </main>
 

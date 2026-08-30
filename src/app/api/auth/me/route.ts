@@ -19,6 +19,7 @@ export async function GET() {
       name: user.name ?? "",
       email: user.email,
       role: isUserAdmin ? "ADMIN" : user.role,
+      isDemo: Boolean(user.isDemo || user.role === "DEMO" || user.email === "demo@porttrack.app" || user.email === "demo@porttrack.com"),
     },
   });
 }
