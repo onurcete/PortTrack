@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle, Text as SvgText } from 'react-native-svg';
 import {
   TrendingUp,
   TrendingDown,
@@ -94,9 +96,156 @@ const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
   { key: 'CRYPTO', label: 'KRİPTO' },
 ];
 
+function ValueLineChart({
+  data,
+  currency,
+  theme,
+  isSingleYear,
+  width,
+}: {
+  data: { month: string; label: string; value: number; cost: number }[];
+  currency: 'TRY' | 'USD';
+  theme: any;
+  isSingleYear: boolean;
+  width: number;
+}) {
+  if (!data || data.length === 0) return null;
+
+  const chartHeight = 155;
+  const paddingLeft = 20;
+  const paddingRight = 20;
+  const paddingTop = 26;
+  const paddingBottom = 28;
+
+  const chartWidth = isSingleYear ? Math.max(width - 48, 300) : Math.max(data.length * 46, width - 48);
+  const plotWidth = chartWidth - paddingLeft - paddingRight;
+  const plotHeight = chartHeight - paddingTop - paddingBottom;
+
+  const values = data.map((d) => d.value);
+  const minVal = Math.min(...values) * 0.96;
+  const maxVal = Math.max(...values) * 1.04;
+  const range = maxVal - minVal || 1;
+
+  const points = data.map((d, i) => {
+    const x = paddingLeft + (data.length === 1 ? plotWidth / 2 : (i / (data.length - 1)) * plotWidth);
+    const y = paddingTop + (1 - (d.value - minVal) / range) * plotHeight;
+    return { x, y, ...d };
+  });
+
+  // Smooth SVG Path with Bezier curves
+  let linePath = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const cp1x = prev.x + (curr.x - prev.x) / 2;
+    const cp1y = prev.y;
+    const cp2x = prev.x + (curr.x - prev.x) / 2;
+    const cp2y = curr.y;
+    linePath += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+  }
+
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${chartHeight - paddingBottom} L ${points[0].x} ${chartHeight - paddingBottom} Z`;
+
+  const ChartSvg = (
+    <Svg width={chartWidth} height={chartHeight}>
+      <Defs>
+        <LinearGradient id="growthAreaGrad" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.45" />
+          <Stop offset="80%" stopColor="#8b5cf6" stopOpacity="0.05" />
+          <Stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
+        </LinearGradient>
+      </Defs>
+
+      {/* Grid Lines */}
+      <Path
+        d={`M ${paddingLeft} ${paddingTop} L ${chartWidth - paddingRight} ${paddingTop}`}
+        stroke={theme.borderSubtle}
+        strokeWidth="1"
+        strokeDasharray="4,4"
+      />
+      <Path
+        d={`M ${paddingLeft} ${paddingTop + plotHeight / 2} L ${chartWidth - paddingRight} ${paddingTop + plotHeight / 2}`}
+        stroke={theme.borderSubtle}
+        strokeWidth="1"
+        strokeDasharray="4,4"
+      />
+      <Path
+        d={`M ${paddingLeft} ${chartHeight - paddingBottom} L ${chartWidth - paddingRight} ${chartHeight - paddingBottom}`}
+        stroke={theme.borderSubtle}
+        strokeWidth="1"
+      />
+
+      {/* Filled Area */}
+      <Path d={areaPath} fill="url(#growthAreaGrad)" />
+
+      {/* Main Line */}
+      <Path d={linePath} fill="none" stroke="#8b5cf6" strokeWidth="3" strokeLinecap="round" />
+
+      {/* Data Points and Labels */}
+      {points.map((p, i) => {
+        const isHighest = p.value === Math.max(...values);
+        const isLowest = p.value === Math.min(...values);
+        const isLast = i === points.length - 1;
+        const showBadge = isSingleYear || isHighest || isLowest || isLast;
+
+        return (
+          <React.Fragment key={`point-${p.month}-${i}`}>
+            {/* Top Value Badge */}
+            {showBadge && (
+              <SvgText
+                x={p.x}
+                y={p.y - 8}
+                fill="#a78bfa"
+                fontSize={isSingleYear && points.length > 8 ? "8" : "9"}
+                fontWeight="800"
+                textAnchor="middle"
+              >
+                {formatCompactMoney(p.value, currency)}
+              </SvgText>
+            )}
+
+            {/* Point Dot */}
+            <Circle
+              cx={p.x}
+              cy={p.y}
+              r={isLast ? "4.5" : "3.5"}
+              fill="#ffffff"
+              stroke="#7c3aed"
+              strokeWidth="2.5"
+            />
+
+            {/* Bottom Month Label */}
+            <SvgText
+              x={p.x}
+              y={chartHeight - 8}
+              fill={theme.text.muted}
+              fontSize={isSingleYear && points.length > 8 ? "9" : "10"}
+              fontWeight="700"
+              textAnchor="middle"
+            >
+              {p.label}
+            </SvgText>
+          </React.Fragment>
+        );
+      })}
+    </Svg>
+  );
+
+  if (isSingleYear) {
+    return <View style={{ alignItems: 'center', width: '100%' }}>{ChartSvg}</View>;
+  }
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4 }}>
+      {ChartSvg}
+    </ScrollView>
+  );
+}
+
 export default function GrowthScreen() {
   const { theme } = useThemeStore();
   const { currency, isTRY } = useCurrencyStore();
+  const { width: windowWidth } = useWindowDimensions();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -423,16 +572,6 @@ export default function GrowthScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. ÜST HEADER (Başlık & Açıklama - Dolar/TL butonu olmadan temiz) */}
-      <View style={[styles.topHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View>
-          <Text style={[styles.pageTitle, { color: theme.text.primary }]}>Portföy Gelişimi</Text>
-          <Text style={[styles.pageSubtitle, { color: theme.text.muted }]}>
-            Aylık büyüme, getiri grafikleri ve yıllık özet
-          </Text>
-        </View>
-      </View>
-
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={theme.brand.primary} />
@@ -755,70 +894,14 @@ export default function GrowthScreen() {
                   </ScrollView>
                 )
               ) : chartMetric === 'value' ? (
-                /* 2. METRİK: PORTFÖY DEĞERİ GRAFİĞİ */
-                chartYear !== 'ALL' ? (
-                  <View style={styles.barChartRowSingleYear}>
-                    {chartData.map((item, idx) => {
-                      const barHeight = Math.max(6, (item.value / maxValInChart) * 90);
-
-                      return (
-                        <View key={`barchart-val-${item.month}-${idx}`} style={styles.barChartColSingleYear}>
-                          <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
-                            <Text style={[styles.barPctLabelMini, { color: theme.brand.primary, fontSize: 6.8 }]}>
-                              {formatCompactMoney(item.value, currency)}
-                            </Text>
-                            <View
-                              style={[
-                                styles.barStickMini,
-                                {
-                                  height: barHeight,
-                                  backgroundColor: theme.brand.primary,
-                                  borderTopLeftRadius: 3,
-                                  borderTopRightRadius: 3,
-                                },
-                              ]}
-                            />
-                          </View>
-                          <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle, marginTop: 2 }]} />
-                          <Text style={[styles.barDateLabelMini, { color: theme.text.muted }]}>
-                            {item.label}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.barChartScroll}>
-                    {chartData.map((item, idx) => {
-                      const barHeight = Math.max(8, (item.value / maxValInChart) * 110);
-
-                      return (
-                        <View key={`barchart-val-all-${item.month}-${idx}`} style={styles.barChartCol}>
-                          <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
-                            <Text style={[styles.barPctLabel, { color: theme.brand.primary, fontSize: 8 }]}>
-                              {formatCompactMoney(item.value, currency)}
-                            </Text>
-                            <View
-                              style={[
-                                styles.barStick,
-                                {
-                                  height: barHeight,
-                                  backgroundColor: theme.brand.primary,
-                                  borderTopLeftRadius: 4,
-                                  borderTopRightRadius: 4,
-                                },
-                              ]}
-                            />
-                          </View>
-                          <View style={[styles.zeroAxisLine, { backgroundColor: theme.borderSubtle, marginTop: 2 }]} />
-                          <Text style={[styles.barDateLabel, { color: theme.text.muted }]}>
-                            {item.label}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </ScrollView>
-                )
+                /* 2. METRİK: PORTFÖY DEĞERİ ÇİZGİ GRAFİĞİ (LINE / AREA CHART) */
+                <ValueLineChart
+                  data={chartData}
+                  currency={currency}
+                  theme={theme}
+                  isSingleYear={chartYear !== 'ALL'}
+                  width={windowWidth}
+                />
               ) : (
                 /* 3. METRİK: VARLIK DAĞILIMI (STACKED BAR) */
                 <View>
