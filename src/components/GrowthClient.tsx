@@ -386,14 +386,14 @@ export function GrowthClient({
     if (chartMetric === "return") {
       const actual = row.returnPct;
       return (
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl text-xs space-y-2 min-w-[180px]">
-          <div className="font-bold border-b border-[var(--color-border)]/40 pb-1 text-[var(--color-foreground)]">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-xl p-3.5 shadow-2xl text-xs space-y-2 min-w-[200px]">
+          <div className="font-extrabold border-b border-[var(--color-border)]/50 pb-1.5 text-[var(--color-foreground)]">
             {dateLabel}
           </div>
           <div className="flex justify-between items-center gap-4">
             <span className="text-[var(--color-muted)] font-medium">Aylık Getiri</span>
-            <span className={cn("font-bold tabular-nums", (actual ?? 0) >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
-              {formatPercent(actual ?? 0)}
+            <span className={cn("font-black tabular-nums text-sm", (actual ?? 0) >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]")}>
+              {(actual ?? 0) >= 0 ? "+" : ""}{formatPercent(actual ?? 0)}
             </span>
           </div>
         </div>
@@ -404,11 +404,11 @@ export function GrowthClient({
     const ret = row.cost > 0 ? (diff / row.cost) * 100 : null;
 
     return (
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl text-xs space-y-3 min-w-[240px]">
-        <div className="font-bold border-b border-[var(--color-border)]/40 pb-1.5 flex justify-between items-center text-[var(--color-foreground)]">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-xl p-4 shadow-2xl text-xs space-y-3 min-w-[250px]">
+        <div className="font-extrabold border-b border-[var(--color-border)]/50 pb-2 flex justify-between items-center text-[var(--color-foreground)]">
           <span>{dateLabel}</span>
           {ret != null && (
-            <span className={cn("font-semibold tabular-nums px-1.5 py-0.5 rounded text-[10px]", diff >= 0 ? "bg-[var(--color-profit)]/10 text-[var(--color-profit)]" : "bg-[var(--color-loss)]/10 text-[var(--color-loss)]")}>
+            <span className={cn("font-black tabular-nums px-2 py-0.5 rounded-full text-[10px]", diff >= 0 ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border border-[var(--color-profit)]/30" : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border border-[var(--color-loss)]/30")}>
               {formatPercent(ret)}
             </span>
           )}
@@ -1207,26 +1207,30 @@ export function GrowthClient({
                     >
                       <defs>
                         <linearGradient id="bar-profit-grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-                          <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                          <stop offset="0%" stopColor="#34d399" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.85} />
                         </linearGradient>
                         <linearGradient id="bar-loss-grad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.85} />
-                          <stop offset="100%" stopColor="#e11d48" stopOpacity={1} />
+                          <stop offset="0%" stopColor="#fb7185" stopOpacity={0.95} />
+                          <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.8} />
+                        </linearGradient>
+                        <linearGradient id="area-val-grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid
                         strokeDasharray="3 3"
                         stroke="var(--color-border)"
-                        strokeOpacity={0.3}
+                        strokeOpacity={0.35}
                         vertical={false}
                       />
                       <XAxis
                         dataKey="month"
-                        tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}
+                        tick={{ fontSize: 10, fill: "var(--color-muted)", fontWeight: 700 }}
                         tickLine={false}
-                        axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.5 }}
-                        minTickGap={24}
+                        axisLine={{ stroke: "var(--color-border)", strokeOpacity: 0.6 }}
+                        minTickGap={20}
                       />
                       <YAxis
                         tick={{ fontSize: 11, fill: "var(--color-muted)", fontWeight: 600 }}

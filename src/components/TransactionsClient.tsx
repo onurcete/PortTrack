@@ -397,29 +397,29 @@ export function TransactionsClient({ transactions }: { transactions: TxDTO[] }) 
 
       {/* İşlem Özet Kartları */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] shadow-sm flex items-center justify-between">
+        <div className="bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md flex items-center justify-between backdrop-blur-xl">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">Filtrelenen İşlemler</p>
-            <p className="text-xl font-bold mt-0.5 tabular-nums">{stats.total} adet</p>
+            <p className="text-xl font-black mt-0.5 tabular-nums text-[var(--color-foreground)]">{stats.total} adet</p>
           </div>
-          <Badge className="bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-semibold">Toplam</Badge>
+          <Badge className="bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] font-bold border border-[var(--color-brand)]/20">Toplam</Badge>
         </div>
 
-        <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] shadow-sm flex items-center justify-between">
+        <div className="bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface-muted)]/30 to-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-border)] shadow-md flex items-center justify-between backdrop-blur-xl">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-muted)]">Alış / Satış Dağılımı</p>
-            <p className="text-xl font-bold mt-0.5 tabular-nums">
+            <p className="text-xl font-black mt-0.5 tabular-nums">
               <span className="text-[var(--color-profit)]">{stats.buyCount} Al</span>
-              <span className="text-[var(--color-muted)] mx-1.5">/</span>
+              <span className="text-[var(--color-muted)] mx-1.5 font-normal">/</span>
               <span className="text-[var(--color-loss)]">{stats.sellCount} Sat</span>
             </p>
           </div>
-          <Badge className="bg-[var(--color-surface-muted)] text-[var(--color-muted)] font-semibold">İşlem Yönü</Badge>
+          <Badge className="bg-[var(--color-surface-muted)] text-[var(--color-muted)] font-bold border border-[var(--color-border)]">İşlem Yönü</Badge>
         </div>
       </div>
 
       {/* Arama, Filtreleme ve Dışa Aktarma Çubuğu (Mobilde Tek Satır) */}
-      <div className="flex items-center justify-between gap-1.5 mb-6 bg-[var(--color-surface)] p-2.5 sm:p-3 rounded-2xl border border-[var(--color-border)] shadow-sm">
+      <div className="flex items-center justify-between gap-1.5 mb-6 bg-[var(--color-surface)]/80 backdrop-blur-xl p-2.5 sm:p-3 rounded-2xl border border-[var(--color-border)] shadow-md">
         {/* Sol: Sembol Arama + Tür Seçici + Sıfırla */}
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {/* Sembol Arama Input */}

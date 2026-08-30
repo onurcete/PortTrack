@@ -2455,19 +2455,19 @@ function PositionDetailModal({
             </div>
 
             {/* Grafik Bölümü */}
-            <div className="border border-[var(--color-border)]/40 rounded-xl p-4">
+            <div className="border border-[var(--color-border)] rounded-xl p-4 bg-[var(--color-surface)]/60 backdrop-blur-md shadow-lg">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <h3 className="font-semibold text-sm">Fiyat Geçmişi & İşlem Noktaları</h3>
+                <h3 className="font-bold text-sm tracking-tight">Fiyat Geçmişi & İşlem Noktaları</h3>
                 {/* Zaman dilimi seçimi */}
-                <div className="inline-flex rounded-lg bg-[var(--color-surface-muted)] p-0.5 border border-[var(--color-border)]/40">
+                <div className="inline-flex rounded-lg bg-[var(--color-surface-muted)] p-0.5 border border-[var(--color-border)]">
                   {(["3M", "6M", "1Y", "ALL"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setTimeframe(t)}
                       className={cn(
-                        "rounded-md px-2 py-0.5 text-[11px] font-bold transition-all duration-150 cursor-pointer",
+                        "rounded-md px-2.5 py-1 text-[11px] font-bold transition-all duration-150 cursor-pointer",
                         timeframe === t
-                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm"
+                          ? "bg-[var(--color-surface)] text-[var(--color-brand-strong)] shadow-sm border border-[var(--color-border)]/60"
                           : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                       )}
                     >
@@ -2498,8 +2498,8 @@ function PositionDetailModal({
                     >
                       <defs>
                         <linearGradient id="colorDetails" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--color-brand)" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="var(--color-brand)" stopOpacity={0.0} />
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.28} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid
@@ -2514,13 +2514,13 @@ function PositionDetailModal({
                           const d = new Date(tick);
                           return d.toLocaleDateString("tr-TR", { month: "short", year: "2-digit" });
                         }}
-                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        tick={{ fill: "var(--color-muted)", fontSize: 10, fontWeight: 600 }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <YAxis
                         domain={["auto", "auto"]}
-                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        tick={{ fill: "var(--color-muted)", fontSize: 10, fontWeight: 600 }}
                         tickFormatter={(v) => formatMoney(v, currency, { compact: true })}
                         axisLine={false}
                         tickLine={false}
@@ -2534,13 +2534,14 @@ function PositionDetailModal({
                       {position.quantity > 1e-9 && costVal > 0 && (
                         <ReferenceLine
                           y={costVal}
-                          stroke="var(--color-muted)"
+                          stroke="#6366f1"
                           strokeWidth={1.5}
                           strokeDasharray="4 4"
                           label={{
                             value: `Ort. Maliyet: ${formatMoney(costVal, currency)}`,
-                            fill: "var(--color-muted)",
-                            fontSize: 9,
+                            fill: "#818cf8",
+                            fontSize: 10,
+                            fontWeight: 700,
                             position: "insideTopLeft",
                           }}
                         />
@@ -2549,8 +2550,8 @@ function PositionDetailModal({
                       <Area
                         type="monotone"
                         dataKey={priceKey}
-                        stroke="var(--color-brand)"
-                        strokeWidth={2}
+                        stroke="#10b981"
+                        strokeWidth={2.5}
                         fillOpacity={1}
                         fill="url(#colorDetails)"
                         dot={<CustomDot />}
@@ -2563,19 +2564,19 @@ function PositionDetailModal({
 
             {/* Aylık Performans */}
             {!loading && !error && monthlyPerformances.length > 0 && (
-              <div className="border border-[var(--color-border)]/40 rounded-xl p-4 space-y-3">
-                <h3 className="font-semibold text-sm">Son 1 Yıllık Aylık Performans</h3>
+              <div className="border border-[var(--color-border)] rounded-xl p-4 space-y-3 bg-[var(--color-surface)]/60 backdrop-blur-md">
+                <h3 className="font-bold text-sm tracking-tight">Son 1 Yıllık Aylık Performans</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
                   {monthlyPerformances.map((mp) => (
                     <div
                       key={mp.monthKey}
-                      className="flex flex-col items-center justify-center p-2 rounded-lg border border-[var(--color-border)]/35 text-center select-none"
+                      className="flex flex-col items-center justify-center p-2 rounded-lg border border-[var(--color-border)]/50 text-center select-none shadow-xs"
                       style={getCellStyle(mp.pct)}
                     >
-                      <span className="text-[10px] opacity-75 font-semibold uppercase tracking-wider">
+                      <span className="text-[10px] opacity-80 font-bold uppercase tracking-wider">
                         {monthLabel(mp.monthKey)}
                       </span>
-                      <span className="text-xs font-bold mt-1 tabular-nums">
+                      <span className="text-xs font-black mt-1 tabular-nums">
                         {mp.pct == null ? "–" : formatPercent(mp.pct)}
                       </span>
                     </div>
@@ -2586,26 +2587,32 @@ function PositionDetailModal({
 
             {/* Yatırımcı Sayısı (Son 1 Hafta) */}
             {!loading && !error && position.assetType === "TEFAS" && lastWeekInvestors.length > 0 && (
-              <div className="border border-[var(--color-border)]/40 rounded-xl p-5 space-y-4">
+              <div className="border border-[var(--color-border)] rounded-xl p-5 space-y-4 bg-[var(--color-surface)]/60 backdrop-blur-md shadow-lg">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-[var(--color-text)]">Yatırımcı Sayısı (Son 1 Hafta)</h3>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-strong)] border border-[var(--color-brand)]/25">
+                  <h3 className="font-bold text-sm text-[var(--color-foreground)]">Yatırımcı Sayısı (Son 1 Hafta)</h3>
+                  <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/30">
                     TEFAS
                   </span>
                 </div>
                 <div className="h-44 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={lastWeekInvestors} margin={{ top: 20, right: 5, left: -20, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="barInvestorsLuxe" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#a855f7" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.7} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} vertical={false} />
                       <XAxis
                         dataKey="date"
-                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        tick={{ fill: "var(--color-muted)", fontSize: 10, fontWeight: 600 }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <YAxis
                         domain={["dataMin - 10", "dataMax + 10"]}
-                        tick={{ fill: "var(--color-muted)", fontSize: 10 }}
+                        tick={{ fill: "var(--color-muted)", fontSize: 10, fontWeight: 600 }}
                         tickFormatter={(v) => v.toLocaleString("tr-TR")}
                         axisLine={false}
                         tickLine={false}
@@ -2615,12 +2622,12 @@ function PositionDetailModal({
                         contentStyle={{ backgroundColor: "transparent", border: "none", padding: 0 }}
                         cursor={{ fill: "color-mix(in srgb, var(--color-muted) 12%, transparent)" }}
                       />
-                      <Bar dataKey="investors" fill="var(--color-brand)" radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="investors" fill="url(#barInvestorsLuxe)" radius={[5, 5, 0, 0]}>
                         <LabelList
                           dataKey="investors"
                           position="top"
                           formatter={(v: any) => v != null ? Number(v).toLocaleString("tr-TR") : ""}
-                          style={{ fill: "var(--color-foreground)", fontSize: 9, fontWeight: 600 }}
+                          style={{ fill: "var(--color-foreground)", fontSize: 9, fontWeight: 700 }}
                         />
                       </Bar>
                     </BarChart>
