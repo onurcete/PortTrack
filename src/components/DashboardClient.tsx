@@ -273,24 +273,28 @@ function CombinedReturnCell({
   if (pct === null || amt === null) return null;
   const positive = pct > 0;
   const negative = pct < 0;
+  const isZero = Math.abs(pct) < 0.05;
 
   return (
-    <div className={cn("p-5 flex justify-between items-center gap-4", borderClasses)}>
+    <div className={cn("p-5 flex justify-between items-center gap-4 transition-colors", borderClasses)}>
       {/* Sol Kısım: Ana İstatistikler */}
       <div className="flex flex-col justify-between flex-1 min-w-0">
-        <span className="text-xs font-black uppercase tracking-wider text-[var(--color-foreground)]/80 truncate block">
+        <span className="text-[11px] font-black uppercase tracking-wider text-[var(--color-foreground)]/80 truncate block">
           {label}
         </span>
-        <div className="mt-2.5">
-          <span
-            className={cn(
-              "text-2xl sm:text-3xl font-black tracking-tight tabular-nums block leading-tight",
-              positive ? "text-[var(--color-profit)]" : negative ? "text-[var(--color-loss)]" : "text-[var(--color-muted)]",
-            )}
-          >
-            {formatPercent(pct)}
-          </span>
-          <span className={cn("text-xs font-semibold tabular-nums block mt-1 leading-none", positive ? "text-[var(--color-profit)]/90" : negative ? "text-[var(--color-loss)]/90" : "text-[var(--color-muted)]")}>
+        <div className="mt-2">
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span
+              className={cn(
+                "text-2xl sm:text-3xl font-black tracking-tight tabular-nums inline-flex items-center gap-1 leading-tight",
+                positive ? "text-[var(--color-profit)]" : negative ? "text-[var(--color-loss)]" : "text-[var(--color-muted)]",
+              )}
+            >
+              {!isZero && <span className="text-base select-none">{positive ? "▲" : "▼"}</span>}
+              {formatPercent(pct)}
+            </span>
+          </div>
+          <span className={cn("text-xs font-bold tabular-nums block mt-1 leading-none", positive ? "text-[var(--color-profit)]/90" : negative ? "text-[var(--color-loss)]/90" : "text-[var(--color-muted)]")}>
             {positive ? "+" : ""}
             {formatMoney(amt, currency)}
           </span>
@@ -527,13 +531,14 @@ export function DashboardClient({ data }: { data: DashboardDTO }) {
               <div className="mt-4">
                 <span
                   className={cn(
-                    "px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 border tabular-nums",
+                    "px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 border tabular-nums shadow-xs",
                     dailyChangePct >= 0
-                      ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/15"
-                      : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/15"
+                      ? "bg-[var(--color-profit-soft)] text-[var(--color-profit)] border-[var(--color-profit)]/20"
+                      : "bg-[var(--color-loss-soft)] text-[var(--color-loss)] border-[var(--color-loss)]/20"
                   )}
                 >
-                  BUGÜN
+                  <span className="text-[10px] select-none">{dailyChangePct >= 0 ? "▲" : "▼"}</span>
+                  <span className="font-extrabold">BUGÜN</span>
                   <span>{dailyChangeAmt >= 0 ? "+" : ""}{formatMoney(dailyChangeAmt, currency)}</span>
                   <span>({formatPercent(dailyChangePct)})</span>
                 </span>
