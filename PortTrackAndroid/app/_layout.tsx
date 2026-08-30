@@ -1,18 +1,35 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
+import { useCurrencyStore } from '../stores/currencyStore';
 
 export default function RootLayout() {
-  const checkAuth = useAuthStore((state) => state.checkAuth);
+  const router = useRouter();
+  const segments = useSegments();
+  const { user, isInitialized, checkAuth } = useAuthStore();
   const { theme, loadTheme, mode } = useThemeStore();
+  const loadCurrency = useCurrencyStore((state) => state.loadCurrency);
 
   useEffect(() => {
     checkAuth();
     loadTheme();
+    loadCurrency();
   }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!user && !inAuthGroup) {
+      router.replace('/(auth)/login' as any);
+    } else if (user && inAuthGroup) {
+      router.replace('/(tabs)' as any);
+    }
+  }, [user, isInitialized, segments]);
 
   return (
     <SafeAreaProvider>

@@ -15,6 +15,7 @@ interface AuthState {
 
   // Eylemler
   login: (email: string, password?: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string) => Promise<boolean>;
   loginDemo: () => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -106,6 +107,62 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         isLoading: false,
         error: typeof err?.message === 'string' ? err.message : 'Giriş sırasında hata oluştu.',
+      });
+      return false;
+    }
+  },
+
+  register: async (name: string, email: string, password: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post<{ ok?: boolean; user?: User; token?: string }>('/auth/register', {
+        name,
+        email,
+        password,
+      });
+
+      if (res.data?.ok || res.data?.user) {
+        if (res.data.token) {
+          await api.setToken(res.data.token);
+        }
+
+        let currentUser = res.data.user;
+        if (!currentUser) {
+          const meRes = await api.get<{ user: User }>('/auth/me');
+          currentUser = meRes.data?.user;
+        }
+
+        set({
+          user: currentUser || {
+            id: 'new-user',
+            name,
+            email,
+            role: 'USER',
+            isDemo: false,
+            theme: 'dark',
+            defaultCurrency: 'TRY',
+            dailyDigestEnabled: false,
+          },
+          token: res.data.token || 'registered-token',
+          isLoading: false,
+          error: null,
+        });
+        return true;
+      } else {
+        const errorText =
+          typeof res.error === 'string'
+            ? res.error
+            : (res.error as any)?.message || 'Kayıt yapılamadı.';
+        set({
+          isLoading: false,
+          error: errorText,
+        });
+        return false;
+      }
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: typeof err?.message === 'string' ? err.message : 'Kayıt sırasında hata oluştu.',
       });
       return false;
     }

@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
         : 0;
 
     const totalValueTRY = portfolio.totals.valueTRY || 0;
+    const currentUsdTry = portfolio.currentUsdTry || 1;
 
     const formattedPositions = portfolio.positions.map((pos) => ({
       symbol: pos.symbol,
@@ -48,13 +49,20 @@ export async function GET(req: NextRequest) {
       assetType: pos.assetType,
       quantity: pos.quantity,
       avgCostTRY: pos.avgCostTRY,
+      avgCostUSD: pos.avgCostTRY ? pos.avgCostTRY / currentUsdTry : 0,
       avgCostNative: pos.avgCostNative,
       currentPriceTRY: pos.currentPriceTRY || 0,
+      currentPriceUSD: pos.currentPriceTRY ? pos.currentPriceTRY / currentUsdTry : 0,
       currentPriceNative: pos.currentPriceNative || 0,
       totalCostTRY: pos.costTRY,
+      totalCostUSD: pos.costUSD ?? (pos.costTRY / currentUsdTry),
       currentValueTRY: pos.valueTRY,
+      currentValueUSD: pos.valueUSD ?? (pos.valueTRY / currentUsdTry),
       profitTRY: pos.unrealizedTRY,
+      profitUSD: pos.unrealizedUSD ?? (pos.unrealizedTRY / currentUsdTry),
       profitRate: pos.unrealizedPctTRY,
+      profitRateTRY: pos.unrealizedPctTRY,
+      profitRateUSD: pos.unrealizedPctUSD ?? pos.unrealizedPctTRY,
       dailyChangePct: pos.dailyChangePct ?? 0,
       currency: pos.nativeCurrency || "TRY",
       weightPercent: totalValueTRY > 0 ? pos.valueTRY / totalValueTRY : 0,
@@ -64,6 +72,7 @@ export async function GET(req: NextRequest) {
       type: slice.assetType,
       label: slice.assetType,
       valueTRY: slice.valueTRY,
+      valueUSD: slice.valueUSD ?? (slice.valueTRY / currentUsdTry),
       percent: slice.pct,
       color: "#10b981",
     }));
@@ -71,11 +80,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       totalValueTRY: portfolio.totals.valueTRY,
+      totalValueUSD: portfolio.totals.valueUSD ?? (portfolio.totals.valueTRY / currentUsdTry),
       totalCostTRY: portfolio.totals.costTRY,
+      totalCostUSD: portfolio.totals.costUSD ?? (portfolio.totals.costTRY / currentUsdTry),
       totalProfitTRY: portfolio.totals.unrealizedTRY,
+      totalProfitUSD: portfolio.totals.unrealizedUSD ?? (portfolio.totals.unrealizedTRY / currentUsdTry),
       totalProfitPercent: portfolio.totals.unrealizedPctTRY,
       dailyChangeTRY,
+      dailyChangeUSD: dailyChangeTRY / currentUsdTry,
       dailyChangePercent,
+      currentUsdTry,
       periodReturns,
       positions: formattedPositions,
       assetBreakdown,

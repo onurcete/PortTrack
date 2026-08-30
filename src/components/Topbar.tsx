@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { ThemeToggle } from "./ThemeToggle";
+import { PortTrackLogo } from "./PortTrackLogo";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -75,16 +76,8 @@ export function Topbar() {
       <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md">
         <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-4 md:px-8 flex h-16 items-center justify-between gap-2 md:gap-4">
           {/* Sol Taraf: Logo ve İsim */}
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand)] text-[var(--color-on-brand)] shadow-sm">
-              <Wallet size={18} />
-            </div>
-            <div className="block">
-              <p className="font-bold text-[14px] leading-tight">PortTrack</p>
-              <p className="text-[10px] text-[var(--color-muted)] leading-tight hidden sm:block">
-                Yatırım Takip
-              </p>
-            </div>
+          <Link href="/" className="hover:opacity-90 transition-opacity shrink-0">
+            <PortTrackLogo size={32} variant="horizontal" showTagline={false} />
           </Link>
 
           {/* Masaüstü Orta Bölüm: Yatay Menü Sekmeleri (Sadece md ve üzerinde görünür) */}

@@ -46,15 +46,18 @@ const SECTION_ORDER: { type: AssetType; label: string }[] = [
   { type: 'BES', label: 'Bireysel Emeklilik' },
 ];
 
+import { useCurrencyStore } from '../../stores/currencyStore';
+import { PortTrackLogo } from '../../components/PortTrackLogo';
+
 export default function DashboardScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const { theme, mode, toggleTheme } = useThemeStore();
+  const { currency, isTRY, toggleCurrency } = useCurrencyStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showValues, setShowValues] = useState(true);
-  const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
@@ -106,8 +109,9 @@ export default function DashboardScreen() {
     return map;
   }, [portfolio]);
 
-  const isTRY = currency === 'TRY';
-  const totalValue = isTRY ? (portfolio?.totalValueTRY ?? 0) : (portfolio?.totalValueUSD ?? 0);
+  const totalValue = isTRY
+    ? (portfolio?.totalValueTRY ?? 0)
+    : (portfolio?.totalValueUSD ?? ((portfolio?.totalValueTRY ?? 0) / (portfolio?.currentUsdTry || 1)));
   const pReturns = portfolio?.periodReturns;
 
   // 2x2 Grid için 4 Ana Dönemsel Getiri
@@ -150,15 +154,13 @@ export default function DashboardScreen() {
           },
         ]}
       >
-        <View style={styles.logoGroup}>
-          <View style={[styles.logoIcon, { backgroundColor: theme.brand.primary }]}>
-            <Wallet size={18} color="#ffffff" />
-          </View>
-          <View>
-            <Text style={[styles.brandTitle, { color: theme.text.primary }]}>PortTrack</Text>
-            <Text style={[styles.brandSubtitle, { color: theme.text.muted }]}>Genel Bakış</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={styles.logoGroup}
+          onPress={() => fetchPortfolio()}
+          activeOpacity={0.8}
+        >
+          <PortTrackLogo size={28} variant="horizontal" showTagline={false} themeMode={mode} />
+        </TouchableOpacity>
 
         {/* Sağ Butonlar */}
         <View style={styles.headerActions}>
@@ -167,10 +169,16 @@ export default function DashboardScreen() {
               styles.headerBtn,
               { backgroundColor: theme.surfaceMuted, borderColor: theme.border },
             ]}
-            onPress={() => setCurrency(currency === 'TRY' ? 'USD' : 'TRY')}
+            onPress={() => {
+              haptic.selection();
+              toggleCurrency();
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Coins size={13} color={theme.brand.primary} />
-            <Text style={[styles.headerBtnText, { color: theme.brand.primary }]}>{currency}</Text>
+            <Text style={[styles.headerBtnText, { color: theme.brand.primary }]}>
+              {currency === 'TRY' ? '₺ TL' : '$ USD'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -240,7 +248,10 @@ export default function DashboardScreen() {
             {/* Toplam Portföy Değeri */}
             <View style={styles.heroTopRow}>
               <TouchableOpacity
-                onPress={() => setCurrency(currency === 'TRY' ? 'USD' : 'TRY')}
+                onPress={() => {
+                  haptic.selection();
+                  toggleCurrency();
+                }}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.heroLabel, { color: theme.text.muted }]}>

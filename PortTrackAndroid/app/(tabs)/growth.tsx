@@ -32,17 +32,14 @@ import {
   getAssetTypeBadgeColor,
 } from '../../utils/formatters';
 import { useThemeStore } from '../../stores/themeStore';
+import { useCurrencyStore } from '../../stores/currencyStore';
+import { SelectModal, SelectOption } from '../../components/SelectModal';
+import { haptic } from '../../utils/haptics';
 import { AssetType, PeriodReturns } from '../../types';
 
-interface GrowthByType {
-  BES: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number };
-  BIST: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number };
-  TEFAS: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number };
-  FOREIGN: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number };
-  FX: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number };
-  METAL: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number };
-  CRYPTO: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number };
-}
+export type GrowthByType = Partial<Record<AssetType, { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number }>> & {
+  [key: string]: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number } | undefined;
+};
 
 interface GrowthPoint {
   month: string;
@@ -60,6 +57,12 @@ function getMonthShortLabel(monthKey: string): string {
   return SHORT_MONTHS[(m || 1) - 1] ?? monthKey;
 }
 
+function prevMonthKey(key: string): string {
+  const [y, m] = key.split('-').map(Number);
+  if (m === 1) return `${y - 1}-12`;
+  return `${y}-${String(m - 1).padStart(2, '0')}`;
+}
+
 const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
   { key: 'BES', label: 'BES' },
   { key: 'BIST', label: 'BIST' },
@@ -72,10 +75,10 @@ const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
 
 export default function GrowthScreen() {
   const { theme } = useThemeStore();
+  const { currency, isTRY, toggleCurrency } = useCurrencyStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
 
   // Grafik Seçenekleri
   const [chartMetric, setChartMetric] = useState<'return' | 'value' | 'allocation'>('return');
@@ -87,6 +90,11 @@ export default function GrowthScreen() {
 
   // Kümülatif Yıllık Başlangıç Filtresi
   const [cumulFromYear, setCumulFromYear] = useState<string>('ALL');
+
+  // Listbox Modalları
+  const [chartYearModalOpen, setChartYearModalOpen] = useState(false);
+  const [cumulYearModalOpen, setCumulYearModalOpen] = useState(false);
+  const [tableYearModalOpen, setTableYearModalOpen] = useState(false);
 
   const [series, setSeries] = useState<GrowthPoint[]>([]);
   const [periodReturns, setPeriodReturns] = useState<PeriodReturns | null>(null);
@@ -127,8 +135,6 @@ export default function GrowthScreen() {
     await fetchGrowth();
   }, [fetchGrowth]);
 
-  const isTRY = currency === 'TRY';
-
   // Mevcut Yıllar Listesi
   const availableYears = useMemo(() => {
     const yearsSet = new Set<string>();
@@ -139,17 +145,33 @@ export default function GrowthScreen() {
     return Array.from(yearsSet).sort();
   }, [series]);
 
-  // Filtrelenmiş Grafik Verileri
+  // Ay bazında lookup map
+  const seriesByMonth = useMemo(() => {
+    const map = new Map<string, GrowthPoint>();
+    for (const p of series) {
+      map.set(p.month, p);
+    }
+    return map;
+  }, [series]);
+
+  // Filtrelenmiş Grafik Verileri (Web ile %100 Birebir Hesaplama)
   const chartData = useMemo(() => {
     const filtered =
       chartYear === 'ALL'
         ? series
         : series.filter((p) => p.month.startsWith(chartYear));
 
-    return filtered.map((p, idx) => {
+    const sorted = filtered.slice().sort((a, b) => a.month.localeCompare(b.month));
+
+    return sorted.map((p, idx) => {
       const val = isTRY ? p.valueTRY : p.valueUSD;
-      const prev = idx > 0 ? (isTRY ? filtered[idx - 1].valueTRY : filtered[idx - 1].valueUSD) : null;
-      const returnPct = prev && prev > 0 ? ((val / prev) - 1) * 100 : 0;
+      let prev = idx > 0 ? sorted[idx - 1] : null;
+      if (!prev) {
+        const pk = prevMonthKey(p.month);
+        prev = pk ? (seriesByMonth.get(pk) ?? null) : null;
+      }
+      const prevVal = prev ? (isTRY ? prev.valueTRY : prev.valueUSD) : null;
+      const returnPct = prevVal != null && prevVal > 0 ? ((val / prevVal) - 1) * 100 : 0;
       const [yStr, mStr] = p.month.split('-');
       const label = chartYear === 'ALL' ? `${yStr.slice(2)}.${mStr}` : getMonthShortLabel(p.month);
 
@@ -161,7 +183,22 @@ export default function GrowthScreen() {
         returnPct,
       };
     });
-  }, [series, chartYear, isTRY]);
+  }, [series, chartYear, isTRY, seriesByMonth]);
+
+  // Listbox Seçenekleri
+  const chartYearOptions: SelectOption[] = useMemo(() => [
+    { key: 'ALL', label: 'Tüm Zamanlar' },
+    ...availableYears.map((y) => ({ key: y, label: `${y} Yılı` })),
+  ], [availableYears]);
+
+  const cumulYearOptions: SelectOption[] = useMemo(() => [
+    { key: 'ALL', label: 'Tüm Yıllar (Kümülatif)', subLabel: 'Bütün yılları ve genel toplamı listeler' },
+    ...availableYears.map((y) => ({ key: y, label: `${y} Yılı`, subLabel: `${y} yılı başlangıç ve bitiş getirisi` })),
+  ], [availableYears]);
+
+  const tableYearOptions: SelectOption[] = useMemo(() => [
+    ...availableYears.map((y) => ({ key: y, label: `${y} Yılı` })),
+  ], [availableYears]);
 
   // Dönem Özet Metrikleri (Hero)
   const periodSummary = useMemo(() => {
@@ -306,8 +343,10 @@ export default function GrowthScreen() {
 
     const summaryCells: Record<AssetType, { returnPct: number | null }> = {} as any;
     for (const item of ASSET_COLUMN_KEYS) {
-      const sVal = firstPoint.byType?.[item.key] ? (isTRY ? firstPoint.byType[item.key].valueTRY : firstPoint.byType[item.key].valueUSD) : 0;
-      const eVal = lastPoint.byType?.[item.key] ? (isTRY ? lastPoint.byType[item.key].valueTRY : lastPoint.byType[item.key].valueUSD) : 0;
+      const sItem = firstPoint.byType?.[item.key];
+      const eItem = lastPoint.byType?.[item.key];
+      const sVal = sItem ? (isTRY ? sItem.valueTRY : sItem.valueUSD) : 0;
+      const eVal = eItem ? (isTRY ? eItem.valueTRY : eItem.valueUSD) : 0;
       const ret = sVal > 0 && eVal > 0 ? ((eVal / sVal) - 1) * 100 : null;
       summaryCells[item.key] = { returnPct: ret };
     }
@@ -335,11 +374,16 @@ export default function GrowthScreen() {
 
         <TouchableOpacity
           style={[styles.currencyToggleBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.border }]}
-          onPress={() => setCurrency(currency === 'TRY' ? 'USD' : 'TRY')}
+          onPress={() => {
+            haptic.selection();
+            toggleCurrency();
+          }}
           activeOpacity={0.8}
         >
           <Coins size={13} color={theme.brand.primary} />
-          <Text style={[styles.currencyToggleText, { color: theme.brand.primary }]}>{currency}</Text>
+          <Text style={[styles.currencyToggleText, { color: theme.brand.primary }]}>
+            {currency === 'TRY' ? '₺ TL' : '$ USD'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -493,32 +537,23 @@ export default function GrowthScreen() {
               </View>
             )}
 
-            {/* Yıl Filtresi */}
+            {/* Yıl Filtresi Dropdown (Listbox) */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10 }}>
               <Text style={[styles.chartRangeLabel, { color: theme.text.muted }]}>Dönem Filtresi:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 5 }}>
-                {['ALL', ...availableYears].map((yr) => (
-                  <TouchableOpacity
-                    key={`chart-yr-${yr}`}
-                    style={[
-                      styles.chartYrBtn,
-                      chartYear === yr
-                        ? [styles.activeChartYrBtn, { backgroundColor: theme.brand.primary }]
-                        : { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle, borderWidth: 1 },
-                    ]}
-                    onPress={() => setChartYear(yr)}
-                  >
-                    <Text
-                      style={[
-                        styles.chartYrBtnText,
-                        { color: chartYear === yr ? '#ffffff' : theme.text.muted },
-                      ]}
-                    >
-                      {yr === 'ALL' ? 'Tüm Zamanlar' : `${yr} Yılı`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <TouchableOpacity
+                style={[
+                  styles.chartYearSelectBtn,
+                  { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                ]}
+                onPress={() => setChartYearModalOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Calendar size={13} color={theme.brand.primary} />
+                <Text style={[styles.chartYearSelectText, { color: theme.text.primary }]}>
+                  {chartYear === 'ALL' ? 'Tüm Zamanlar' : `${chartYear} Yılı`}
+                </Text>
+                <ChevronDown size={13} color={theme.text.muted} />
+              </TouchableOpacity>
             </View>
 
             {/* ÇUBUK GRAFİK (BAR CHART) */}
@@ -667,14 +702,11 @@ export default function GrowthScreen() {
                 </Text>
               </View>
 
-              {/* Yıl Filtresi Dropdown */}
+              {/* Yıl Filtresi Dropdown (Listbox) */}
               <TouchableOpacity
                 style={[styles.miniYearFilterBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
-                onPress={() => {
-                  const allChoices = ['ALL', ...availableYears];
-                  const nextIdx = (allChoices.indexOf(cumulFromYear) + 1) % allChoices.length;
-                  setCumulFromYear(allChoices[nextIdx]);
-                }}
+                onPress={() => setCumulYearModalOpen(true)}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.miniYearFilterText, { color: theme.text.primary }]}>
                   {cumulFromYear === 'ALL' ? 'Tüm Yıllar (Kümülatif)' : `${cumulFromYear} Yılı`}
@@ -776,14 +808,11 @@ export default function GrowthScreen() {
                 </Text>
               </View>
 
-              {/* Yıl Seçici */}
+              {/* Yıl Seçici (Listbox) */}
               <TouchableOpacity
                 style={[styles.miniYearFilterBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
-                onPress={() => {
-                  const curIdx = availableYears.indexOf(tableYear);
-                  const nextYear = availableYears[(curIdx + 1) % availableYears.length] || '2026';
-                  setTableYear(nextYear);
-                }}
+                onPress={() => setTableYearModalOpen(true)}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.miniYearFilterText, { color: theme.text.primary }]}>
                   {tableYear} Yılı
@@ -1033,6 +1062,36 @@ export default function GrowthScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* 1. Grafik Dönem Filtresi Modalı */}
+      <SelectModal
+        visible={chartYearModalOpen}
+        title="Grafik Dönemi Seçin"
+        options={chartYearOptions}
+        selectedValue={chartYear}
+        onSelect={(val) => setChartYear(val)}
+        onClose={() => setChartYearModalOpen(false)}
+      />
+
+      {/* 2. Kümülatif Yıllık Özet Filtresi Modalı */}
+      <SelectModal
+        visible={cumulYearModalOpen}
+        title="Kümülatif Başlangıç Yılı"
+        options={cumulYearOptions}
+        selectedValue={cumulFromYear}
+        onSelect={(val) => setCumulFromYear(val)}
+        onClose={() => setCumulYearModalOpen(false)}
+      />
+
+      {/* 3. Aylık Dağılım Yılı Filtresi Modalı */}
+      <SelectModal
+        visible={tableYearModalOpen}
+        title="Aylık Dağılım Yılı"
+        options={tableYearOptions}
+        selectedValue={tableYear}
+        onSelect={(val) => setTableYear(val)}
+        onClose={() => setTableYearModalOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -1158,15 +1217,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   chartRangeLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
-  chartYrBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
+  chartYearSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
   },
-  activeChartYrBtn: {},
+  chartYearSelectText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
   chartYrBtnText: {
     fontSize: 10,
     fontWeight: '700',
