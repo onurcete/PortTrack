@@ -81,20 +81,20 @@ export function getAssetTypeLabel(type: string): string {
 
 export function getAssetTypeBadgeColor(type: string): { bg: string; text: string } {
   switch (type) {
-    case 'BIST':
-      return { bg: 'rgba(59, 130, 246, 0.15)', text: '#60a5fa' };
     case 'TEFAS':
-      return { bg: 'rgba(16, 185, 129, 0.15)', text: '#34d399' };
-    case 'FOREIGN':
-      return { bg: 'rgba(168, 85, 247, 0.15)', text: '#c084fc' };
+      return { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' };
     case 'BES':
-      return { bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24' };
-    case 'CRYPTO':
-      return { bg: 'rgba(236, 72, 153, 0.15)', text: '#f472b6' };
+      return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' };
+    case 'FOREIGN':
+      return { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981' };
     case 'METAL':
-      return { bg: 'rgba(234, 179, 8, 0.15)', text: '#facc15' };
+      return { bg: 'rgba(234, 179, 8, 0.15)', text: '#eab308' };
+    case 'CRYPTO':
+      return { bg: 'rgba(249, 115, 22, 0.15)', text: '#f97316' };
+    case 'BIST':
+      return { bg: 'rgba(6, 182, 212, 0.15)', text: '#06b6d4' };
     case 'FX':
-      return { bg: 'rgba(20, 184, 166, 0.15)', text: '#2dd4bf' };
+      return { bg: 'rgba(99, 102, 241, 0.15)', text: '#6366f1' };
     default:
       return { bg: 'rgba(148, 163, 184, 0.15)', text: '#94a3b8' };
   }

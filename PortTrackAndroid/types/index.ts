@@ -62,6 +62,12 @@ export interface PortfolioPosition {
   dailyChangePct?: number | null;
   currency: string;
   weightPercent: number;
+  realizedTRY?: number;
+  realizedUSD?: number;
+  totalBuyTRY?: number;
+  totalBuyUSD?: number;
+  totalSellTRY?: number;
+  totalSellUSD?: number;
 }
 
 export interface PeriodReturns {

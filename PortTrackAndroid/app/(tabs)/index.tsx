@@ -100,7 +100,7 @@ function DonutChart({
   const validData = data.filter((d) => d.percent > 0);
   const total = validData.reduce((sum, d) => sum + d.percent, 0) || 100;
 
-  let cumulativePercent = 0;
+  let cumulativeLength = 0;
 
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -115,10 +115,11 @@ function DonutChart({
       />
       {validData.map((item, idx) => {
         const itemPercent = (item.percent / total) * 100;
-        const strokeDashoffset = circumference - (cumulativePercent / 100) * circumference;
-        const strokeDasharray = `${(itemPercent / 100) * circumference} ${circumference}`;
-        cumulativePercent += itemPercent;
-        const sliceColor = item.color || getAssetTypeBadgeColor(item.type).text;
+        const sliceLength = (itemPercent / 100) * circumference;
+        const strokeDasharray = `${sliceLength} ${circumference}`;
+        const strokeDashoffset = -cumulativeLength;
+        cumulativeLength += sliceLength;
+        const sliceColor = getAssetTypeBadgeColor(item.type).text || item.color || '#8b5cf6';
 
         return (
           <Circle
@@ -259,15 +260,18 @@ export default function DashboardScreen() {
     );
   }, [portfolio?.positions]);
 
-  // Kapalı Pozisyonlar
+  // Kapalı Pozisyonlar: Web ile %100 aynı mantık (Adet <= 0 ve realize kâr/maliyet/işlem geçmişi olanlar)
   const closedPositions = useMemo(() => {
     if (!portfolio?.positions) return [];
     return portfolio.positions.filter(
       (p) =>
         p.quantity <= 1e-9 &&
-        ((p.profitTRY != null && Math.abs(p.profitTRY) > 0.001) ||
+        ((p.realizedTRY != null && Math.abs(p.realizedTRY) > 0.001) ||
+          (p.totalBuyTRY != null && p.totalBuyTRY > 0) ||
+          (p.profitTRY != null && Math.abs(p.profitTRY) > 0.001) ||
           p.totalCostTRY > 0 ||
-          (p.profitRate != null && Math.abs(p.profitRate) > 0.001))
+          (p.profitRate != null && Math.abs(p.profitRate) > 0.001) ||
+          (p.totalSellTRY != null && p.totalSellTRY > 0))
     );
   }, [portfolio?.positions]);
 
