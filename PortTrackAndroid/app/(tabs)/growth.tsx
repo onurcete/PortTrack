@@ -10,21 +10,17 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, Defs, LinearGradient, Stop, Circle, Text as SvgText, Rect } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle, Text as SvgText } from 'react-native-svg';
 import {
   TrendingUp,
-  TrendingDown,
   Calendar,
   Filter,
   ChevronDown,
   ChevronRight,
-  LayoutGrid,
-  Table as TableIcon,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
   formatCurrency,
-  formatPercent,
   getAssetTypeLabel,
   getAssetTypeBadgeColor,
 } from '../../utils/formatters';
@@ -170,7 +166,7 @@ function ValueLineChart({
       />
 
       <Path d={areaPath} fill="url(#growthAreaGrad)" />
-      <Path d={linePath} fill="none" stroke="#8b5cf6" strokeWidth="2.8" strokeLinecap="round" />
+      <Path d={linePath} fill="none" stroke="#8b5cf6" strokeWidth={2.8} strokeLinecap="round" />
 
       {points.map((p, i) => {
         const isHighest = p.value === Math.max(...values);
@@ -242,19 +238,10 @@ export default function GrowthScreen() {
   const [chartYear, setChartYear] = useState<string>('2026');
 
   // Aylık Dağılım Tablosu Seçenekleri
-  const [monthlyViewMode, setMonthlyViewMode] = useState<'return' | 'amount' | 'share'>('return');
   const [tableYear, setTableYear] = useState<string>('2026');
-
-  // Kümülatif Yıllık Başlangıç Filtresi
-  const [cumulFromYear, setCumulFromYear] = useState<string>('ALL');
-
-  // Görünüm Modları: 'table' (Varsayılan - Screenshot 1:1) | 'cards'
-  const [cumulDisplayMode, setCumulDisplayMode] = useState<'cards' | 'table'>('table');
-  const [monthlyDisplayMode, setMonthlyDisplayMode] = useState<'cards' | 'table'>('table');
 
   // Modallar
   const [chartYearModalOpen, setChartYearModalOpen] = useState(false);
-  const [cumulYearModalOpen, setCumulYearModalOpen] = useState(false);
   const [tableYearModalOpen, setTableYearModalOpen] = useState(false);
 
   const [series, setSeries] = useState<GrowthPoint[]>([]);
@@ -314,7 +301,7 @@ export default function GrowthScreen() {
     return map;
   }, [series]);
 
-  // Filtrelenmiş Grafik Verileri (Web ile %100 Birebir)
+  // Filtrelenmiş Grafik Verileri
   const chartData = useMemo(() => {
     const filtered =
       chartYear === 'ALL'
@@ -350,14 +337,6 @@ export default function GrowthScreen() {
     () => [
       { key: 'ALL', label: 'Tüm Zamanlar' },
       ...availableYears.map((y) => ({ key: y, label: `${y} Yılı` })),
-    ],
-    [availableYears]
-  );
-
-  const cumulYearOptions: SelectOption[] = useMemo(
-    () => [
-      { key: 'ALL', label: 'Tüm Yıllar', subLabel: 'Bütün yılları ve genel toplamı listeler' },
-      ...availableYears.map((y) => ({ key: y, label: `${y} Yılı`, subLabel: `${y} yılı başlangıç ve bitiş getirisi` })),
     ],
     [availableYears]
   );
@@ -403,7 +382,7 @@ export default function GrowthScreen() {
     };
   }, [chartData, series, periodReturns, chartYear, isTRY, fullByMonth]);
 
-  // Kümülatif Yıllık Tablo Satırları (Screenshot 1:1)
+  // Kümülatif Yıllık Tablo Satırları (Temiz, Tek Satır, Yalın Gösterim)
   const cumulativeYearlyRows = useMemo(() => {
     const byYear = new Map<string, GrowthPoint[]>();
     for (const p of series) {
@@ -416,13 +395,8 @@ export default function GrowthScreen() {
 
     const rows: {
       year: string;
-      isOngoing: boolean;
-      startTRY: number;
       endTRY: number;
-      gainTRY: number;
-      startUSD: number;
       endUSD: number;
-      gainUSD: number;
       returnTRY: number | null;
       returnUSD: number | null;
     }[] = [];
@@ -430,8 +404,6 @@ export default function GrowthScreen() {
     const allYears = Array.from(byYear.keys()).sort().reverse();
 
     for (const y of allYears) {
-      if (cumulFromYear !== 'ALL' && y !== cumulFromYear) continue;
-
       const months = byYear.get(y)!.sort((a, b) => a.month.localeCompare(b.month));
       const last = months[months.length - 1];
       const prevDec = fullByMonth.get(`${Number(y) - 1}-12`);
@@ -439,87 +411,54 @@ export default function GrowthScreen() {
 
       const startTRY = first.valueTRY;
       const endTRY = last.valueTRY;
-      const gainTRY = endTRY - startTRY;
       const returnTRY = startTRY > 0 ? ((endTRY / startTRY) - 1) * 100 : null;
 
       const startUSD = first.valueUSD;
       const endUSD = last.valueUSD;
-      const gainUSD = endUSD - startUSD;
       const returnUSD = startUSD > 0 ? ((endUSD / startUSD) - 1) * 100 : null;
-
-      const currentYearStr = String(new Date().getFullYear());
-      const isOngoing = y === currentYearStr;
 
       rows.push({
         year: y,
-        isOngoing,
-        startTRY,
         endTRY,
-        gainTRY,
-        startUSD,
         endUSD,
-        gainUSD,
         returnTRY,
         returnUSD,
       });
     }
 
     return rows;
-  }, [series, cumulFromYear, fullByMonth]);
+  }, [series, fullByMonth]);
 
-  // Aylık Dağılım Tablosu Verileri
-  const monthlyTableData = useMemo(() => {
+  // Aylık Dağılım Tablosu Verileri (Kümülatif Yıllık Formatında Toplam Değerler)
+  const monthlyRows = useMemo(() => {
     const yearPoints = series
       .filter((p) => p.month.startsWith(tableYear))
       .sort((a, b) => a.month.localeCompare(b.month));
 
-    if (yearPoints.length === 0) return { rows: [], yearSummary: null };
+    if (yearPoints.length === 0) return [];
 
-    const rows = yearPoints.map((p, idx) => {
+    return yearPoints.map((p, idx) => {
       const prev = idx > 0 ? yearPoints[idx - 1] : fullByMonth.get(`${Number(tableYear) - 1}-12`);
 
-      const totalVal = isTRY ? p.valueTRY : p.valueUSD;
-      const prevTotal = prev ? (isTRY ? prev.valueTRY : prev.valueUSD) : null;
-      const totalReturnPct = totalVal > 0 && prevTotal && prevTotal > 0
-        ? (totalVal / prevTotal - 1) * 100
-        : null;
+      const valTRY = p.valueTRY;
+      const prevTRY = prev ? prev.valueTRY : null;
+      const returnTRY = prevTRY && prevTRY > 0 ? ((valTRY / prevTRY) - 1) * 100 : null;
 
-      const cells: Record<
-        AssetType,
-        { amount: number; returnPct: number | null; sharePct: number }
-      > = {} as any;
-
-      for (const item of ASSET_COLUMN_KEYS) {
-        const typeData = p.byType?.[item.key];
-        const prevTypeData = prev?.byType?.[item.key];
-
-        const amount = typeData ? (isTRY ? typeData.valueTRY : typeData.valueUSD) : 0;
-        const prevAmount = prevTypeData ? (isTRY ? prevTypeData.valueTRY : prevTypeData.valueUSD) : null;
-
-        const returnPct =
-          prevAmount && prevAmount > 0 && amount > 0
-            ? (amount / prevAmount - 1) * 100
-            : null;
-        const sharePct = totalVal > 0 ? (amount / totalVal) * 100 : 0;
-
-        cells[item.key] = { amount, returnPct, sharePct };
-      }
+      const valUSD = p.valueUSD;
+      const prevUSD = prev ? prev.valueUSD : null;
+      const returnUSD = prevUSD && prevUSD > 0 ? ((valUSD / prevUSD) - 1) * 100 : null;
 
       return {
         monthKey: p.month,
-        totalVal,
-        totalReturnPct,
-        cells,
+        valTRY,
+        valUSD,
+        returnTRY,
+        returnUSD,
       };
     });
+  }, [series, tableYear, fullByMonth]);
 
-    return {
-      rows,
-      yearSummary: null,
-    };
-  }, [series, tableYear, isTRY, fullByMonth]);
-
-  // Bar Chart Y-Ekseni Ölçeği (Screenshot 1:1)
+  // Bar Chart Y-Ekseni Ölçeği
   const returnChartScale = useMemo(() => {
     if (!chartData || chartData.length === 0) {
       return { maxPos: 15, maxNeg: 5, topRatio: 0.75, availableHeight: 140, topHeight: 105, bottomHeight: 35 };
@@ -553,7 +492,7 @@ export default function GrowthScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
-      {/* 1. ÜST BAŞLIK & İKONLAR (Screenshot 1:1) */}
+      {/* 1. ÜST BAŞLIK & İKONLAR */}
       <View style={styles.topHeader}>
         <View>
           <View style={styles.titleRow}>
@@ -581,7 +520,7 @@ export default function GrowthScreen() {
             style={[styles.headerIconBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
             onPress={() => {
               haptic.selection();
-              setCumulYearModalOpen(true);
+              setChartYearModalOpen(true);
             }}
             activeOpacity={0.7}
           >
@@ -622,7 +561,7 @@ export default function GrowthScreen() {
             />
           }
         >
-          {/* 2. ÜST GÖRÜNÜM SEKMELERİ (Aylık Getiri % | Portföy Değeri | Varlık Dağılımı) */}
+          {/* 2. ÜST GÖRÜNÜM SEKMELERİ */}
           <View style={[styles.topTabsContainer, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
             {[
               { key: 'return', label: 'Aylık Getiri %' },
@@ -657,7 +596,7 @@ export default function GrowthScreen() {
             })}
           </View>
 
-          {/* 3. DÖNEM METRİK KARTI (2x2 Grid - Screenshot 1:1) */}
+          {/* 3. DÖNEM METRİK KARTI (2x2 Grid) */}
           {periodSummary && (
             <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
               <View style={styles.kpiRow}>
@@ -965,7 +904,7 @@ export default function GrowthScreen() {
             )}
           </View>
 
-          {/* 5. KÜMÜLATİF YILLIK ÖZET BÖLÜMÜ (Screenshot 1:1) */}
+          {/* 5. KÜMÜLATİF YILLIK ÖZET (Tek ve Yalın Tablo Gösterimi) */}
           <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
             <View style={styles.sectionHeaderRow}>
               <View>
@@ -973,71 +912,17 @@ export default function GrowthScreen() {
                   Kümülatif Yıllık Özet
                 </Text>
                 <Text style={[styles.sectionSubTitle, { color: theme.text.muted }]}>
-                  Yıllara göre büyüme ve net getiri
+                  Yıllara göre kümülatif büyüme ve net getiri
                 </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {/* Kart / Tablo Toggle */}
-                <View style={[styles.viewModeToggle, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                  <TouchableOpacity
-                    style={[
-                      styles.viewModeBtn,
-                      cumulDisplayMode === 'cards' && [styles.activeViewModeBtn, { backgroundColor: '#5b4df5' }],
-                    ]}
-                    onPress={() => {
-                      haptic.selection();
-                      setCumulDisplayMode('cards');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <LayoutGrid size={12} color={cumulDisplayMode === 'cards' ? '#ffffff' : theme.text.muted} />
-                    <Text style={[styles.viewModeText, { color: cumulDisplayMode === 'cards' ? '#ffffff' : theme.text.muted }]}>
-                      Kart
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.viewModeBtn,
-                      cumulDisplayMode === 'table' && [styles.activeViewModeBtn, { backgroundColor: '#5b4df5' }],
-                    ]}
-                    onPress={() => {
-                      haptic.selection();
-                      setCumulDisplayMode('table');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <TableIcon size={12} color={cumulDisplayMode === 'table' ? '#ffffff' : theme.text.muted} />
-                    <Text style={[styles.viewModeText, { color: cumulDisplayMode === 'table' ? '#ffffff' : theme.text.muted }]}>
-                      Tablo
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Filtre Dropdown */}
-                <TouchableOpacity
-                  style={[styles.smallFilterPill, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
-                  onPress={() => {
-                    haptic.selection();
-                    setCumulYearModalOpen(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.smallFilterPillText, { color: theme.text.primary }]}>
-                    {cumulFromYear === 'ALL' ? 'Tüm Yıllar' : `${cumulFromYear} Yılı`}
-                  </Text>
-                  <ChevronDown size={13} color={theme.text.muted} />
-                </TouchableOpacity>
               </View>
             </View>
 
-            {/* Tablo Görünümü (Screenshot 1:1) */}
+            {/* Tablo Görünümü */}
             <View style={styles.tableWrapper}>
               <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <Text style={[styles.thCell, { width: '18%', color: theme.text.muted }]}>YIL</Text>
-                <Text style={[styles.thCell, { width: '28%', color: theme.text.muted }]}>TRY DEĞERİ</Text>
-                <Text style={[styles.thCell, { width: '24%', color: theme.text.muted }]}>USD DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '20%', color: theme.text.muted }]}>YIL</Text>
+                <Text style={[styles.thCell, { width: '27%', color: theme.text.muted }]}>TRY DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '23%', color: theme.text.muted }]}>USD DEĞERİ</Text>
                 <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (TRY)</Text>
                 <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (USD)</Text>
               </View>
@@ -1048,34 +933,23 @@ export default function GrowthScreen() {
 
                 return (
                   <View key={row.year} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
-                    {/* Yıl Kolonu */}
-                    <View style={{ width: '18%', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    {/* Yıl Kolonu (Sade ve Tek Satır) */}
+                    <View style={{ width: '20%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <View style={[styles.rowDot, { backgroundColor: '#8b5cf6' }]} />
-                      <View>
-                        <Text style={[styles.rowYearText, { color: theme.text.primary }]}>{row.year}</Text>
-                        <Text style={[styles.rowStatusSub, { color: row.isOngoing ? '#818cf8' : theme.text.muted }]}>
-                          {row.isOngoing ? 'Devam Ediyor' : 'Tamamlandı'}
-                        </Text>
-                      </View>
+                      <Text style={[styles.rowYearText, { color: theme.text.primary }]}>{row.year}</Text>
                     </View>
 
-                    {/* TRY Değeri */}
-                    <View style={{ width: '28%' }}>
+                    {/* TRY Değeri (Sade Tek Satır) */}
+                    <View style={{ width: '27%' }}>
                       <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
                         {formatCurrency(row.endTRY, 'TRY', 0)}
                       </Text>
-                      <Text style={[styles.rowValueSecondary, { color: isPosTRY ? theme.profit.main : theme.loss.main }]}>
-                        {row.gainTRY >= 0 ? '+' : ''}{formatCurrency(row.gainTRY, 'TRY', 0)} • %{row.returnTRY?.toFixed(1).replace('.', ',')}
-                      </Text>
                     </View>
 
-                    {/* USD Değeri */}
-                    <View style={{ width: '24%' }}>
+                    {/* USD Değeri (Sade Tek Satır) */}
+                    <View style={{ width: '23%' }}>
                       <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
                         {formatCurrency(row.endUSD, 'USD', 0)}
-                      </Text>
-                      <Text style={[styles.rowValueSecondary, { color: '#818cf8' }]}>
-                        {row.gainUSD >= 0 ? '+' : ''}{formatCurrency(row.gainUSD, 'USD', 0)} • %{row.returnUSD?.toFixed(1).replace('.', ',')}
                       </Text>
                     </View>
 
@@ -1088,7 +962,7 @@ export default function GrowthScreen() {
 
                     {/* Getiri USD % */}
                     <View style={{ width: '15%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
-                      <Text style={[styles.rowPctText, { color: '#818cf8' }]}>
+                      <Text style={[styles.rowPctText, { color: isPosUSD ? '#818cf8' : theme.loss.main }]}>
                         %{row.returnUSD != null ? row.returnUSD.toFixed(1).replace('.', ',') : '—'}
                       </Text>
                       <ChevronRight size={12} color={theme.text.muted} />
@@ -1099,7 +973,7 @@ export default function GrowthScreen() {
             </View>
           </View>
 
-          {/* 6. AYLIK DAĞILIM BÖLÜMÜ (Screenshot 1:1) */}
+          {/* 6. AYLIK DAĞILIM (Kümülatif Formatında Toplam Portföy Tablosu) */}
           <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
             <View style={styles.sectionHeaderRow}>
               <View>
@@ -1107,146 +981,86 @@ export default function GrowthScreen() {
                   Aylık Dağılım
                 </Text>
                 <Text style={[styles.sectionSubTitle, { color: theme.text.muted }]}>
-                  Varlıkların bir önceki aya göre getiri yüzdesi (%)
+                  Aylara göre portföy değeri ve getiri oranları
                 </Text>
               </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {/* Kart / Tablo Toggle */}
-                <View style={[styles.viewModeToggle, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                  <TouchableOpacity
-                    style={[
-                      styles.viewModeBtn,
-                      monthlyDisplayMode === 'cards' && [styles.activeViewModeBtn, { backgroundColor: '#5b4df5' }],
-                    ]}
-                    onPress={() => {
-                      haptic.selection();
-                      setMonthlyDisplayMode('cards');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <LayoutGrid size={12} color={monthlyDisplayMode === 'cards' ? '#ffffff' : theme.text.muted} />
-                    <Text style={[styles.viewModeText, { color: monthlyDisplayMode === 'cards' ? '#ffffff' : theme.text.muted }]}>
-                      Kart
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.viewModeBtn,
-                      monthlyDisplayMode === 'table' && [styles.activeViewModeBtn, { backgroundColor: '#5b4df5' }],
-                    ]}
-                    onPress={() => {
-                      haptic.selection();
-                      setMonthlyDisplayMode('table');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <TableIcon size={12} color={monthlyDisplayMode === 'table' ? '#ffffff' : theme.text.muted} />
-                    <Text style={[styles.viewModeText, { color: monthlyDisplayMode === 'table' ? '#ffffff' : theme.text.muted }]}>
-                      Tablo
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Yıl Seçici Dropdown */}
-                <TouchableOpacity
-                  style={[styles.smallFilterPill, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
-                  onPress={() => {
-                    haptic.selection();
-                    setTableYearModalOpen(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.smallFilterPillText, { color: theme.text.primary }]}>
-                    {tableYear} Yılı
-                  </Text>
-                  <ChevronDown size={13} color={theme.text.muted} />
-                </TouchableOpacity>
-              </View>
+              {/* Yıl Seçici Dropdown */}
+              <TouchableOpacity
+                style={[styles.smallFilterPill, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+                onPress={() => {
+                  haptic.selection();
+                  setTableYearModalOpen(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.smallFilterPillText, { color: theme.text.primary }]}>
+                  {tableYear} Yılı
+                </Text>
+                <ChevronDown size={13} color={theme.text.muted} />
+              </TouchableOpacity>
             </View>
 
-            {/* Yatay Kaydırılabilir Aylık Dağılım Tablosu (Screenshot 1:1) */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
-              <View style={styles.monthlyTableWrapper}>
-                <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                  <Text style={[styles.thCell, { width: 72, color: theme.text.muted }]}>AY</Text>
-                  {ASSET_COLUMN_KEYS.map((col) => (
-                    <Text key={col.key} style={[styles.thCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>
-                      {col.label}
-                    </Text>
-                  ))}
-                  <Text style={[styles.thCell, { width: 85, textAlign: 'right', color: theme.text.primary, fontWeight: '800' }]}>
-                    TOPLAM
-                  </Text>
-                </View>
+            {/* Tablo Görünümü (Kümülatif Yıllık İle Birebir Aynı Sütun Düzeni) */}
+            <View style={styles.tableWrapper}>
+              <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                <Text style={[styles.thCell, { width: '20%', color: theme.text.muted }]}>AY</Text>
+                <Text style={[styles.thCell, { width: '27%', color: theme.text.muted }]}>TRY DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '23%', color: theme.text.muted }]}>USD DEĞERİ</Text>
+                <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (TRY)</Text>
+                <Text style={[styles.thCell, { width: '15%', textAlign: 'right', color: theme.text.muted }]}>GETİRİ (USD)</Text>
+              </View>
 
-                {monthlyTableData.rows.map((row) => {
-                  const isTotalPos = (row.totalReturnPct ?? 0) >= 0;
+              {monthlyRows.map((row) => {
+                const isPosTRY = (row.returnTRY ?? 0) >= 0;
+                const isPosUSD = (row.returnUSD ?? 0) >= 0;
 
-                  return (
-                    <View key={row.monthKey} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
-                      <Text style={[styles.tdCell, { width: 72, fontWeight: '800', color: theme.text.primary }]}>
+                return (
+                  <View key={row.monthKey} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
+                    {/* Ay Kolonu */}
+                    <View style={{ width: '20%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={[styles.rowDot, { backgroundColor: '#6366f1' }]} />
+                      <Text style={[styles.rowYearText, { color: theme.text.primary }]}>
                         {row.monthKey.replace('-', '.')}
                       </Text>
+                    </View>
 
-                      {ASSET_COLUMN_KEYS.map((col) => {
-                        const cellData = row.cells[col.key];
-                        if (!cellData || cellData.amount <= 0) {
-                          return (
-                            <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>
-                              —
-                            </Text>
-                          );
-                        }
-
-                        const ret = cellData.returnPct;
-                        if (ret == null) {
-                          return (
-                            <Text key={col.key} style={[styles.tdCell, { width: 85, textAlign: 'right', color: theme.text.muted }]}>
-                              —
-                            </Text>
-                          );
-                        }
-
-                        const isPos = ret >= 0;
-                        return (
-                          <Text
-                            key={col.key}
-                            style={[
-                              styles.tdCell,
-                              {
-                                width: 85,
-                                textAlign: 'right',
-                                fontWeight: '700',
-                                color: isPos ? theme.profit.main : theme.loss.main,
-                              },
-                            ]}
-                          >
-                            {isPos ? '▲ %' : '▼ %'}{Math.abs(ret).toFixed(1).replace('.', ',')}
-                          </Text>
-                        );
-                      })}
-
-                      {/* Toplam Kolonu */}
-                      <Text
-                        style={[
-                          styles.tdCell,
-                          {
-                            width: 85,
-                            textAlign: 'right',
-                            fontWeight: '800',
-                            color: isTotalPos ? theme.profit.main : theme.loss.main,
-                          },
-                        ]}
-                      >
-                        {isTotalPos ? '▲ %' : '▼ %'}{Math.abs(row.totalReturnPct ?? 0).toFixed(1).replace('.', ',')}
+                    {/* TRY Değeri */}
+                    <View style={{ width: '27%' }}>
+                      <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
+                        {formatCurrency(row.valTRY, 'TRY', 0)}
                       </Text>
                     </View>
-                  );
-                })}
-              </View>
-            </ScrollView>
+
+                    {/* USD Değeri */}
+                    <View style={{ width: '23%' }}>
+                      <Text style={[styles.rowValuePrimary, { color: theme.text.primary }]}>
+                        {formatCurrency(row.valUSD, 'USD', 0)}
+                      </Text>
+                    </View>
+
+                    {/* Getiri TRY % */}
+                    <View style={{ width: '15%', alignItems: 'flex-end', justifyContent: 'center' }}>
+                      <Text style={[styles.rowPctText, { color: isPosTRY ? theme.profit.main : theme.loss.main }]}>
+                        {row.returnTRY != null
+                          ? `${isPosTRY ? '▲ %' : '▼ %'}${Math.abs(row.returnTRY).toFixed(1).replace('.', ',')}`
+                          : '—'}
+                      </Text>
+                    </View>
+
+                    {/* Getiri USD % */}
+                    <View style={{ width: '15%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+                      <Text style={[styles.rowPctText, { color: isPosUSD ? '#818cf8' : theme.loss.main }]}>
+                        {row.returnUSD != null
+                          ? `${isPosUSD ? '▲ %' : '▼ %'}${Math.abs(row.returnUSD).toFixed(1).replace('.', ',')}`
+                          : '—'}
+                      </Text>
+                      <ChevronRight size={12} color={theme.text.muted} />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         </ScrollView>
       )}
@@ -1262,15 +1076,6 @@ export default function GrowthScreen() {
           if (key !== 'ALL') setTableYear(key);
         }}
         onClose={() => setChartYearModalOpen(false)}
-      />
-
-      <SelectModal
-        visible={cumulYearModalOpen}
-        title="Kümülatif Yıllık Filtresi"
-        options={cumulYearOptions}
-        selectedValue={cumulFromYear}
-        onSelect={setCumulFromYear}
-        onClose={() => setCumulYearModalOpen(false)}
       />
 
       <SelectModal
@@ -1530,25 +1335,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
-  viewModeToggle: {
-    flexDirection: 'row',
-    borderRadius: 10,
-    padding: 2,
-    borderWidth: 1,
-  },
-  viewModeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  activeViewModeBtn: {},
-  viewModeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
   smallFilterPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1566,28 +1352,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  monthlyTableWrapper: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
   tableHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 8,
     marginBottom: 4,
   },
   thCell: {
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
   tableBodyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
   },
   rowDot: {
@@ -1599,27 +1381,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
-  rowStatusSub: {
-    fontSize: 8.5,
-    fontWeight: '600',
-    marginTop: 1,
-  },
   rowValuePrimary: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
-  },
-  rowValueSecondary: {
-    fontSize: 9.5,
-    fontWeight: '600',
-    marginTop: 1,
   },
   rowPctText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
-  },
-  tdCell: {
-    fontSize: 11,
-    paddingVertical: 2,
   },
   centerLoading: {
     flex: 1,
