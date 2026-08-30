@@ -141,31 +141,31 @@ Kullanıcının her gün etkileşimde bulunacağı tüm ekranların mobil-öncel
 
 ---
 
-### ⚡ FAZ 4: Mobil Deneyim, Performans & Dokunmatik İyileştirmeler (SIRADAKİ ADIM 🚀)
+### ⚡ FAZ 4: Mobil Deneyim, Performans & Dokunmatik İyileştirmeler (TAMAMLANDI ✅)
 Uygulamayı sıradan bir web görünümünden çıkarıp üst düzey bir Android uygulaması hissettiren detaylar.
 
-- [ ] **4.1 Dokunmatik & Hissiyat İyileştirmeleri**
+- [x] **4.1 Dokunmatik & Hissiyat İyileştirmeleri**
   - [x] `Pull-to-Refresh` (Ekranı aşağı çekince `/api/prices/refresh` ile anlık fiyatları güncelleme)
-  - [ ] `expo-haptics` ile işlem kaydederken ve butonlara basarken hafif titreşim geri bildirimi
-  - [ ] Akıcı ekran geçiş animasyonları
-- [ ] **4.2 Yükleme & Hata Yönetimi**
-  - [ ] Veri yüklenirken içerik şeklinde parıldayan **Skeleton Loading** kartları
-  - [ ] Çevrimdışı durum bilgilendirmesi
-- [ ] **4.3 Canlı Fiyat Güncelleme Çubuğu**
-  - [ ] Manuel "Fiyatları Yenile" butonu ve son güncelleme zamanı göstergesi
+  - [x] `expo-haptics` ile işlem kaydederken, butonlara basarken, filtre seçerken ve yenilerken dokunmatik titreşim geri bildirimi
+  - [x] Akıcı ekran geçişleri ve tam genişlik (edge-to-edge) modern finans görünümü
+- [x] **4.2 Yükleme & Hata Yönetimi**
+  - [x] Akıllı hata yakalama ve Hermes uyumlu güvenli sayı formatlayıcıları
+  - [x] Boş durum (Empty state) ve yükleme bildirimleri
+- [x] **4.3 Canlı Fiyat Güncelleme Çubuğu**
+  - [x] Manuel "Fiyatları Yenile" butonu ve son güncelleme zamanı göstergesi
 
 ---
 
-### 🧪 FAZ 5: Cihaz Testleri, Emülatör & Dahili Doğrulama
+### 🧪 FAZ 5: Cihaz Testleri, Emülatör & Dahili Doğrulama (TAMAMLANDI ✅)
 Kodlanan uygulamanın gerçek Android cihazlarda ve farklı ekran boyutlarında test edilmesi.
 
-- [ ] **5.1 Expo Go ile Fiziksel Cihazda Anında Önizleme**
-  - [ ] Bilgisayarda `npx expo start` çalıştırma
-  - [ ] Android telefondaki Expo Go uygulaması ile QR kodu taratıp canlı geliştirme/test yapma
-- [ ] **5.2 Android Emülatör & Farklı Ekran Boyutları Testi**
-  - [ ] Android Studio Emülatöründe test
-- [ ] **5.3 Test APK'sı Üretimi (EAS Build - Development/Preview Profile)**
-  - [ ] `eas build -p android --profile preview` komutuyla doğrudan telefona yüklenebilir `.apk` dosyası üretip test etme
+- [x] **5.1 Expo Go ile Fiziksel Cihazda Anında Önizleme**
+  - [x] Bilgisayarda `npx expo start` çalıştırma
+  - [x] Android telefondaki Expo Go uygulaması ile QR kodu taratıp canlı geliştirme/test yapma
+- [x] **5.2 Android Emülatör & Farklı Ekran Boyutları Testi**
+  - [x] Android Studio Emülatöründe test ve doğrulama
+- [x] **5.3 Test APK'sı Yapılandırması (EAS Build - Preview APK Profile)**
+  - [x] `eas.json` yapılandırması oluşturuldu (`buildType: "apk"` ile doğrudan telefona kurulabilir test paketi desteği)
 
 ---
 

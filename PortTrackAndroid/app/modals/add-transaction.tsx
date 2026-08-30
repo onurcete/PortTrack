@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import { useThemeStore } from '../../stores/themeStore';
+import { haptic } from '../../utils/haptics';
 import {
   formatCurrency,
   getAssetTypeLabel,
@@ -107,6 +108,7 @@ export default function AddTransactionModal() {
 
   // Arama Sonucuna Dokunulduğunda
   const selectSearchResult = async (item: SearchResult) => {
+    haptic.selection();
     setSymbol(item.symbol);
     setAssetName(item.name);
     setAssetType(item.assetType);
@@ -121,6 +123,7 @@ export default function AddTransactionModal() {
       if (res.data?.data) {
         setUnitPrice(res.data.data.price.toFixed(2));
         setCurrency(res.data.data.currency || 'TRY');
+        haptic.light();
       }
     } catch (err) {
       console.error('Fiyat çekme hatası:', err);
@@ -134,8 +137,12 @@ export default function AddTransactionModal() {
   const calculatedTotal = numQty * numPrice;
 
   // Hızlı Tarih Seçenekleri
-  const setToday = () => setDate(new Date().toISOString().slice(0, 10));
+  const setToday = () => {
+    haptic.light();
+    setDate(new Date().toISOString().slice(0, 10));
+  };
   const setYesterday = () => {
+    haptic.light();
     const d = new Date();
     d.setDate(d.getDate() - 1);
     setDate(d.toISOString().slice(0, 10));
@@ -143,10 +150,12 @@ export default function AddTransactionModal() {
 
   const handleSave = async () => {
     if (!symbol.trim()) {
+      haptic.error();
       Alert.alert('Eksik Bilgi', 'Lütfen bir sembol veya hisse/fon kodu girin.');
       return;
     }
     if (numQty <= 0 || numPrice <= 0) {
+      haptic.error();
       Alert.alert('Eksik Bilgi', 'Lütfen geçerli adet ve birim fiyat girin.');
       return;
     }
@@ -166,11 +175,14 @@ export default function AddTransactionModal() {
       });
 
       if (res.error) {
+        haptic.error();
         Alert.alert('Hata', res.error);
       } else {
+        haptic.success();
         router.back();
       }
     } catch (err: any) {
+      haptic.error();
       Alert.alert('Hata', 'İşlem kaydedilirken bir sorun oluştu.');
     } finally {
       setSubmitting(false);

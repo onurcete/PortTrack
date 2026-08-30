@@ -33,6 +33,7 @@ import {
 } from '../../utils/formatters';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { haptic } from '../../utils/haptics';
 import { PortfolioSummary, PortfolioPosition, AssetType } from '../../types';
 
 const SECTION_ORDER: { type: AssetType; label: string }[] = [
@@ -76,14 +77,17 @@ export default function DashboardScreen() {
   }, [fetchPortfolio]);
 
   const onRefresh = useCallback(async () => {
+    haptic.medium();
     setRefreshing(true);
     try {
       await api.post('/prices/refresh');
     } catch {}
     await fetchPortfolio();
+    haptic.success();
   }, [fetchPortfolio]);
 
   const toggleSection = (type: string) => {
+    haptic.selection();
     setCollapsedSections((prev) => ({
       ...prev,
       [type]: !prev[type],
