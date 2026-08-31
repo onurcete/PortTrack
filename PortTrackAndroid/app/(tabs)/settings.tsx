@@ -239,7 +239,7 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={[styles.menuLabel, { color: theme.text.primary }]}>Uygulama Sürümü</Text>
               </View>
-              <Text style={[styles.menuValue, { color: theme.text.muted }]}>v1.0.1 (Build 2)</Text>
+              <Text style={[styles.menuValue, { color: theme.text.muted }]}>v1.0.2 (Build 3)</Text>
             </View>
 
             <View style={styles.menuItem}>
