@@ -14,7 +14,8 @@
       "backgroundColor": "#090d16"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.porttrack.app"
     },
     "android": {
       "adaptiveIcon": {
