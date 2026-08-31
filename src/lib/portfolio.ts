@@ -243,7 +243,7 @@ export function computePositions(
 
   for (const [symbol, r] of bySymbol) {
     const open = r.qty > EPS;
-    const isBes = r.assetType === "BES" || symbol.toUpperCase() === "BES";
+    const isBes = r.assetType === "BES" && symbol.toUpperCase() === "BES";
     const priceInfo = prices.get(symbol);
     // BES gibi sabit bakiyeli kalemlerde sahte kâr/zarar oluşmasını önlemek için
     const validPrice = priceInfo && Number.isFinite(priceInfo.priceTRY) && (!isBes || priceInfo.priceTRY > 1.01);

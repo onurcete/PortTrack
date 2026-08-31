@@ -6,6 +6,7 @@
 export type AssetType =
   | 'BIST'
   | 'TEFAS'
+  | 'BES_FUND'
   | 'FOREIGN'
   | 'FX'
   | 'METAL'

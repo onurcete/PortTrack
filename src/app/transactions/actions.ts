@@ -633,8 +633,8 @@ export async function searchSymbols(
     }
   }
 
-  // 4. Search TEFAS cached list (both for TEFAS and BES asset types)
-  if (assetType === "TEFAS" || assetType === "BES") {
+  // 4. Search TEFAS cached list (for TEFAS, BES_FUND and BES asset types)
+  if (assetType === "TEFAS" || assetType === "BES_FUND" || assetType === "BES") {
     try {
       const tefasFunds = await getCachedTefasFunds();
       const cleanQ = normalizedQ.replace(/[\s\-_]/g, "");
@@ -652,10 +652,22 @@ export async function searchSymbols(
 
       for (const match of matches) {
         if (!results.some((r) => r.symbol === match.symbol)) {
+          const isPensionFund =
+            match.name.toUpperCase().includes("EMEKLİLİK") ||
+            match.name.toUpperCase().includes("OKS");
+          const targetType: AssetType =
+            assetType === "BES_FUND"
+              ? "BES_FUND"
+              : assetType === "BES"
+                ? "BES_FUND"
+                : isPensionFund
+                  ? "BES_FUND"
+                  : "TEFAS";
+
           results.push({
             symbol: match.symbol,
             name: match.name,
-            assetType: assetType,
+            assetType: targetType,
             source: "yahoo",
           });
         }
@@ -666,7 +678,7 @@ export async function searchSymbols(
         results.push({
           symbol: q,
           name: `${q} Fonu`,
-          assetType: assetType,
+          assetType: assetType === "BES" || assetType === "BES_FUND" ? "BES_FUND" : "TEFAS",
           source: "yahoo",
         });
       }

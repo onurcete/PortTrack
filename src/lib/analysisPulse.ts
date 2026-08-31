@@ -16,13 +16,13 @@ export const ANALYSIS_TABS: {
   { key: "TEFAS", label: "TEFAS Fonlar", types: ["TEFAS"] },
   { key: "STOCKS", label: "Hisse", types: ["FOREIGN", "BIST"] },
   { key: "ALT", label: "Alternatif", types: ["METAL", "CRYPTO", "FX"] },
-  { key: "BES", label: "BES", types: ["BES"] },
+  { key: "BES", label: "BES", types: ["BES", "BES_FUND"] },
 ];
 
 export function tabKeyForAssetType(assetType: AssetType): AnalysisTabKey {
   if (assetType === "TEFAS") return "TEFAS";
   if (assetType === "FOREIGN" || assetType === "BIST") return "STOCKS";
-  if (assetType === "BES") return "BES";
+  if (assetType === "BES" || assetType === "BES_FUND") return "BES";
   return "ALT";
 }
 

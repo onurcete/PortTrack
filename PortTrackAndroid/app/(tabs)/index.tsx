@@ -51,6 +51,7 @@ const windowWidth = Dimensions.get('window').width;
 
 const SECTION_ORDER: { type: AssetType; label: string }[] = [
   { type: 'TEFAS', label: 'Yatırım Fonları' },
+  { type: 'BES_FUND', label: 'BES Fonları' },
   { type: 'BES', label: 'Bireysel Emeklilik' },
   { type: 'FOREIGN', label: 'Yabancı Hisseler' },
   { type: 'BIST', label: 'BIST Hisseleri' },
@@ -101,6 +102,7 @@ function getSymbolAvatarStyle(symbol: string, assetType: string): { bg: string; 
     for (let i = 0; i < symbol.length; i++) h += symbol.charCodeAt(i);
     return tefasPalette[h % tefasPalette.length];
   }
+  if (assetType === 'BES_FUND') return { bg: '#0ea5e9', text: '#ffffff' };
   if (assetType === 'BES') return { bg: '#0284c7', text: '#ffffff' };
   if (assetType === 'FOREIGN') return { bg: '#8b5cf6', text: '#ffffff' };
   if (assetType === 'BIST') return { bg: '#2563eb', text: '#ffffff' };

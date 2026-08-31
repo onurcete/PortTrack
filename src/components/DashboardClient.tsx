@@ -49,6 +49,7 @@ import {
 /** Açık pozisyon bölüm sırası */
 const POSITION_SECTION_ORDER: AssetType[] = [
   "TEFAS",
+  "BES_FUND",
   "FOREIGN",
   "BIST",
   "FX",
@@ -821,6 +822,8 @@ function AssetTypeIcon({ assetType, size = 14 }: { assetType: AssetType; size?: 
       return <TrendingUp size={size} />;
     case "TEFAS":
       return <Layers size={size} />;
+    case "BES_FUND":
+      return <ShieldCheck size={size} />;
     case "FOREIGN":
       return <Globe size={size} />;
     case "FX":

@@ -208,7 +208,7 @@ export async function getPortfolio(userId: string): Promise<PortfolioData> {
   for (const inst of instruments) {
     if (inst.manualPrice !== null && inst.manualPrice !== undefined) {
       // BES gibi sabit bakiyeli kalemlerde varsayılan dummy 1 ₺ manuel fiyatını es geç
-      if ((inst.assetType === "BES" || inst.symbol.toUpperCase() === "BES") && inst.manualPrice <= 1) {
+      if (inst.symbol.toUpperCase() === "BES" && inst.assetType === "BES" && inst.manualPrice <= 1) {
         continue;
       }
       const map = resolvePriceMapping(inst.assetType as AssetType, inst.symbol);

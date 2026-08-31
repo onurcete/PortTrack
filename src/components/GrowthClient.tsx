@@ -36,6 +36,7 @@ import { GrowthAiCommentary } from "./GrowthAiCommentary";
 /** Tablo kolon sirasi (kullanici oncelikli gruplama) */
 const TABLE_TYPES: AssetType[] = [
   "BES",
+  "BES_FUND",
   "BIST",
   "TEFAS",
   "FOREIGN",

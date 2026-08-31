@@ -70,6 +70,7 @@ export function getAssetTypeLabel(type: string): string {
   const map: Record<string, string> = {
     BIST: 'BIST Hisse',
     TEFAS: 'Yatırım Fonu',
+    BES_FUND: 'BES Fon',
     FOREIGN: 'Yabancı Hisse',
     FX: 'Döviz',
     METAL: 'Kıymetli Maden',
@@ -83,6 +84,8 @@ export function getAssetTypeBadgeColor(type: string): { bg: string; text: string
   switch (type) {
     case 'TEFAS':
       return { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' };
+    case 'BES_FUND':
+      return { bg: 'rgba(14, 165, 233, 0.15)', text: '#0ea5e9' };
     case 'BES':
       return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' };
     case 'FOREIGN':

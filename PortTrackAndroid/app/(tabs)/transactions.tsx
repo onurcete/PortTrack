@@ -40,6 +40,7 @@ import { PortTrackLogo } from '../../components/PortTrackLogo';
 const ASSET_TYPE_FILTERS: { key: AssetType | 'ALL'; label: string }[] = [
   { key: 'ALL', label: 'Tüm Varlıklar' },
   { key: 'TEFAS', label: 'Fonlar (TEFAS)' },
+  { key: 'BES_FUND', label: 'BES Fonları' },
   { key: 'FOREIGN', label: 'Yabancı Hisseler' },
   { key: 'BIST', label: 'BIST Hisseleri' },
   { key: 'BES', label: 'Bireysel Emeklilik' },

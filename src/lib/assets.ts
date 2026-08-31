@@ -3,6 +3,7 @@
 export type AssetType =
   | "BIST"
   | "TEFAS"
+  | "BES_FUND"
   | "FOREIGN"
   | "FX"
   | "METAL"
@@ -19,6 +20,7 @@ export interface AssetMeta {
 export const ASSET_META: Record<AssetType, AssetMeta> = {
   BIST: { label: "BIST", color: "#2563eb" },
   TEFAS: { label: "TEFAS Fon", color: "#7c3aed" },
+  BES_FUND: { label: "BES Fon", color: "#0ea5e9" },
   FOREIGN: { label: "Yabanci Borsa", color: "#0891b2" },
   FX: { label: "Doviz", color: "#059669" },
   METAL: { label: "Kiymetli Maden", color: "#d97706" },
@@ -45,6 +47,7 @@ export interface AssetTypeResolution {
 export const ASSET_TYPE_ALIASES: Record<AssetType, readonly string[]> = {
   BIST: ["bist", "bıst", "borsa istanbul", "hisse", "hisse senedi"],
   TEFAS: ["fon", "tefas", "tefas fon", "tefas fonu"],
+  BES_FUND: ["bes fon", "bes fonu", "emeklilik fonu", "emeklilik yatirim fonu"],
   FOREIGN: [
     "nasdaq",
     "nyse",
@@ -183,6 +186,7 @@ export function resolvePriceMapping(
       };
 
     case "TEFAS":
+    case "BES_FUND":
       return { source: "tefas", tefasCode: s, currency: "TRY" };
 
     case "FX": {
@@ -225,6 +229,9 @@ export function resolvePriceMapping(
     }
 
     case "BES":
+      if (s === "BES") {
+        return { source: "manual", currency: "TRY" };
+      }
       return { source: "tefas", tefasCode: s, currency: "TRY" };
     default:
       return { source: "manual", currency: "TRY" };

@@ -87,6 +87,7 @@ function formatCompactMoney(value: number, currency: 'TRY' | 'USD'): string {
 
 const ASSET_COLORS: Record<AssetType, string> = {
   BES: '#3b82f6',
+  BES_FUND: '#0ea5e9',
   BIST: '#06b6d4',
   TEFAS: '#a855f7',
   FOREIGN: '#10b981',
@@ -97,6 +98,7 @@ const ASSET_COLORS: Record<AssetType, string> = {
 
 const ASSET_COLUMN_KEYS: { key: AssetType; label: string }[] = [
   { key: 'BES', label: 'BES' },
+  { key: 'BES_FUND', label: 'BES FON' },
   { key: 'BIST', label: 'BIST' },
   { key: 'TEFAS', label: 'TEFAS FON' },
   { key: 'FOREIGN', label: 'YABANCI HİSSE' },

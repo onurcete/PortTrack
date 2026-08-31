@@ -82,8 +82,12 @@ export async function refreshPrices(options?: {
   const failed: string[] = [];
   let updated = 0;
 
-  const tefasSymbols = symbols.filter((s) => s.assetType === "TEFAS");
-  const otherSymbols = symbols.filter((s) => s.assetType !== "TEFAS");
+  const tefasSymbols = symbols.filter(
+    (s) => s.assetType === "TEFAS" || s.assetType === "BES_FUND" || (s.assetType === "BES" && s.symbol !== "BES")
+  );
+  const otherSymbols = symbols.filter(
+    (s) => s.assetType !== "TEFAS" && s.assetType !== "BES_FUND" && !(s.assetType === "BES" && s.symbol !== "BES")
+  );
 
   // TEFAS İÇİN AKILLI KONTROL:
   // 1. force=true ise (kullanıcı manuel "Fiyatları Güncelle"ye bastığında veya yeni işlem eklendiğinde) -> SAAT KAÇ OLURSA OLSUN ÇEK!

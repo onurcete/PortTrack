@@ -50,11 +50,12 @@ interface AssetTypeOption {
 const ASSET_TYPE_CARDS: AssetTypeOption[] = [
   { type: 'BIST', label: 'BIST Hisseleri', icon: BarChart2 },
   { type: 'TEFAS', label: 'Yatırım Fonları', icon: PieChart },
+  { type: 'BES_FUND', label: 'BES Fonları', icon: ShieldCheck },
   { type: 'FOREIGN', label: 'Yabancı Hisseler', icon: Globe },
   { type: 'CRYPTO', label: 'Kripto Paralar', icon: Coins },
   { type: 'FX', label: 'Döviz', icon: DollarSign },
   { type: 'METAL', label: 'Kıymetli Maden', icon: Layers },
-  { type: 'BES', label: 'BES Fonları', icon: ShieldCheck },
+  { type: 'BES', label: 'Bireysel Emeklilik', icon: ShieldCheck },
 ];
 
 interface SearchResult {

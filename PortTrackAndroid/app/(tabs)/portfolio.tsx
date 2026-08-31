@@ -26,6 +26,7 @@ const CATEGORIES: { key: string; label: string }[] = [
   { key: 'ALL', label: 'Tümü' },
   { key: 'BIST', label: 'BIST Hisse' },
   { key: 'TEFAS', label: 'Fonlar' },
+  { key: 'BES_FUND', label: 'BES Fon' },
   { key: 'FOREIGN', label: 'Yabancı Hisse' },
   { key: 'BES', label: 'BES' },
   { key: 'CRYPTO', label: 'Kripto' },
