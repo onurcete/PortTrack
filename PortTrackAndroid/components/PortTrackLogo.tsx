@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useThemeStore } from '../stores/themeStore';
 
 interface PortTrackLogoProps {
   size?: number;
@@ -13,10 +14,11 @@ export function PortTrackLogo({
   size = 48,
   variant = 'vertical',
   showTagline = true,
-  themeMode = 'dark',
+  themeMode,
 }: PortTrackLogoProps) {
+  const { mode } = useThemeStore();
   const iconSize = size;
-  const isDark = themeMode === 'dark';
+  const isDark = (themeMode || mode) === 'dark';
 
   const iconElement = (
     <Svg width={iconSize} height={iconSize} viewBox="0 0 100 100" fill="none">
@@ -27,8 +29,8 @@ export function PortTrackLogo({
           <Stop offset="100%" stopColor="#4f46e5" />
         </LinearGradient>
         <LinearGradient id="bar1Grad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <Stop offset="0%" stopColor="#ffffff" />
-          <Stop offset="100%" stopColor="#e2e8f0" />
+          <Stop offset="0%" stopColor={isDark ? '#ffffff' : '#334155'} />
+          <Stop offset="100%" stopColor={isDark ? '#e2e8f0' : '#1e293b'} />
         </LinearGradient>
         <LinearGradient id="bar2Grad" x1="0%" y1="0%" x2="0%" y2="100%">
           <Stop offset="0%" stopColor="#a78bfa" />
@@ -58,7 +60,7 @@ export function PortTrackLogo({
         fill="url(#pMainGrad)"
       />
 
-      {/* 1. Bar: Sol Kısa Çubuk (Beyaz / Aydınlık Kavis) */}
+      {/* 1. Bar: Sol Kısa Çubuk */}
       <Path
         d="M 22 88
            C 22 75, 27 65, 33 55
@@ -108,7 +110,7 @@ export function PortTrackLogo({
             </Text>
           </View>
           {showTagline && (
-            <Text style={[styles.tagline, { fontSize: Math.max(9, size * 0.16) }]}>
+            <Text style={[styles.tagline, { fontSize: Math.max(9, size * 0.16), color: isDark ? '#94a3b8' : '#64748b' }]}>
               YATIRIM TAKİP PLATFORMU
             </Text>
           )}
@@ -117,7 +119,7 @@ export function PortTrackLogo({
     );
   }
 
-  // Vertical (Stacked) Variant (Matching Image 1 & 2)
+  // Vertical (Stacked) Variant
   return (
     <View style={styles.verticalContainer}>
       <View style={styles.iconWrapper}>{iconElement}</View>
@@ -130,7 +132,7 @@ export function PortTrackLogo({
         </Text>
       </View>
       {showTagline && (
-        <Text style={[styles.tagline, { fontSize: Math.max(10, size * 0.18) }]}>
+        <Text style={[styles.tagline, { fontSize: Math.max(10, size * 0.18), color: isDark ? '#94a3b8' : '#64748b' }]}>
           Yatırım Takip Platformu
         </Text>
       )}
@@ -168,7 +170,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   tagline: {
-    color: '#94a3b8',
     fontWeight: '600',
     letterSpacing: 0.8,
     marginTop: 3,

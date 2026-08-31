@@ -87,6 +87,51 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    const userId = await getUserId(req);
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Yetkisiz erişim." }, { status: 401 });
+    }
+
+    const body = await req.json().catch(() => null);
+    if (!body || !body.id) {
+      return NextResponse.json({ ok: false, error: "İşlem ID belirtilmedi." }, { status: 400 });
+    }
+
+    const tx = await prisma.transaction.update({
+      where: { id: body.id },
+      data: {
+        date: body.date ? new Date(body.date) : undefined,
+        assetType: body.assetType,
+        symbol: body.symbol ? body.symbol.toUpperCase().trim() : undefined,
+        side: body.side,
+        unitPrice: body.unitPrice != null ? Number(body.unitPrice) : undefined,
+        quantity: body.quantity != null ? Number(body.quantity) : undefined,
+        total:
+          body.total != null
+            ? Number(body.total)
+            : body.unitPrice != null && body.quantity != null
+            ? Number(body.unitPrice) * Number(body.quantity)
+            : undefined,
+        currency: body.currency,
+        note: body.note !== undefined ? (body.note?.trim() || null) : undefined,
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      transaction: tx,
+    });
+  } catch (err: any) {
+    console.error("❌ Transactions API PUT Error:", err);
+    return NextResponse.json(
+      { ok: false, error: "İşlem güncellenemedi." },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const userId = await getUserId(req);

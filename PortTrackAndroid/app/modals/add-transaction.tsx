@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   X,
   Check,
@@ -80,19 +80,33 @@ function formatDisplayToIso(displayStr: string): string {
 
 export default function AddTransactionModal() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    id?: string;
+    symbol?: string;
+    side?: string;
+    assetType?: string;
+    quantity?: string;
+    unitPrice?: string;
+    currency?: string;
+    date?: string;
+    note?: string;
+  }>();
+  const isEdit = Boolean(params.id);
   const { theme } = useThemeStore();
 
-  const [side, setSide] = useState<TransactionSide>('BUY');
-  const [assetType, setAssetType] = useState<AssetType>('BIST');
-  const [symbol, setSymbol] = useState('');
+  const initialDateDisplay = params.date
+    ? formatDateToDisplay(params.date.slice(0, 10))
+    : formatDateToDisplay(new Date().toISOString().slice(0, 10));
+
+  const [side, setSide] = useState<TransactionSide>((params.side as TransactionSide) || 'BUY');
+  const [assetType, setAssetType] = useState<AssetType>((params.assetType as AssetType) || 'BIST');
+  const [symbol, setSymbol] = useState(params.symbol || '');
   const [assetName, setAssetName] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
-  const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
-  const [dateDisplay, setDateDisplay] = useState<string>(
-    formatDateToDisplay(new Date().toISOString().slice(0, 10))
-  );
-  const [note, setNote] = useState('');
+  const [quantity, setQuantity] = useState(params.quantity || '');
+  const [unitPrice, setUnitPrice] = useState(params.unitPrice || '');
+  const [currency, setCurrency] = useState<'TRY' | 'USD'>((params.currency as 'TRY' | 'USD') || 'TRY');
+  const [dateDisplay, setDateDisplay] = useState<string>(initialDateDisplay);
+  const [note, setNote] = useState(params.note || '');
   const [submitting, setSubmitting] = useState(false);
 
   // Canlı Arama State'leri
@@ -196,7 +210,8 @@ export default function AddTransactionModal() {
     setSubmitting(true);
     try {
       const isoDate = formatDisplayToIso(dateDisplay);
-      const res = await api.post('/transactions', {
+      const payload = {
+        id: params.id,
         assetType,
         symbol: symbol.trim().toUpperCase(),
         side,
@@ -206,7 +221,11 @@ export default function AddTransactionModal() {
         currency,
         date: new Date(isoDate).toISOString(),
         note: note.trim() || undefined,
-      });
+      };
+
+      const res = isEdit
+        ? await api.put('/transactions', payload)
+        : await api.post('/transactions', payload);
 
       if (res.error) {
         haptic.error();
@@ -217,7 +236,7 @@ export default function AddTransactionModal() {
       }
     } catch (err: any) {
       haptic.error();
-      Alert.alert('Hata', 'İşlem kaydedilirken bir sorun oluştu.');
+      Alert.alert('Hata', isEdit ? 'İşlem güncellenirken bir sorun oluştu.' : 'İşlem kaydedilirken bir sorun oluştu.');
     } finally {
       setSubmitting(false);
     }
@@ -232,9 +251,11 @@ export default function AddTransactionModal() {
 
       <View style={[styles.header, { borderBottomColor: theme.borderSubtle }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: theme.text.primary }]}>Yeni İşlem Ekle</Text>
+          <Text style={[styles.headerTitle, { color: theme.text.primary }]}>
+            {isEdit ? 'İşlemi Düzenle' : 'Yeni İşlem Ekle'}
+          </Text>
           <Text style={[styles.headerSubtitle, { color: theme.text.muted }]}>
-            Portföyünüze yatırım, alım veya satış işlemi ekleyin.
+            {isEdit ? 'Portföyünüzdeki bu işlem hareketini güncelleyin.' : 'Portföyünüze yatırım, alım veya satış işlemi ekleyin.'}
           </Text>
         </View>
 
@@ -581,7 +602,9 @@ export default function AddTransactionModal() {
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Check size={18} color="#ffffff" strokeWidth={2.5} />
-              <Text style={styles.saveBtnText}>İşlemi Kaydet</Text>
+              <Text style={styles.saveBtnText}>
+                {isEdit ? 'Değişiklikleri Kaydet' : (side === 'BUY' ? 'Alış İşlemini Kaydet' : 'Satış İşlemini Kaydet')}
+              </Text>
             </View>
           )}
         </TouchableOpacity>

@@ -11,9 +11,13 @@ import {
   ScrollView,
   Modal,
   TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Svg, { Path } from 'react-native-svg';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import {
   User as UserIcon,
   UserPlus,
@@ -30,12 +34,39 @@ import { useThemeStore } from '../../stores/themeStore';
 import { PortTrackLogo } from '../../components/PortTrackLogo';
 import { haptic } from '../../utils/haptics';
 
+WebBrowser.maybeCompleteAuthSession();
+
+// Google 4-Renk SVG İkonu
+function GoogleIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <Path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      />
+      <Path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      />
+    </Svg>
+  );
+}
+
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, register, loginDemo, isLoading, error, clearError } = useAuthStore();
-  const { theme } = useThemeStore();
+  const { login, register, loginGoogle, loginDemo, isLoading, error, clearError } = useAuthStore();
+  const { theme, mode } = useThemeStore();
 
   const [authModalType, setAuthModalType] = useState<'login' | 'register' | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -51,6 +82,30 @@ export default function LoginScreen() {
   const handleCloseModal = () => {
     setAuthModalType(null);
     clearError();
+  };
+
+  const handleGoogleLogin = async () => {
+    haptic.medium();
+    setGoogleLoading(true);
+    try {
+      const authUrl = 'https://port-track-ten.vercel.app/api/auth/google?mobile=true';
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, 'porttrack://');
+      if (result.type === 'success' && result.url) {
+        const parsed = Linking.parse(result.url);
+        const token = parsed.queryParams?.token as string;
+        if (token) {
+          await loginGoogle(token);
+          haptic.success();
+          setAuthModalType(null);
+          router.replace('/(tabs)' as any);
+        }
+      }
+    } catch (err) {
+      console.error('Google login error:', err);
+      Alert.alert('Hata', 'Google ile giriş yapılırken bir sorun oluştu.');
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -84,17 +139,17 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: mode === 'dark' ? '#060814' : theme.bg.primary }]} edges={['top', 'bottom']}>
       {/* Arka Plan Ambient Parlama */}
       <View style={styles.ambientGlow} pointerEvents="none" />
 
       <View style={styles.contentWrapper}>
         {/* Üst Logo ve Başlık Bölümü */}
         <View style={styles.heroSection}>
-          <PortTrackLogo size={90} variant="vertical" showTagline={true} themeMode="dark" />
+          <PortTrackLogo size={90} variant="vertical" showTagline={true} />
 
           {/* Slogan Metni */}
-          <Text style={styles.taglineText}>
+          <Text style={[styles.taglineText, { color: theme.text.secondary }]}>
             Tüm yatırımlarını <Text style={styles.taglineHighlight}>tek yerde</Text> takip et,{'\n'}
             performansını net şekilde gör.
           </Text>
@@ -102,34 +157,53 @@ export default function LoginScreen() {
 
         {/* Alt Butonlar & Aksiyonlar */}
         <View style={styles.actionsSection}>
-          {/* 1. Giriş Yap Butonu (Mor Gradient Görünümlü Ana Buton) */}
+          {/* 1. Google İle Giriş Yap Butonu (Web ile Birebir Uyumlu) */}
+          <TouchableOpacity
+            style={[styles.googleBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
+            onPress={handleGoogleLogin}
+            disabled={googleLoading}
+            activeOpacity={0.85}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#8b5cf6" />
+            ) : (
+              <>
+                <GoogleIcon size={20} />
+                <Text style={[styles.googleBtnText, { color: theme.text.primary }]}>
+                  Google İle Giriş Yap
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* VEYA Ayracı */}
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: theme.borderSubtle }]} />
+            <Text style={[styles.dividerText, { color: theme.text.muted }]}>veya e-posta ile</Text>
+            <View style={[styles.dividerLine, { backgroundColor: theme.borderSubtle }]} />
+          </View>
+
+          {/* 2. Giriş Yap Butonu (Mor Gradient Görünümlü Ana Buton) */}
           <TouchableOpacity
             style={styles.primaryBtn}
             onPress={() => handleOpenModal('login')}
             activeOpacity={0.85}
           >
-            <UserIcon size={20} color="#ffffff" />
+            <UserIcon size={19} color="#ffffff" />
             <Text style={styles.primaryBtnText}>Giriş Yap</Text>
           </TouchableOpacity>
 
-          {/* 2. Üye Ol Butonu (Koyu Çerçeveli İkincil Buton) */}
+          {/* 3. Üye Ol Butonu (Koyu Çerçeveli İkincil Buton) */}
           <TouchableOpacity
-            style={styles.secondaryBtn}
+            style={[styles.secondaryBtn, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
             onPress={() => handleOpenModal('register')}
             activeOpacity={0.85}
           >
-            <UserPlus size={20} color="#e0e7ff" />
-            <Text style={styles.secondaryBtnText}>Üye Ol</Text>
+            <UserPlus size={19} color={theme.text.primary} />
+            <Text style={[styles.secondaryBtnText, { color: theme.text.primary }]}>Yeni Hesap Oluştur</Text>
           </TouchableOpacity>
 
-          {/* VEYA Ayracı */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>veya</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* 3. Demo Hesabı İncele */}
+          {/* 4. Demo Hesabı İncele */}
           <TouchableOpacity
             style={styles.demoLinkBtn}
             onPress={handleDemoAccess}
@@ -164,14 +238,14 @@ export default function LoginScreen() {
             <View style={styles.backdropOverlay} />
           </TouchableWithoutFeedback>
 
-          <View style={styles.sheetContainer}>
+          <View style={[styles.sheetContainer, { backgroundColor: theme.surface }]}>
             {/* Sheet Header */}
             <View style={styles.sheetHeader}>
               <View>
-                <Text style={styles.sheetTitle}>
+                <Text style={[styles.sheetTitle, { color: theme.text.primary }]}>
                   {authModalType === 'login' ? 'Giriş Yap' : 'Yeni Hesap Oluştur'}
                 </Text>
-                <Text style={styles.sheetSubtitle}>
+                <Text style={[styles.sheetSubtitle, { color: theme.text.muted }]}>
                   {authModalType === 'login'
                     ? 'Portföyünüze erişmek için bilgilerinizi girin'
                     : 'PortTrack ile yatırımlarınızı hemen yönetmeye başlayın'}
@@ -179,11 +253,36 @@ export default function LoginScreen() {
               </View>
               <TouchableOpacity
                 onPress={handleCloseModal}
-                style={styles.sheetCloseBtn}
+                style={[styles.sheetCloseBtn, { backgroundColor: theme.surfaceMuted }]}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <X size={18} color="#94a3b8" />
+                <X size={18} color={theme.text.muted} />
               </TouchableOpacity>
+            </View>
+
+            {/* Modal İçi Google Giriş Butonu */}
+            <TouchableOpacity
+              style={[styles.googleBtnModal, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+              onPress={handleGoogleLogin}
+              disabled={googleLoading}
+              activeOpacity={0.85}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#8b5cf6" />
+              ) : (
+                <>
+                  <GoogleIcon size={18} />
+                  <Text style={[styles.googleBtnText, { color: theme.text.primary, fontSize: 13 }]}>
+                    {authModalType === 'login' ? 'Google İle Giriş Yap' : 'Google İle Kaydol'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <View style={[styles.dividerRow, { marginVertical: 14 }]}>
+              <View style={[styles.dividerLine, { backgroundColor: theme.borderSubtle }]} />
+              <Text style={[styles.dividerText, { color: theme.text.muted }]}>veya bilgilerinizle</Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.borderSubtle }]} />
             </View>
 
             {/* Hata Kutusu */}
@@ -203,13 +302,13 @@ export default function LoginScreen() {
             >
               {authModalType === 'register' && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Ad Soyad</Text>
-                  <View style={styles.inputWrapper}>
-                    <UserIcon size={18} color="#64748b" style={{ marginRight: 10 }} />
+                  <Text style={[styles.inputLabel, { color: theme.text.secondary }]}>Ad Soyad</Text>
+                  <View style={[styles.inputWrapper, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                    <UserIcon size={18} color={theme.text.muted} style={{ marginRight: 10 }} />
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, { color: theme.text.primary }]}
                       placeholder="Adınız Soyadınız"
-                      placeholderTextColor="#475569"
+                      placeholderTextColor={theme.text.muted}
                       value={name}
                       onChangeText={(t) => {
                         clearError();
@@ -222,13 +321,13 @@ export default function LoginScreen() {
               )}
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>E-posta Adresi</Text>
-                <View style={styles.inputWrapper}>
-                  <Mail size={18} color="#64748b" style={{ marginRight: 10 }} />
+                <Text style={[styles.inputLabel, { color: theme.text.secondary }]}>E-posta Adresi</Text>
+                <View style={[styles.inputWrapper, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                  <Mail size={18} color={theme.text.muted} style={{ marginRight: 10 }} />
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { color: theme.text.primary }]}
                     placeholder="ornek@email.com"
-                    placeholderTextColor="#475569"
+                    placeholderTextColor={theme.text.muted}
                     value={email}
                     onChangeText={(t) => {
                       clearError();
@@ -241,13 +340,13 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Şifre</Text>
-                <View style={styles.inputWrapper}>
-                  <Lock size={18} color="#64748b" style={{ marginRight: 10 }} />
+                <Text style={[styles.inputLabel, { color: theme.text.secondary }]}>Şifre</Text>
+                <View style={[styles.inputWrapper, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                  <Lock size={18} color={theme.text.muted} style={{ marginRight: 10 }} />
                   <TextInput
-                    style={styles.textInput}
+                    style={[styles.textInput, { color: theme.text.primary }]}
                     placeholder="••••••••"
-                    placeholderTextColor="#475569"
+                    placeholderTextColor={theme.text.muted}
                     value={password}
                     onChangeText={(t) => {
                       clearError();
@@ -287,7 +386,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#060814',
   },
   ambientGlow: {
     position: 'absolute',
@@ -297,7 +395,6 @@ const styles = StyleSheet.create({
     height: 380,
     borderRadius: 190,
     backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    filter: 'blur(50px)',
   },
   contentWrapper: {
     flex: 1,
@@ -315,70 +412,92 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
     textAlign: 'center',
-    color: '#94a3b8',
     marginTop: 28,
     fontWeight: '500',
-    paddingHorizontal: 12,
   },
   taglineHighlight: {
-    color: '#a78bfa',
-    fontWeight: '700',
+    color: '#818cf8',
+    fontWeight: '800',
   },
   actionsSection: {
-    gap: 12,
-    paddingBottom: 20,
+    width: '100%',
+    gap: 11,
+    paddingBottom: 16,
   },
-  primaryBtn: {
+  googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6366f1',
+    paddingVertical: 14,
     borderRadius: 16,
-    height: 54,
     gap: 10,
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  googleBtnModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    borderRadius: 14,
+    gap: 10,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  googleBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  primaryBtn: {
+    backgroundColor: '#6366f1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    borderRadius: 16,
+    gap: 8,
     shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
   },
   primaryBtnText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 0.2,
   },
   secondaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0f1429',
+    paddingVertical: 15,
     borderRadius: 16,
-    height: 54,
-    gap: 10,
+    gap: 8,
     borderWidth: 1,
-    borderColor: '#3730a3',
   },
   secondaryBtnText: {
-    color: '#e0e7ff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 6,
+    gap: 12,
+    marginVertical: 4,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#1e293b',
   },
   dividerText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '600',
-    marginHorizontal: 12,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   demoLinkBtn: {
     flexDirection: 'row',
@@ -389,72 +508,57 @@ const styles = StyleSheet.create({
   },
   demoLinkText: {
     color: '#818cf8',
-    fontSize: 14.5,
+    fontSize: 13,
     fontWeight: '700',
   },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   backdropOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   sheetContainer: {
-    backgroundColor: '#0f1322',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    borderBottomWidth: 0,
     paddingHorizontal: 24,
-    paddingTop: 22,
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 24,
+    paddingTop: 24,
+    paddingBottom: 36,
   },
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   sheetTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#ffffff',
-    letterSpacing: -0.4,
   },
   sheetSubtitle: {
-    fontSize: 12.5,
-    color: '#94a3b8',
-    marginTop: 3,
-    maxWidth: 260,
+    fontSize: 12,
+    marginTop: 4,
   },
   sheetCloseBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#1e293b',
     justifyContent: 'center',
     alignItems: 'center',
   },
   errorBox: {
-    backgroundColor: 'rgba(244, 63, 94, 0.12)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
     borderWidth: 1,
-    borderColor: '#f43f5e',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 14,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
   },
   errorText: {
-    color: '#fb7185',
-    fontSize: 12.5,
+    color: '#f87171',
+    fontSize: 12,
     fontWeight: '600',
-    textAlign: 'center',
   },
   inputGroup: {
     gap: 6,
@@ -462,32 +566,34 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#cbd5e1',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#070a14',
-    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1e293b',
-    height: 50,
+    borderRadius: 14,
     paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
   },
   textInput: {
     flex: 1,
-    color: '#ffffff',
-    fontSize: 14.5,
+    fontSize: 14,
+    fontWeight: '600',
   },
   sheetSubmitBtn: {
+    backgroundColor: '#6366f1',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6366f1',
-    borderRadius: 14,
-    height: 50,
+    paddingVertical: 15,
+    borderRadius: 16,
     gap: 8,
     marginTop: 8,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 3,
   },
   sheetSubmitBtnText: {
     color: '#ffffff',

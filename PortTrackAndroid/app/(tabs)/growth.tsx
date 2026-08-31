@@ -455,7 +455,7 @@ export default function GrowthScreen() {
 
     if (yearPoints.length === 0) return [];
 
-    return yearPoints.map((p, idx) => {
+    const calculatedRows = yearPoints.map((p, idx) => {
       const prev = idx > 0 ? yearPoints[idx - 1] : fullByMonth.get(`${Number(tableYear) - 1}-12`);
 
       const valTRY = p.valueTRY;
@@ -475,6 +475,9 @@ export default function GrowthScreen() {
         returnUSD,
       };
     });
+
+    // En güncel ay en yukarıda olsun
+    return calculatedRows.reverse();
   }, [series, tableYear, fullByMonth]);
 
   // Bar Chart Y-Ekseni Ölçeği
@@ -669,17 +672,17 @@ export default function GrowthScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.chartPillDropdown, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}
+                style={[
+                  styles.headerIconBtn,
+                  { width: 34, height: 34, backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                ]}
                 onPress={() => {
                   haptic.selection();
                   setChartYearModalOpen(true);
                 }}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.chartPillDropdownText, { color: theme.text.primary }]}>
-                  {chartYear === 'ALL' ? 'Tüm Yıllar' : `${chartYear} Yılı`}
-                </Text>
-                <ChevronDown size={13} color={theme.text.muted} />
+                <Calendar size={16} color={theme.text.primary} />
               </TouchableOpacity>
             </View>
 

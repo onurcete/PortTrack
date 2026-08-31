@@ -30,6 +30,7 @@ import {
   TrendingDown,
   Layers,
   Sparkles,
+  Clock,
 } from 'lucide-react-native';
 import { api } from '../../services/api';
 import {
@@ -58,7 +59,33 @@ const SECTION_ORDER: { type: AssetType; label: string }[] = [
   { type: 'FX', label: 'Döviz Varlıkları' },
 ];
 
-type TimeframeOption = '1G' | '1H' | '1A' | '3A' | '1Y' | 'ALL';
+type TimeframeOption = '1G' | '1H' | 'MTD' | '1A' | '3A' | 'YTD' | '1Y';
+
+const TIMEFRAME_BUTTONS: { key: TimeframeOption; label: string }[] = [
+  { key: '1G', label: '1G' },
+  { key: '1H', label: '1H' },
+  { key: 'MTD', label: 'MTD' },
+  { key: '1A', label: '1 Ay' },
+  { key: '3A', label: '3 Ay' },
+  { key: 'YTD', label: 'YTD' },
+  { key: '1Y', label: '1 Yıl' },
+];
+
+function formatLastUpdated(dateStr?: string | null): string {
+  if (!dateStr) return 'Son Fiyatlar';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  } catch {
+    return dateStr;
+  }
+}
 
 // Sembol Avatarı Renk Üreticisi
 function getSymbolAvatarStyle(symbol: string, assetType: string): { bg: string; text: string } {
@@ -318,13 +345,19 @@ export default function DashboardScreen() {
         return {
           pct: isTRY ? pReturns?.weeklyTRY ?? 0 : pReturns?.weeklyUSD ?? 0,
           amt: isTRY ? pReturns?.weeklyAmtTRY ?? 0 : pReturns?.weeklyAmtUSD ?? 0,
-          label: 'Bu hafta',
+          label: 'Bu Hafta (5 İşlem Günü)',
         };
-      case '1A':
+      case 'MTD':
         return {
           pct: isTRY ? pReturns?.mtdTRY ?? 0 : pReturns?.mtdUSD ?? 0,
           amt: isTRY ? pReturns?.mtdAmtTRY ?? 0 : pReturns?.mtdAmtUSD ?? 0,
-          label: 'Bu ay (MTD)',
+          label: 'Cari Ay (MTD)',
+        };
+      case '1A':
+        return {
+          pct: isTRY ? pReturns?.monthlyTRY ?? pReturns?.mtdTRY ?? 0 : pReturns?.monthlyUSD ?? pReturns?.mtdUSD ?? 0,
+          amt: isTRY ? pReturns?.monthlyAmtTRY ?? pReturns?.mtdAmtTRY ?? 0 : pReturns?.monthlyAmtUSD ?? pReturns?.mtdAmtUSD ?? 0,
+          label: 'Son 1 Ay (30 Gün)',
         };
       case '3A':
         return {
@@ -336,7 +369,14 @@ export default function DashboardScreen() {
             : pReturns?.threeMonthsAmtUSD ?? (pReturns?.monthlyAmtUSD != null ? pReturns.monthlyAmtUSD * 2.2 : (pReturns?.mtdAmtUSD != null ? pReturns.mtdAmtUSD * 2.5 : 0)),
           label: 'Son 3 Ay',
         };
+      case 'YTD':
+        return {
+          pct: isTRY ? pReturns?.ytdTRY ?? 0 : pReturns?.ytdUSD ?? 0,
+          amt: isTRY ? pReturns?.ytdAmtTRY ?? 0 : pReturns?.ytdAmtUSD ?? 0,
+          label: 'Yıl Başından Beri (YTD)',
+        };
       case '1Y':
+      default:
         return {
           pct: isTRY
             ? pReturns?.oneYearTRY ?? pReturns?.ytdTRY ?? 0
@@ -346,17 +386,8 @@ export default function DashboardScreen() {
             : pReturns?.oneYearAmtUSD ?? pReturns?.ytdAmtUSD ?? 0,
           label: 'Son 1 Yıl',
         };
-      case 'ALL':
-      default:
-        return {
-          pct: portfolio?.totalProfitPercent ?? 0,
-          amt: isTRY
-            ? portfolio?.totalProfitTRY ?? 0
-            : portfolio?.totalProfitUSD ?? (portfolio?.totalProfitTRY ?? 0) / (portfolio?.currentUsdTry || 1),
-          label: 'Toplam Kâr/Zarar',
-        };
     }
-  }, [timeframe, isTRY, pReturns, portfolio]);
+  }, [timeframe, isTRY, pReturns]);
 
   // Seçili Döneme Göre Sentetik / Akıcı Çizgi Noktaları
   const chartPoints = useMemo(() => {
@@ -469,9 +500,11 @@ export default function DashboardScreen() {
               <Text style={[styles.heroSubTitle, { color: theme.text.muted }]}>
                 TOPLAM PORTFÖY DEĞERİ ({currency})
               </Text>
-              <View style={[styles.statusBadge, { backgroundColor: theme.profit.soft }]}>
-                <View style={[styles.statusDot, { backgroundColor: theme.profit.main }]} />
-                <Text style={[styles.statusBadgeText, { color: theme.profit.main }]}>Güncel</Text>
+              <View style={[styles.statusBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 }]}>
+                <Clock size={10} color={theme.text.muted} />
+                <Text style={[styles.statusBadgeText, { color: theme.text.muted, fontSize: 10, fontWeight: '700' }]}>
+                  {formatLastUpdated(portfolio?.lastUpdated)}
+                </Text>
               </View>
             </View>
 
@@ -521,21 +554,20 @@ export default function DashboardScreen() {
               />
             </View>
 
-            {/* Zaman Filtresi Sekmeleri (1G | 1H | 1A | 3A | 1Y | Tümü) */}
+            {/* Zaman Filtresi Sekmeleri (1G | 1H | MTD | 1 Ay | 3 Ay | YTD | 1 Yıl) */}
             <View style={styles.timeframeRow}>
-              {(['1G', '1H', '1A', '3A', '1Y', 'ALL'] as TimeframeOption[]).map((tf) => {
-                const isActive = timeframe === tf;
-                const label = tf === 'ALL' ? 'Tümü' : tf;
+              {TIMEFRAME_BUTTONS.map((tf) => {
+                const isActive = timeframe === tf.key;
                 return (
                   <TouchableOpacity
-                    key={tf}
+                    key={tf.key}
                     style={[
                       styles.timeframeBtn,
                       isActive && [styles.timeframeBtnActive, { backgroundColor: '#5b4df5' }],
                     ]}
                     onPress={() => {
                       haptic.selection();
-                      setTimeframe(tf);
+                      setTimeframe(tf.key);
                     }}
                     activeOpacity={0.8}
                   >
@@ -546,7 +578,7 @@ export default function DashboardScreen() {
                         isActive && { fontWeight: '900' },
                       ]}
                     >
-                      {label}
+                      {tf.label}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -1033,9 +1065,9 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   timeframeBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 9,
   },
   timeframeBtnActive: {
     shadowColor: '#5b4df5',
@@ -1045,7 +1077,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   timeframeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
   },
   sectionCard: {

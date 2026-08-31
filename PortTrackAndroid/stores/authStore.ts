@@ -16,6 +16,7 @@ interface AuthState {
   // Eylemler
   login: (email: string, password?: string) => Promise<boolean>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
+  loginGoogle: (token: string) => Promise<boolean>;
   loginDemo: () => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -170,6 +171,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         isLoading: false,
         error: typeof err?.message === 'string' ? err.message : 'Kayıt sırasında hata oluştu.',
+      });
+      return false;
+    }
+  },
+
+  loginGoogle: async (token: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await api.setToken(token);
+      const meRes = await api.get<{ user: User }>('/auth/me');
+      if (meRes.data?.user) {
+        set({
+          user: meRes.data.user,
+          token,
+          isLoading: false,
+          error: null,
+          isInitialized: true,
+        });
+        return true;
+      } else {
+        set({
+          token,
+          isLoading: false,
+          error: null,
+          isInitialized: true,
+        });
+        return true;
+      }
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: 'Google girişi tamamlanamadı.',
       });
       return false;
     }

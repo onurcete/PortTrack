@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Linking from 'expo-linking';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -9,7 +10,7 @@ import { useCurrencyStore } from '../stores/currencyStore';
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
-  const { user, isInitialized, checkAuth } = useAuthStore();
+  const { user, isInitialized, checkAuth, loginGoogle } = useAuthStore();
   const { theme, loadTheme, mode } = useThemeStore();
   const loadCurrency = useCurrencyStore((state) => state.loadCurrency);
 
@@ -17,6 +18,24 @@ export default function RootLayout() {
     checkAuth();
     loadTheme();
     loadCurrency();
+
+    // Deep Link ile Google Girişini Dinle
+    const handleUrl = async (url: string | null) => {
+      if (!url) return;
+      if (url.includes('auth-callback') || url.includes('token=')) {
+        const parsed = Linking.parse(url);
+        const token = parsed.queryParams?.token as string;
+        if (token) {
+          await loginGoogle(token);
+          router.replace('/(tabs)' as any);
+        }
+      }
+    };
+
+    Linking.getInitialURL().then(handleUrl);
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {

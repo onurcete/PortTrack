@@ -5,9 +5,13 @@ import { AUTH_COOKIE, createSession } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const error = req.nextUrl.searchParams.get("error");
+  const state = req.nextUrl.searchParams.get("state");
   const origin = req.nextUrl.origin;
 
   if (error || !code) {
+    if (state === "mobile") {
+      return NextResponse.redirect(`porttrack://auth-callback?error=google_cancelled`);
+    }
     return NextResponse.redirect(`${origin}/login?error=google_cancelled`);
   }
 
@@ -15,6 +19,9 @@ export async function GET(req: NextRequest) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
+    if (state === "mobile") {
+      return NextResponse.redirect(`porttrack://auth-callback?error=google_config_missing`);
+    }
     return NextResponse.redirect(`${origin}/login?error=google_config_missing`);
   }
 
@@ -38,6 +45,9 @@ export async function GET(req: NextRequest) {
 
     if (!tokenRes.ok || !tokenData.access_token) {
       console.error("Google token exchange failed:", tokenData);
+      if (state === "mobile") {
+        return NextResponse.redirect(`porttrack://auth-callback?error=google_token_failed`);
+      }
       return NextResponse.redirect(`${origin}/login?error=google_token_failed`);
     }
 
@@ -50,6 +60,9 @@ export async function GET(req: NextRequest) {
 
     if (!userRes.ok || !googleUser.email) {
       console.error("Google userinfo failed:", googleUser);
+      if (state === "mobile") {
+        return NextResponse.redirect(`porttrack://auth-callback?error=google_user_failed`);
+      }
       return NextResponse.redirect(`${origin}/login?error=google_user_failed`);
     }
 
@@ -88,6 +101,12 @@ export async function GET(req: NextRequest) {
 
     // 4. Create Session and Set Cookie
     const token = await createSession(user.id);
+
+    // Mobil Yönlendirmesi (Deep Link)
+    if (state === "mobile") {
+      return NextResponse.redirect(`porttrack://auth-callback?token=${encodeURIComponent(token)}`);
+    }
+
     const redirectUrl = isNewUser ? `${origin}/?registered=true` : `${origin}/`;
     const response = NextResponse.redirect(redirectUrl);
 
@@ -102,6 +121,9 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (err) {
     console.error("Google Auth Callback Error:", err);
+    if (state === "mobile") {
+      return NextResponse.redirect(`porttrack://auth-callback?error=google_auth_error`);
+    }
     return NextResponse.redirect(`${origin}/login?error=google_auth_error`);
   }
 }

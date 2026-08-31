@@ -17,6 +17,7 @@ import {
   Search,
   X,
   Trash2,
+  Pencil,
   Calendar,
   Filter,
   ArrowUpRight,
@@ -150,7 +151,7 @@ export default function TransactionsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 2. SAYFA BAŞLIĞI & İKONLAR */}
+      {/* 2. SAYFA BAŞLIĞI */}
       <View style={styles.pageTitleRow}>
         <View>
           <Text style={[styles.pageTitle, { color: theme.text.primary }]}>İşlemler</Text>
@@ -159,15 +160,6 @@ export default function TransactionsScreen() {
               {transactions.length} Kayıtlı Hareket
             </Text>
             <View style={[styles.purpleDot, { backgroundColor: '#8b5cf6' }]} />
-          </View>
-        </View>
-
-        <View style={styles.titleActions}>
-          <View style={[styles.iconCircleBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
-            <Search size={17} color={theme.text.primary} />
-          </View>
-          <View style={[styles.iconCircleBtn, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
-            <Filter size={17} color={theme.text.primary} />
           </View>
         </View>
       </View>
@@ -375,13 +367,38 @@ export default function TransactionsScreen() {
                         <Text style={[styles.txTotalVal, { color: theme.text.primary }]}>
                           {formatCurrency(tx.total, tx.currency)}
                         </Text>
-                        <TouchableOpacity
-                          style={styles.deleteBtn}
-                          onPress={() => handleDelete(tx.id, tx.symbol)}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <Trash2 size={14} color="#f43f5e" />
-                        </TouchableOpacity>
+                        <View style={styles.actionBtnsRow}>
+                          <TouchableOpacity
+                            style={styles.actionIconBtn}
+                            onPress={() => {
+                              haptic.selection();
+                              router.push({
+                                pathname: '/modals/add-transaction',
+                                params: {
+                                  id: tx.id,
+                                  symbol: tx.symbol,
+                                  side: tx.side,
+                                  assetType: tx.assetType,
+                                  quantity: String(tx.quantity),
+                                  unitPrice: String(tx.unitPrice),
+                                  currency: tx.currency,
+                                  date: tx.date,
+                                  note: tx.note || '',
+                                },
+                              } as any);
+                            }}
+                            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                          >
+                            <Pencil size={13} color="#818cf8" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.actionIconBtn}
+                            onPress={() => handleDelete(tx.id, tx.symbol)}
+                            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                          >
+                            <Trash2 size={13} color="#f43f5e" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <View style={styles.txDateRow}>
@@ -629,8 +646,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
   },
-  deleteBtn: {
-    padding: 2,
+  actionBtnsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  actionIconBtn: {
+    padding: 3,
   },
   txDateRow: {
     flexDirection: 'row',

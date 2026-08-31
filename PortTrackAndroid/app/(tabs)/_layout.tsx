@@ -2,18 +2,20 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { LayoutDashboard, ArrowLeftRight, TrendingUp, Activity, Settings } from 'lucide-react-native';
-import { colors } from '../../theme/colors';
+import { useThemeStore } from '../../stores/themeStore';
 
 export default function TabLayout() {
+  const { theme } = useThemeStore();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.emerald[400],
-        tabBarInactiveTintColor: colors.text.muted,
+        tabBarActiveTintColor: '#8b5cf6',
+        tabBarInactiveTintColor: theme.text.muted,
         tabBarStyle: {
-          backgroundColor: colors.bg.secondary,
-          borderTopColor: colors.bg.borderSubtle,
+          backgroundColor: theme.surface,
+          borderTopColor: theme.borderSubtle,
           borderTopWidth: 1,
           height: Platform.OS === 'android' ? 64 : 84,
           paddingBottom: Platform.OS === 'android' ? 10 : 26,
@@ -22,7 +24,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
         },
       }}
     >

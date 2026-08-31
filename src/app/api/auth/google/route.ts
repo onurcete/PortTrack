@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
 
   const origin = req.nextUrl.origin;
   const redirectUri = `${origin}/api/auth/google/callback`;
+  const isMobile = req.nextUrl.searchParams.get("mobile") === "true";
+  const state = isMobile ? "mobile" : (req.nextUrl.searchParams.get("state") || "web");
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -19,6 +21,7 @@ export async function GET(req: NextRequest) {
     response_type: "code",
     scope: "openid email profile",
     prompt: "select_account",
+    state,
   });
 
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
