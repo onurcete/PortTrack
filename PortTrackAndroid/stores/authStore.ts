@@ -19,6 +19,13 @@ interface AuthState {
   loginDemo: () => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateUser: (updatedUser: Partial<User>) => void;
+  updateSettings: (patch: {
+    name?: string;
+    defaultCurrency?: 'TRY' | 'USD';
+    dailyDigestEnabled?: boolean;
+    theme?: string;
+  }) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -225,5 +232,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {}
     await api.removeToken();
     set({ user: null, token: null, error: null });
+  },
+
+  updateUser: (updatedUser: Partial<User>) => {
+    const current = get().user;
+    if (current) {
+      set({ user: { ...current, ...updatedUser } });
+    }
+  },
+
+  updateSettings: async (patch: {
+    name?: string;
+    defaultCurrency?: 'TRY' | 'USD';
+    dailyDigestEnabled?: boolean;
+    theme?: string;
+  }) => {
+    const current = get().user;
+    if (!current) return false;
+
+    // İyimser (Optimistic) güncelleme
+    set({ user: { ...current, ...patch } });
+
+    try {
+      const res = await api.patch<{ settings?: any; error?: string }>('/user/settings', patch);
+      if (res.data?.settings) {
+        set({ user: { ...current, ...res.data.settings } });
+        return true;
+      }
+      return !res.error;
+    } catch (err) {
+      console.error('Ayar güncelleme hatası:', err);
+      // Geri al
+      set({ user: current });
+      return false;
+    }
   },
 }));

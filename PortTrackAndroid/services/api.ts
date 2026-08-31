@@ -154,6 +154,13 @@ class ApiService {
     });
   }
 
+  patch<T = any>(endpoint: string, body?: any) {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
   delete<T = any>(endpoint: string) {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
