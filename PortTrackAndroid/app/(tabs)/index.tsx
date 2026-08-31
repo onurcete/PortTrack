@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Svg, {
   Path,
   Defs,
@@ -122,11 +122,12 @@ function DonutChart({
   size?: number;
   strokeWidth?: number;
 }) {
-  const radius = (size - strokeWidth) / 2;
+  if (!data || data.length === 0) return null;
+  const radius = Math.max(10, (size - strokeWidth) / 2);
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
 
-  const validData = data.filter((d) => d.percent > 0);
+  const validData = data.filter((d) => Number.isFinite(d.percent) && d.percent > 0);
   const total = validData.reduce((sum, d) => sum + d.percent, 0) || 100;
 
   let cumulativeLength = 0;
@@ -162,9 +163,8 @@ function DonutChart({
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="butt"
             fill="transparent"
-            originX={center}
-            originY={center}
-            rotation="-90"
+            origin={`${center}, ${center}`}
+            rotation={-90}
           />
         );
       })}
@@ -184,19 +184,23 @@ function PortfolioHeroChart({
   height?: number;
   color?: string;
 }) {
-  if (!points || points.length < 2) return null;
+  if (!points || points.length < 2 || width <= 0) return null;
 
-  const min = Math.min(...points);
-  const max = Math.max(...points);
+  const validPoints = points.map((p) => (Number.isFinite(p) ? p : 0));
+  const min = Math.min(...validPoints);
+  const max = Math.max(...validPoints);
   const range = max - min || 1;
 
   const paddingY = 8;
-  const drawHeight = height - paddingY * 2;
+  const drawHeight = Math.max(10, height - paddingY * 2);
 
-  const coords = points.map((val, idx) => {
-    const x = (idx / (points.length - 1)) * width;
+  const coords = validPoints.map((val, idx) => {
+    const x = (idx / (validPoints.length - 1)) * width;
     const y = height - paddingY - ((val - min) / range) * drawHeight;
-    return { x, y };
+    return {
+      x: Number.isFinite(x) ? x : 0,
+      y: Number.isFinite(y) ? y : height / 2,
+    };
   });
 
   let pathD = `M ${coords[0].x} ${coords[0].y}`;
@@ -259,9 +263,11 @@ export default function DashboardScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchPortfolio();
-  }, [fetchPortfolio]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchPortfolio();
+    }, [fetchPortfolio])
+  );
 
   const onRefresh = useCallback(async () => {
     haptic.medium();
@@ -393,9 +399,10 @@ export default function DashboardScreen() {
 
   // Seçili Döneme Göre Sentetik / Akıcı Çizgi Noktaları
   const chartPoints = useMemo(() => {
-    const baseVal = totalValue || 100000;
-    const gainPct = currentPeriodInfo.pct ?? 0;
-    const startVal = Math.abs(gainPct + 100) > 1e-4 ? baseVal / (1 + gainPct / 100) : baseVal;
+    const baseVal = Number.isFinite(totalValue) && totalValue > 0 ? totalValue : 100000;
+    const gainPct = Number.isFinite(currentPeriodInfo.pct) ? currentPeriodInfo.pct : 0;
+    const divisor = 1 + gainPct / 100;
+    const startVal = Math.abs(divisor) > 1e-4 ? baseVal / divisor : baseVal;
 
     const steps = 24;
     const points: number[] = [];
@@ -404,10 +411,12 @@ export default function DashboardScreen() {
     for (let i = 0; i < steps; i++) {
       const progress = i / (steps - 1);
       const trend = startVal + (baseVal - startVal) * progress;
-      const wave = Math.sin(progress * Math.PI * 3.5) * (Math.abs(baseVal - startVal) * 0.15 + (Math.abs(gainPct) > 0.01 ? baseVal * 0.012 : 0));
-      const micro = Math.abs(gainPct) > 0.01 ? (Math.cos(i * 1.8) * (baseVal * 0.005)) : 0;
+      const wave =
+        Math.sin(progress * Math.PI * 3.5) *
+        (Math.abs(baseVal - startVal) * 0.15 + (Math.abs(gainPct) > 0.01 ? baseVal * 0.012 : 0));
+      const micro = Math.abs(gainPct) > 0.01 ? Math.cos(i * 1.8) * (baseVal * 0.005) : 0;
       const val = i === steps - 1 ? baseVal : i === 0 ? startVal : trend + wave + micro;
-      points.push(Math.max(1, val));
+      points.push(Number.isFinite(val) ? Math.max(1, val) : baseVal);
     }
 
     return points;
@@ -793,7 +802,7 @@ export default function DashboardScreen() {
                         const isDailyPos = dailyPct >= 0;
                         const dailyColor = isDailyPos ? theme.profit.main : theme.loss.main;
 
-                        const isTotalPos = pos.profitRate >= 0;
+                        const isTotalPos = (pos.profitRate ?? 0) >= 0;
                         const totalProfitColor = isTotalPos ? theme.profit.main : theme.loss.main;
 
                         const posPrice = isTRY
