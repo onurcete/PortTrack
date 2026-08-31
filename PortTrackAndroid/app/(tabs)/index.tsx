@@ -352,8 +352,8 @@ export default function DashboardScreen() {
   // Seçili Döneme Göre Sentetik / Akıcı Çizgi Noktaları
   const chartPoints = useMemo(() => {
     const baseVal = totalValue || 100000;
-    const gainPct = currentPeriodInfo.pct || 5.0;
-    const startVal = baseVal / (1 + gainPct / 100);
+    const gainPct = currentPeriodInfo.pct ?? 0;
+    const startVal = Math.abs(gainPct + 100) > 1e-4 ? baseVal / (1 + gainPct / 100) : baseVal;
 
     const steps = 24;
     const points: number[] = [];
@@ -362,8 +362,8 @@ export default function DashboardScreen() {
     for (let i = 0; i < steps; i++) {
       const progress = i / (steps - 1);
       const trend = startVal + (baseVal - startVal) * progress;
-      const wave = Math.sin(progress * Math.PI * 3.5) * (Math.abs(baseVal - startVal) * 0.15 + baseVal * 0.015);
-      const micro = (Math.cos(i * 1.8) * (baseVal * 0.008));
+      const wave = Math.sin(progress * Math.PI * 3.5) * (Math.abs(baseVal - startVal) * 0.15 + (Math.abs(gainPct) > 0.01 ? baseVal * 0.012 : 0));
+      const micro = Math.abs(gainPct) > 0.01 ? (Math.cos(i * 1.8) * (baseVal * 0.005)) : 0;
       const val = i === steps - 1 ? baseVal : i === 0 ? startVal : trend + wave + micro;
       points.push(Math.max(1, val));
     }
