@@ -651,6 +651,42 @@ export async function searchSymbols(
     }
   }
 
+  // 3.5. Search METAL predefined precious metals (Altın, Çeyrek, Yarım, Tam, Ata, vb.)
+  if (assetType === "METAL") {
+    const predefinedMetals: SearchResult[] = [
+      { symbol: "ALTIN", name: "Gram Altın (TL/Gram)", assetType: "METAL", source: "db" },
+      { symbol: "CEYREK", name: "Çeyrek Altın (Adet / 1.75 gr)", assetType: "METAL", source: "db" },
+      { symbol: "YARIM", name: "Yarım Altın (Adet / 3.51 gr)", assetType: "METAL", source: "db" },
+      { symbol: "TAM", name: "Tam Altın / Ziynet (Adet / 7.02 gr)", assetType: "METAL", source: "db" },
+      { symbol: "ATA", name: "Ata / Cumhuriyet Altını (Adet / 7.22 gr)", assetType: "METAL", source: "db" },
+      { symbol: "GUMUS", name: "Gram Gümüş (TL/Gram)", assetType: "METAL", source: "db" },
+      { symbol: "XAU", name: "Ons Altın (USD/Ons)", assetType: "METAL", source: "db" },
+      { symbol: "XAG", name: "Ons Gümüş (USD/Ons)", assetType: "METAL", source: "db" },
+      { symbol: "XPT", name: "Ons Platin (USD/Ons)", assetType: "METAL", source: "db" },
+      { symbol: "XPD", name: "Ons Paladyum (USD/Ons)", assetType: "METAL", source: "db" },
+    ];
+
+    for (const m of predefinedMetals) {
+      const sym = m.symbol.toUpperCase();
+      const normName = normalizeTurkish(m.name.toUpperCase());
+      if (
+        sym.includes(normalizedQ) ||
+        normName.includes(normalizedQ) ||
+        (normalizedQ.includes("ALTIN") && normName.includes("ALTIN")) ||
+        (normalizedQ.includes("CEYREK") && sym === "CEYREK") ||
+        (normalizedQ.includes("YARIM") && sym === "YARIM") ||
+        (normalizedQ.includes("TAM") && sym === "TAM") ||
+        (normalizedQ.includes("ATA") && sym === "ATA") ||
+        (normalizedQ.includes("CUMHURIYET") && sym === "ATA") ||
+        (normalizedQ.includes("ZIYNET") && sym === "TAM")
+      ) {
+        if (!results.some((r) => r.symbol === m.symbol)) {
+          results.push(m);
+        }
+      }
+    }
+  }
+
   // 4. Search TEFAS cached list (for TEFAS, BES_FUND and BES asset types)
   if (assetType === "TEFAS" || assetType === "BES_FUND" || assetType === "BES") {
     try {
@@ -722,7 +758,9 @@ export async function getSymbolPrice(
     const priceInfo = await resolveCurrentPriceTRY(assetType, symbol, usdTry);
     if (priceInfo) {
       let currency: "TRY" | "USD" = "TRY";
-      if (assetType === "FOREIGN" || assetType === "CRYPTO") {
+      if (assetType === "METAL" && ["XAU", "XAG", "XPT", "XPD"].includes(symbol.toUpperCase())) {
+        currency = "USD";
+      } else if (assetType === "FOREIGN" || assetType === "CRYPTO") {
         currency = "USD";
       } else if (
         assetType === "METAL" ||

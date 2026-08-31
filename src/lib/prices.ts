@@ -557,6 +557,7 @@ export async function resolveCurrentPriceTRY(
 
   let price = q.price;
   if (map.perGramDivisor) price = price / map.perGramDivisor;
+  if (map.multiplier) price = price * map.multiplier;
 
   let priceTRY: number;
   let nativeCurrency = q.currency;
@@ -577,7 +578,9 @@ export async function resolveCurrentPriceTRY(
     priceTRY = price * usdTry;
     nativeCurrency = "TRY";
     if (q.prevPrice) {
-      const pPrev = map.perGramDivisor ? q.prevPrice / map.perGramDivisor : q.prevPrice;
+      let pPrev = q.prevPrice;
+      if (map.perGramDivisor) pPrev = pPrev / map.perGramDivisor;
+      if (map.multiplier) pPrev = pPrev * map.multiplier;
       prevPrice = pPrev;
       prevPriceTRY = pPrev * usdTry;
     }

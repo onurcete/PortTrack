@@ -193,7 +193,7 @@ export async function backfillYahoo(): Promise<BackfillResult> {
     for (const end of ends) {
       const raw = lookupOnOrBefore(native, end);
       if (raw == null) continue;
-      const adj = map.perGramDivisor ? raw / map.perGramDivisor : raw;
+      const adj = (map.perGramDivisor ? raw / map.perGramDivisor : raw) * (map.multiplier || 1);
       let priceTRY: number;
       if (map.source === "yahoo-fx") priceTRY = adj;
       else if (map.multiplyByUsdTry) priceTRY = adj * fx(end);
@@ -314,7 +314,7 @@ export async function smartBackfillUserSymbols(userId?: string): Promise<{ proce
         const raw = lookupOnOrBefore(yahooHistory, end);
         if (raw == null || raw <= 0) continue;
 
-        const adj = mapping.perGramDivisor ? raw / mapping.perGramDivisor : raw;
+        const adj = (mapping.perGramDivisor ? raw / mapping.perGramDivisor : raw) * (mapping.multiplier || 1);
         let priceTRY: number;
         if (mapping.source === "yahoo-fx") priceTRY = adj;
         else if (mapping.multiplyByUsdTry) priceTRY = adj * fx(end);

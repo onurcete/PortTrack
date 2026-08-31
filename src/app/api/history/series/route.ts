@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
 
         history = nativePoints.map((p) => {
           const raw = p.close;
-          const adj = mapping.perGramDivisor ? raw / mapping.perGramDivisor : raw;
+          const adj = (mapping.perGramDivisor ? raw / mapping.perGramDivisor : raw) * (mapping.multiplier || 1);
           let priceTRY = 0;
 
           if (mapping.source === "yahoo-fx") {

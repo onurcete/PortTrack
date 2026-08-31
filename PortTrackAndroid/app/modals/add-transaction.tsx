@@ -58,6 +58,19 @@ const ASSET_TYPE_CARDS: AssetTypeOption[] = [
   { type: 'BES', label: 'Bireysel Emeklilik', icon: ShieldCheck },
 ];
 
+const PREDEFINED_METALS: SearchResult[] = [
+  { symbol: 'ALTIN', name: 'Gram Altın (TL/Gram)', assetType: 'METAL', source: 'db' },
+  { symbol: 'CEYREK', name: 'Çeyrek Altın (Adet / 1.75 gr)', assetType: 'METAL', source: 'db' },
+  { symbol: 'YARIM', name: 'Yarım Altın (Adet / 3.51 gr)', assetType: 'METAL', source: 'db' },
+  { symbol: 'TAM', name: 'Tam Altın / Ziynet (Adet / 7.02 gr)', assetType: 'METAL', source: 'db' },
+  { symbol: 'ATA', name: 'Ata / Cumhuriyet Altını (Adet / 7.22 gr)', assetType: 'METAL', source: 'db' },
+  { symbol: 'GUMUS', name: 'Gram Gümüş (TL/Gram)', assetType: 'METAL', source: 'db' },
+  { symbol: 'XAU', name: 'Ons Altın (USD/Ons)', assetType: 'METAL', source: 'db' },
+  { symbol: 'XAG', name: 'Ons Gümüş (USD/Ons)', assetType: 'METAL', source: 'db' },
+  { symbol: 'XPT', name: 'Ons Platin (USD/Ons)', assetType: 'METAL', source: 'db' },
+  { symbol: 'XPD', name: 'Ons Paladyum (USD/Ons)', assetType: 'METAL', source: 'db' },
+];
+
 interface SearchResult {
   symbol: string;
   name: string;
@@ -150,8 +163,13 @@ export default function AddTransactionModal() {
         }
       }, 300);
     } else {
-      setSearchResults([]);
-      setShowDropdown(false);
+      if (assetType === 'METAL') {
+        setSearchResults(PREDEFINED_METALS);
+        setShowDropdown(true);
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
       setSearching(false);
     }
   };
@@ -351,7 +369,12 @@ export default function AddTransactionModal() {
                   onPress={() => {
                     haptic.selection();
                     setAssetType(item.type);
-                    if (symbol) handleSymbolChange(symbol);
+                    if (item.type === 'METAL' && !symbol) {
+                      setSearchResults(PREDEFINED_METALS);
+                      setShowDropdown(true);
+                    } else if (symbol) {
+                      handleSymbolChange(symbol);
+                    }
                   }}
                   activeOpacity={0.75}
                 >
@@ -383,6 +406,12 @@ export default function AddTransactionModal() {
               placeholderTextColor={theme.text.muted}
               value={symbol}
               onChangeText={handleSymbolChange}
+              onFocus={() => {
+                if (!symbol && assetType === 'METAL') {
+                  setSearchResults(PREDEFINED_METALS);
+                  setShowDropdown(true);
+                }
+              }}
               autoCapitalize="characters"
               autoCorrect={false}
             />

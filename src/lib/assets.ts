@@ -82,7 +82,7 @@ export function normalizeAssetTypeInput(value: string): string {
 }
 
 const CRYPTO_SYMBOL = /^(BTC|ETH|SOL|XRP|ADA|DOGE|AVAX|BNB|DOT|LTC)(?:\b|[\/-])/;
-const METAL_SYMBOL = /^(XAU|XAG|XPT|XPD|GAU|GUMUS|ALTIN)(?:\b|[\/-])/;
+const METAL_SYMBOL = /^(XAU|XAG|XPT|XPD|GAU|GUMUS|ALTIN|CEYREK|YARIM|TAM|ATA|ZIYNET|CUMHURIYET)(?:\b|[\/-])/;
 
 /** CSV tür/simge kombinasyonunu güven seviyesiyle çözer. */
 export function resolveAssetTypeDetailed(
@@ -160,6 +160,8 @@ export interface PriceMapping {
   multiplyByUsdTry?: boolean;
   /** Birimi gram'a cevirmek icin bolen (ons -> gram) */
   perGramDivisor?: number;
+  /** Gram veya birim carpani (Ceyrek=1.6067, Yarim=3.2134, Tam=6.4267, Ata=6.615) */
+  multiplier?: number;
   currency: "TRY" | "USD";
   tefasCode?: string;
 }
@@ -210,20 +212,46 @@ export function resolvePriceMapping(
     }
 
     case "METAL": {
-      // Gram bazli TL fiyat: USD ons futures -> gram -> TL
+      // Ons bazli USD metaller
+      if (s === "XAU") {
+        return { source: "yahoo", yahooSymbol: "GC=F", currency: "USD" };
+      }
+      if (s === "XAG") {
+        return { source: "yahoo", yahooSymbol: "SI=F", currency: "USD" };
+      }
+      if (s === "XPT") {
+        return { source: "yahoo", yahooSymbol: "PL=F", currency: "USD" };
+      }
+      if (s === "XPD") {
+        return { source: "yahoo", yahooSymbol: "PA=F", currency: "USD" };
+      }
+
+      // TL Bazlı Gram ve Ziynet/Sikke Altınlar
       let yahooSymbol = "GC=F"; // default gold
+      let multiplier = 1;
+
       if (/^(XAG|GUMUS)/.test(s)) {
         yahooSymbol = "SI=F"; // silver
       } else if (/^XPT/.test(s)) {
         yahooSymbol = "PL=F"; // platinum
       } else if (/^XPD/.test(s)) {
         yahooSymbol = "PA=F"; // palladium
+      } else if (/^(CEYREK)/.test(s)) {
+        multiplier = 1.6067; // Çeyrek Altın (1.754 gr 22 ayar = 1.6067 gr saf altın)
+      } else if (/^(YARIM)/.test(s)) {
+        multiplier = 3.2134; // Yarım Altın (3.508 gr 22 ayar = 3.2134 gr saf altın)
+      } else if (/^(TAM|ZIYNET)/.test(s)) {
+        multiplier = 6.4267; // Tam Altın / Ziynet (7.016 gr 22 ayar = 6.4267 gr saf altın)
+      } else if (/^(ATA|CUMHURIYET)/.test(s)) {
+        multiplier = 6.615; // Ata / Cumhuriyet Altını (7.216 gr 22 ayar = 6.615 gr saf altın)
       }
+
       return {
         source: "yahoo",
         yahooSymbol,
         multiplyByUsdTry: true,
         perGramDivisor: TROY_OUNCE_GRAMS,
+        multiplier,
         currency: "TRY",
       };
     }

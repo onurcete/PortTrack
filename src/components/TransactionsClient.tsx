@@ -2142,6 +2142,10 @@ function SymbolCombobox({
     if (assetType === "METAL") {
       return [
         { symbol: "ALTIN", name: "Gram Altın (TL/Gram)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "CEYREK", name: "Çeyrek Altın (Adet / 1.75 gr)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "YARIM", name: "Yarım Altın (Adet / 3.51 gr)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "TAM", name: "Tam Altın / Ziynet (Adet / 7.02 gr)", assetType: "METAL" as const, source: "db" as const },
+        { symbol: "ATA", name: "Ata / Cumhuriyet Altını (Adet / 7.22 gr)", assetType: "METAL" as const, source: "db" as const },
         { symbol: "GUMUS", name: "Gram Gümüş (TL/Gram)", assetType: "METAL" as const, source: "db" as const },
         { symbol: "XAU", name: "Ons Altın (USD/Ons)", assetType: "METAL" as const, source: "db" as const },
         { symbol: "XAG", name: "Ons Gümüş (USD/Ons)", assetType: "METAL" as const, source: "db" as const },
