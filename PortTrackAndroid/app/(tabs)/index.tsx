@@ -238,10 +238,19 @@ export default function DashboardScreen() {
     haptic.medium();
     setRefreshing(true);
     try {
-      await api.post('/prices/refresh');
-    } catch {}
-    await fetchPortfolio();
-    haptic.success();
+      const res = await api.post<{ ok: boolean; portfolio?: PortfolioSummary }>('/prices/refresh');
+      if (res.data?.portfolio) {
+        setPortfolio(res.data.portfolio);
+      } else {
+        await fetchPortfolio();
+      }
+    } catch (err) {
+      console.error('Fiyat yenileme hatası:', err);
+      await fetchPortfolio();
+    } finally {
+      setRefreshing(false);
+      haptic.success();
+    }
   }, [fetchPortfolio]);
 
   const toggleSection = (type: string) => {
