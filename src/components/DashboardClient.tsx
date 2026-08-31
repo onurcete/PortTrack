@@ -270,10 +270,11 @@ function CombinedReturnCell({
   xirrTRY?: number | null;
   xirrUSD?: number | null;
 }) {
-  if (pct === null || amt === null) return null;
-  const positive = pct > 0;
-  const negative = pct < 0;
-  const isZero = Math.abs(pct) < 0.05;
+  const displayPct = pct ?? 0;
+  const displayAmt = amt ?? 0;
+  const positive = displayPct > 0;
+  const negative = displayPct < 0;
+  const isZero = Math.abs(displayPct) < 0.05;
 
   return (
     <div className={cn("p-5 flex justify-between items-center gap-4 transition-colors", borderClasses)}>
@@ -291,12 +292,12 @@ function CombinedReturnCell({
               )}
             >
               {!isZero && <span className="text-base select-none">{positive ? "▲" : "▼"}</span>}
-              {formatPercent(pct)}
+              {formatPercent(displayPct)}
             </span>
           </div>
           <span className={cn("text-xs font-bold tabular-nums block mt-1 leading-none", positive ? "text-[var(--color-profit)]/90" : negative ? "text-[var(--color-loss)]/90" : "text-[var(--color-muted)]")}>
             {positive ? "+" : ""}
-            {formatMoney(amt, currency, { decimals: 0 })}
+            {formatMoney(displayAmt, currency, { decimals: 0 })}
           </span>
         </div>
       </div>

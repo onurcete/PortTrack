@@ -820,6 +820,30 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
   const { positions: currentPositions } = computePositions(tx, priceMapToday, fx, current);
   const openPositions = currentPositions.filter((p) => p.quantity > 1e-6);
 
+  // Inception (Portföy başlangıç) baseline tespiti
+  const sortedTx = tx.slice().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const firstTxDate = sortedTx.length > 0 ? new Date(sortedTx[0].date) : null;
+  const totalCostTRY = currentPositions.reduce((s, p) => s + (p.costTRY || 0), 0);
+  const totalCostUSD = currentPositions.reduce((s, p) => s + (p.costUSD || 0), 0);
+  const firstPointValTRY = firstTxDate ? getValAt(firstTxDate).valueTRY : 0;
+  const firstPointValUSD = firstTxDate ? getValAt(firstTxDate).valueUSD : 0;
+  const inceptionValTRY = totalCostTRY > 0 ? totalCostTRY : (firstPointValTRY > 0 ? firstPointValTRY : t0.valueTRY);
+  const inceptionValUSD = totalCostUSD > 0 ? totalCostUSD : (firstPointValUSD > 0 ? firstPointValUSD : t0.valueUSD);
+
+  function getEffectiveBaseline(tTarget: { valueTRY: number; valueUSD: number }, dTarget: Date) {
+    const isTargetBeforeInception = firstTxDate ? isBeforeOrEqualDay(dTarget, firstTxDate) : false;
+    const baseTRY = (tTarget.valueTRY > 0 && !isTargetBeforeInception) ? tTarget.valueTRY : inceptionValTRY;
+    const baseUSD = (tTarget.valueUSD > 0 && !isTargetBeforeInception) ? tTarget.valueUSD : inceptionValUSD;
+    return { valueTRY: baseTRY, valueUSD: baseUSD };
+  }
+
+  const base1 = t1.valueTRY > 0 ? t1 : getEffectiveBaseline(t1, d1);
+  const base7 = getEffectiveBaseline(t7, d7);
+  const baseMtd = getEffectiveBaseline(tMtd, dMtd);
+  const base30 = getEffectiveBaseline(t30, d30);
+  const baseYtd = getEffectiveBaseline(tYtd, dYtd);
+  const base1Y = getEffectiveBaseline(t1Y, d1Y);
+
   function getAssetReturns(dStart: Date, dEnd: Date) {
     const typeTotals = new Map<string, {
       valTRY: number;
@@ -830,8 +854,11 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
 
     for (const p of openPositions) {
       const points = bySymbol.get(p.symbol) || [];
-      const pStartTRY = lookupOnOrBefore(points, dStart);
-      const pEndTRY = lookupOnOrBefore(points, dEnd);
+      let pStartTRY = lookupOnOrBefore(points, dStart);
+      if (pStartTRY == null || pStartTRY <= 0) {
+        pStartTRY = (p.avgCostTRY > 0 ? p.avgCostTRY : lookupOnOrBefore(points, today)) ?? p.currentPriceTRY;
+      }
+      const pEndTRY = lookupOnOrBefore(points, dEnd) ?? p.currentPriceTRY;
       
       if (pStartTRY == null || pEndTRY == null || pStartTRY <= 0) continue;
 
@@ -839,8 +866,8 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
 
       const rateStart = fx(dStart);
       const rateEnd = fx(dEnd);
-      const pStartUSD = pStartTRY / rateStart;
-      const pEndUSD = pEndTRY / rateEnd;
+      const pStartUSD = pStartTRY / (rateStart > 0 ? rateStart : current);
+      const pEndUSD = pEndTRY / (rateEnd > 0 ? rateEnd : current);
       const rUSD = pStartUSD > 0 ? ((pEndUSD / pStartUSD) - 1) * 100 : 0;
 
       const t = p.assetType;
@@ -865,43 +892,38 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
   }
 
   const series = await getGrowthSeries(userId);
-  // Tum zamanlar getirisi guvenilir (tam kapsamli) ilk noktadan baslar;
-  // backlog oncesi kismi aylar baz alinirsa yuzde yaniltici siser.
   const firstPoint =
     series.find((p) => !p.partialData) ?? (series.length > 0 ? series[0] : null);
 
-  const prev1Y_TRY = t1Y.valueTRY > 0 ? t1Y.valueTRY : (firstPoint && firstPoint.valueTRY > 0 ? firstPoint.valueTRY : 0);
-  const prev1Y_USD = t1Y.valueUSD > 0 ? t1Y.valueUSD : (firstPoint && firstPoint.valueUSD > 0 ? firstPoint.valueUSD : 0);
-
   return {
-    dailyTRY: calcPct(t0.valueTRY, t1.valueTRY),
-    dailyUSD: calcPct(t0.valueUSD, t1.valueUSD),
-    dailyAmtTRY: calcAmt(t0.valueTRY, t1.valueTRY),
-    dailyAmtUSD: calcAmt(t0.valueUSD, t1.valueUSD),
-    weeklyTRY: calcPct(t0.valueTRY, t7.valueTRY),
-    weeklyUSD: calcPct(t0.valueUSD, t7.valueUSD),
-    weeklyAmtTRY: calcAmt(t0.valueTRY, t7.valueTRY),
-    weeklyAmtUSD: calcAmt(t0.valueUSD, t7.valueUSD),
-    mtdTRY: calcPct(t0.valueTRY, tMtd.valueTRY),
-    mtdUSD: calcPct(t0.valueUSD, tMtd.valueUSD),
-    mtdAmtTRY: calcAmt(t0.valueTRY, tMtd.valueTRY),
-    mtdAmtUSD: calcAmt(t0.valueUSD, tMtd.valueUSD),
-    monthlyTRY: calcPct(t0.valueTRY, t30.valueTRY),
-    monthlyUSD: calcPct(t0.valueUSD, t30.valueUSD),
-    monthlyAmtTRY: calcAmt(t0.valueTRY, t30.valueTRY),
-    monthlyAmtUSD: calcAmt(t0.valueUSD, t30.valueUSD),
-    ytdTRY: calcPct(t0.valueTRY, tYtd.valueTRY),
-    ytdUSD: calcPct(t0.valueUSD, tYtd.valueUSD),
-    ytdAmtTRY: calcAmt(t0.valueTRY, tYtd.valueTRY),
-    ytdAmtUSD: calcAmt(t0.valueUSD, tYtd.valueUSD),
-    oneYearTRY: prev1Y_TRY > 0 ? calcPct(t0.valueTRY, prev1Y_TRY) : null,
-    oneYearUSD: prev1Y_USD > 0 ? calcPct(t0.valueUSD, prev1Y_USD) : null,
-    oneYearAmtTRY: prev1Y_TRY > 0 ? calcAmt(t0.valueTRY, prev1Y_TRY) : null,
-    oneYearAmtUSD: prev1Y_USD > 0 ? calcAmt(t0.valueUSD, prev1Y_USD) : null,
-    allTimeTRY: firstPoint ? calcPct(t0.valueTRY, firstPoint.valueTRY) : null,
-    allTimeUSD: firstPoint ? calcPct(t0.valueUSD, firstPoint.valueUSD) : null,
-    allTimeAmtTRY: firstPoint ? calcAmt(t0.valueTRY, firstPoint.valueTRY) : null,
-    allTimeAmtUSD: firstPoint ? calcAmt(t0.valueUSD, firstPoint.valueUSD) : null,
+    dailyTRY: calcPct(t0.valueTRY, base1.valueTRY),
+    dailyUSD: calcPct(t0.valueUSD, base1.valueUSD),
+    dailyAmtTRY: calcAmt(t0.valueTRY, base1.valueTRY),
+    dailyAmtUSD: calcAmt(t0.valueUSD, base1.valueUSD),
+    weeklyTRY: calcPct(t0.valueTRY, base7.valueTRY),
+    weeklyUSD: calcPct(t0.valueUSD, base7.valueUSD),
+    weeklyAmtTRY: calcAmt(t0.valueTRY, base7.valueTRY),
+    weeklyAmtUSD: calcAmt(t0.valueUSD, base7.valueUSD),
+    mtdTRY: calcPct(t0.valueTRY, baseMtd.valueTRY),
+    mtdUSD: calcPct(t0.valueUSD, baseMtd.valueUSD),
+    mtdAmtTRY: calcAmt(t0.valueTRY, baseMtd.valueTRY),
+    mtdAmtUSD: calcAmt(t0.valueUSD, baseMtd.valueUSD),
+    monthlyTRY: calcPct(t0.valueTRY, base30.valueTRY),
+    monthlyUSD: calcPct(t0.valueUSD, base30.valueUSD),
+    monthlyAmtTRY: calcAmt(t0.valueTRY, base30.valueTRY),
+    monthlyAmtUSD: calcAmt(t0.valueUSD, base30.valueUSD),
+    ytdTRY: calcPct(t0.valueTRY, baseYtd.valueTRY),
+    ytdUSD: calcPct(t0.valueUSD, baseYtd.valueUSD),
+    ytdAmtTRY: calcAmt(t0.valueTRY, baseYtd.valueTRY),
+    ytdAmtUSD: calcAmt(t0.valueUSD, baseYtd.valueUSD),
+    oneYearTRY: base1Y.valueTRY > 0 ? calcPct(t0.valueTRY, base1Y.valueTRY) : null,
+    oneYearUSD: base1Y.valueUSD > 0 ? calcPct(t0.valueUSD, base1Y.valueUSD) : null,
+    oneYearAmtTRY: base1Y.valueTRY > 0 ? calcAmt(t0.valueTRY, base1Y.valueTRY) : null,
+    oneYearAmtUSD: base1Y.valueUSD > 0 ? calcAmt(t0.valueUSD, base1Y.valueUSD) : null,
+    allTimeTRY: firstPoint ? calcPct(t0.valueTRY, firstPoint.valueTRY) : (inceptionValTRY > 0 ? calcPct(t0.valueTRY, inceptionValTRY) : null),
+    allTimeUSD: firstPoint ? calcPct(t0.valueUSD, firstPoint.valueUSD) : (inceptionValUSD > 0 ? calcPct(t0.valueUSD, inceptionValUSD) : null),
+    allTimeAmtTRY: firstPoint ? calcAmt(t0.valueTRY, firstPoint.valueTRY) : (inceptionValTRY > 0 ? calcAmt(t0.valueTRY, inceptionValTRY) : null),
+    allTimeAmtUSD: firstPoint ? calcAmt(t0.valueUSD, firstPoint.valueUSD) : (inceptionValUSD > 0 ? calcAmt(t0.valueUSD, inceptionValUSD) : null),
     assetTypeReturns: {
       weekly: getAssetReturns(d7, d0),
       mtd: getAssetReturns(dMtd, d0),
