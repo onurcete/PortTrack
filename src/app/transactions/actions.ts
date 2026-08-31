@@ -575,6 +575,11 @@ export async function searchSymbols(
       const urls = [
         `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(normalizedQuery)}&newsCount=0`
       ];
+      if (assetType === "CRYPTO") {
+        urls.push(
+          `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(normalizedQuery)}-USD&newsCount=0`
+        );
+      }
 
       const responses = await Promise.all(
         urls.map((url) =>
@@ -594,7 +599,7 @@ export async function searchSymbols(
 
         for (const quote of quotes) {
           const sym: string = quote.symbol;
-          const name: string = quote.shortname || quote.longname || sym;
+          const rawName: string = quote.shortname || quote.longname || sym;
 
           if (assetType === "FOREIGN") {
             if (quote.quoteType === "EQUITY" || quote.quoteType === "ETF") {
@@ -606,7 +611,7 @@ export async function searchSymbols(
                 if (!results.some((r) => r.symbol === sym)) {
                   results.push({
                     symbol: sym,
-                    name,
+                    name: rawName,
                     assetType: "FOREIGN",
                     source: "yahoo",
                   });
@@ -614,12 +619,15 @@ export async function searchSymbols(
               }
             }
           } else if (assetType === "CRYPTO") {
-            if (quote.quoteType === "CRYPTOCURRENCY" || sym.endsWith("-USD")) {
-              const baseSymbol = sym.replace("-USD", "");
-              if (!results.some((r) => r.symbol === baseSymbol)) {
+            if (quote.quoteType === "CRYPTOCURRENCY" || sym.includes("-USD") || sym.includes("-TRY") || sym.includes("-EUR")) {
+              const baseSymbol = sym.split("-")[0].toUpperCase();
+              if (baseSymbol && !results.some((r) => r.symbol === baseSymbol)) {
+                const cleanName = rawName.replace(/\s+(USD|EUR|GBP|JPY|TRY|CNY)$/i, "").trim();
+                const displayName = cleanName ? `${cleanName} (${baseSymbol})` : `${baseSymbol} USD`;
+
                 results.push({
                   symbol: baseSymbol,
-                  name,
+                  name: displayName,
                   assetType: "CRYPTO",
                   source: "yahoo",
                 });
@@ -627,6 +635,16 @@ export async function searchSymbols(
             }
           }
         }
+      }
+
+      // Kripto için doğrudan kod tamamlama yedeği (Örn: CAKE, PEPE, SUI)
+      if (assetType === "CRYPTO" && q.length >= 2 && !results.some((r) => r.symbol === q)) {
+        results.push({
+          symbol: q,
+          name: `${q} USD`,
+          assetType: "CRYPTO",
+          source: "yahoo",
+        });
       }
     } catch (err) {
       console.error("Error searching Yahoo Finance:", err);
@@ -704,15 +722,25 @@ export async function getSymbolPrice(
     const priceInfo = await resolveCurrentPriceTRY(assetType, symbol, usdTry);
     if (priceInfo) {
       let currency: "TRY" | "USD" = "TRY";
-      if (assetType === "FOREIGN") {
+      if (assetType === "FOREIGN" || assetType === "CRYPTO") {
         currency = "USD";
-      } else if (assetType === "METAL" || assetType === "BIST" || assetType === "TEFAS" || assetType === "FX") {
+      } else if (
+        assetType === "METAL" ||
+        assetType === "BIST" ||
+        assetType === "TEFAS" ||
+        assetType === "BES_FUND" ||
+        assetType === "FX" ||
+        assetType === "BES"
+      ) {
         currency = "TRY";
       } else if (priceInfo.currency === "USD" || priceInfo.currency === "USDTRY") {
         currency = "USD";
       }
 
-      const price = (currency === "TRY" && priceInfo.priceTRY != null) ? priceInfo.priceTRY : priceInfo.price;
+      const price =
+        currency === "TRY" && priceInfo.priceTRY != null
+          ? priceInfo.priceTRY
+          : priceInfo.price;
       return {
         price,
         currency,
