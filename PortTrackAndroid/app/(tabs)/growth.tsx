@@ -1518,7 +1518,7 @@ const styles = StyleSheet.create({
   },
   rowValuePrimary: {
     fontSize: 11.5,
-    fontWeight: '800',
+    fontWeight: '500',
   },
   retPill: {
     paddingHorizontal: 2,
