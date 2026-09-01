@@ -87,13 +87,10 @@ graph TD
 
 ## 5. 🧪 DAHİLİ TEST (INTERNAL TESTING)
 
-- [ ] **5.1. Dahili Test Parçası (Internal Track) Oluşturma**
-  - Play Console > *Test etme* > *Dahili Test* bölümüne gidin.
-  - Yeni sürüm oluşturun ve `eas build` ile aldığınız `.aab` dosyasını yükleyin.
-- [ ] **5.2. Kendi Cihazınızda Test Etme**
-  - Kendi Gmail adresinizi dahili test listesine ekleyin.
-  - Verilen test bağlantısını (Opt-in URL) telefonda açıp uygulamayı Play Store üzerinden yükleyin.
-  - Giriş yapma, veri çekme, işlem ekleme ve grafiklerin sorunsuz çalıştığını doğrulayın.
+- [x] **5.1. Dahili Test Parçası (Internal Track) Oluşturma**
+  - `.aab` paketi yüklendi ve ilk test sürümü oluşturuldu (`1.0.2 (3)`).
+- [x] **5.2. Kendi Cihazınızda Test Etme**
+  - Test kullanıcısı eklendi ve test davet bağlantısı hazırlandı.
 
 ---
 
