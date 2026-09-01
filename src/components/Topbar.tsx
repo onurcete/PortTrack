@@ -113,6 +113,14 @@ export function Topbar() {
             {user?.isDemo && (
               <Link
                 href="/register"
+                onClick={() => {
+                  if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+                    (window as any).gtag("event", "demo_signup_click", {
+                      event_category: "Engagement",
+                      button_location: "topbar"
+                    });
+                  }
+                }}
                 className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-105 transition-all duration-200"
                 title="Kendi portföyünüzü oluşturmak için hemen ücretsiz üye olun"
               >

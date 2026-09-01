@@ -54,6 +54,14 @@ export function DemoBanner() {
           <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0 pt-1 md:pt-0">
             <Link
               href="/register"
+              onClick={() => {
+                if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+                  (window as any).gtag("event", "demo_signup_click", {
+                    event_category: "Engagement",
+                    button_location: "demo_banner"
+                  });
+                }
+              }}
               className="flex-1 md:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
             >
               <UserPlus size={16} />
