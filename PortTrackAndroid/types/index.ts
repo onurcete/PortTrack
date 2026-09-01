@@ -149,3 +149,32 @@ export interface AnalysisBriefing {
     risks?: string[];
   };
 }
+
+export interface InvestorPoint {
+  date: string;
+  investors: number;
+}
+
+export type InvestorTrend = 'up' | 'down' | 'flat' | 'unknown';
+export type InvestorMagnitude = 'none' | 'notable' | 'strong';
+
+export interface TefasFundInvestorStats {
+  symbol: string;
+  latest: number | null;
+  priorWeek: number | null;
+  weekDelta: number | null;
+  weekDeltaPct: number | null;
+  magnitude: InvestorMagnitude;
+  trend4w: InvestorTrend;
+  series: InvestorPoint[];
+}
+
+export interface TefasInvestorSummary {
+  fundsWithData: number;
+  risingCount: number;
+  fallingCount: number;
+  flatCount: number;
+  topInflow: { symbol: string; weekDeltaPct: number; weekDelta: number } | null;
+  topOutflow: { symbol: string; weekDeltaPct: number; weekDelta: number } | null;
+  funds: TefasFundInvestorStats[];
+}
