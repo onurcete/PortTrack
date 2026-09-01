@@ -8,22 +8,21 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+import { hashPassword } from "../src/lib/auth";
+
 const DEMO_EMAIL = "demo@porttrack.app";
-const DEMO_PASS_HASH =
-  "demo-not-used:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-// isDemo=true olan kullanıcıda şifre hiç kullanılmıyor;
-// demo login API doğrudan session oluşturuyor.
 
 async function main() {
   console.log("🚀 Demo kullanıcısı oluşturuluyor...");
+  const hashedPassword = await hashPassword("Demo1234!");
 
   // 1. Demo user oluştur ya da güncelle
   const demo = await prisma.user.upsert({
     where: { email: DEMO_EMAIL },
-    update: { isDemo: true, name: "Demo Kullanıcı" },
+    update: { isDemo: true, name: "Demo Kullanıcı", password: hashedPassword },
     create: {
       email: DEMO_EMAIL,
-      password: DEMO_PASS_HASH,
+      password: hashedPassword,
       name: "Demo Kullanıcı",
       role: "USER",
       isDemo: true,

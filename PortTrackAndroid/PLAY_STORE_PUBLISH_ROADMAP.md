@@ -34,17 +34,17 @@ graph TD
 
 ## 2. ⚙️ TEKNİK YAPILANDIRMA & DERLEME (EAS BUILD)
 
-- [ ] **2.1. `app.json` Yapılandırma Kontrolü**
+- [x] **2.1. `app.json` Yapılandırma Kontrolü**
   - [x] `name`: `"PortTrack"`
   - [x] `package`: `"com.porttrack.app"` (Benzersiz paket adı)
-  - [x] `version`: `"1.0.0"` (Kullanıcıya görünen sürüm)
-  - [x] `versionCode`: `1` (Her yeni güncellemede +1 artırılacak)
-  - [x] `userInterfaceStyle`: `"dark"` veya `"automatic"`
+  - [x] `version`: `"1.0.2"` (Kullanıcıya görünen sürüm)
+  - [x] `versionCode`: `3` (Her yeni güncellemede +1 artırılacak)
+  - [x] `userInterfaceStyle`: `"dark"`
   - [x] `scheme`: `"porttrack"`
-- [ ] **2.2. Uygulama İkonları & Açılış Ekranı (Splash)**
-  - [ ] **Uygulama İkonu (`assets/icon.png`):** 512x512 px, PNG (32-bit renk, alpha kanalı olmayan, köşeleri yuvarlatılmamış düz kare).
-  - [ ] **Adaptif İkon (`assets/adaptive-icon.png`):** Android için 432x432 px ön plan görseli + `#090d16` arka plan rengi.
-  - [ ] **Splash Ekranı (`assets/splash-icon.png`):** Açılış logosu ve `#090d16` arka plan rengi.
+- [x] **2.2. Uygulama İkonları & Açılış Ekranı (Splash)**
+  - [x] **Uygulama İkonu (`assets/icon.png`):** 512x512 px PNG oluşturuldu.
+  - [x] **Adaptif İkon (`assets/adaptive-icon.png`):** 512x512 px PNG oluşturuldu.
+  - [x] **Splash Ekranı (`assets/splash-icon.png`):** 512x512 px PNG oluşturuldu.
 - [ ] **2.3. EAS CLI Kurulumu ve Giriş**
   ```bash
   npm install -g eas-cli
@@ -66,64 +66,33 @@ graph TD
 
 ## 3. 🎨 MAĞAZA GİRİŞİ (STORE LISTING) & GÖRSEL MATERYALLER
 
-- [ ] **3.1. Metin İçerikleri (Türkçe & İngilizce)**
-  - [ ] **Uygulama Adı (Maks. 30 Karakter):**  
-    `PortTrack: Portföy & Fon Takip`
-  - [ ] **Kısa Açıklama (Maks. 80 Karakter):**  
-    `BIST, TEFAS Fonları, Kripto, Döviz ve Altın yatırımlarınızı tek yerden takip edin.`
-  - [ ] **Tam Açıklama (Maks. 4000 Karakter):**  
-    *Özellikleri listeleyen detaylı açıklama:*
-    - 📊 BIST, TEFAS, BES Fonları, Döviz, Emtia ve Kripto portföy takibi.
-    - 📈 TEFAS Fon Yatırımcı Sayısı Dinamikleri ve 4 Haftalık Talep Analizi.
-    - 💵 Çift Para Birimi: Anlık TRY ve USD portföy değerleme ve kâr/zarar.
-    - 📅 Kümülatif Yıllık Özet & Aylık Dağılım performans tabloları.
-    - ⚡ Canlı piyasa verileri ve anlık getiri grafikleri.
-- [ ] **3.2. Grafiksel Varlıklar (Play Store Gereksinimleri)**
-  - [ ] **Uygulama Simgesi:** 512 x 512 px, 32-bit PNG, maks 1 MB.
-  - [ ] **Özellik Grafiği (Feature Graphic - Banner):** 1024 x 500 px, JPG veya 24-bit PNG (Alfa kanalsız), maks 15 MB.
-  - [ ] **Telefon Ekran Görüntüleri (Screenshots):**  
-    - En az **4-6 adet** dikey ekran görüntüsü (Önerilen: 1080 x 2400 px veya 1242 x 2688 px).
-    - 1. Ekran: Genel Bakış & Varlık Dağılımı (Donut Grafik & Portföy Değeri).
-    - 2. Ekran: Fon Analiz (TEFAS Talep Dengesi & Sparkline Grafikleri).
-    - 3. Ekran: Gelişim & Yıllık/Aylık Dağılım Tabloları.
-    - 4. Ekran: İşlemler & Yeni Varlık Ekleme Ekranı.
-- [ ] **3.3. Kategorilendirme**
+- [x] **3.1. Metin İçerikleri (Türkçe & İngilizce)**
+  - [x] **Uygulama Adı (Maks. 30 Karakter):** `PortTrack: Portföy & Fon Takip`
+  - [x] **Kısa Açıklama (Maks. 80 Karakter):** `BIST, TEFAS Fonları, BES, Döviz ve Altın portföyünüzü anlık takip edin.`
+  - [x] **Tam Açıklama (Maks. 4000 Karakter):** Emojisiz ve Google Play Meta Veri politikasına uyumlu metin girildi.
+- [x] **3.2. Grafiksel Varlıklar (Play Store Gereksinimleri)**
+  - [x] **Uygulama Simgesi:** `PortTrackAndroid/assets/playstore_icon_512.png` (512x512 px PNG).
+  - [x] **Özellik Grafiği (Feature Graphic - Banner):** `PortTrackAndroid/assets/feature_graphic_1024x500.png` (1024x500 px).
+  - [x] **Telefon Ekran Görüntüleri (Screenshots):** Ekran görüntüleri yüklendi.
+- [x] **3.3. Kategorilendirme & İletişim**
   - **Uygulama Türü:** Uygulama (App)
   - **Kategori:** Finans (Finance)
-  - **Etiketler (Tags):** Finans, Borsa, Portföy Takibi, Yatırım Fonları.
+  - **Etiketler:** Finans, Kişisel Finans, Yatırım, Bütçe Takibi, Araçlar.
+  - **Web Sitesi:** `https://www.porttrack.com.tr`
 
 ---
 
 ## 4. ⚖️ POLİTİKA, GİZLİLİK & VERİ GÜVENLİĞİ (DATA SAFETY)
 
-Google Play Console sol menüsündeki **"Uygulama İçeriği" (App Content)** altındaki tüm formların doldurulması zorunludur:
-
-- [ ] **4.1. Gizlilik Politikası (Privacy Policy URL)**
-  - Web sitenizde bir `/privacy` sayfası barındırın (Örn: `https://porttrack.vercel.app/privacy`).
-  - Linki Play Console'a girin.
-- [ ] **4.2. Uygulama Erişimi (App Access)**
-  - PortTrack giriş/kayıt gerektirdiği için Google denetçilerine bir **Demo Test Hesabı** tanımlayın:
-    - *Kullanıcı Adı/E-posta:* `demo@porttrack.com` (veya test e-postanız)
-    - *Şifre:* `Demo1234!`
-    - *Açıklama:* Denetçinin giriş yapıp tüm ekranları görebileceği yönlendirme notu.
-- [ ] **4.3. Reklamlar (Ads)**
-  - *"Uygulamanız reklam içeriyor mu?"* -> **"Hayır, uygulamam reklam içermiyor"** seçin.
-- [ ] **4.4. Hedef Kitle ve İçerik (Target Audience)**
-  - Hedef Yaş Grubu: **18 ve üzeri** seçin.
-  - Çocuklara hitap ediyor mu? -> **Hayır**.
-- [ ] **4.5. Finansal Özellikler Beyanı (Financial Features)**
-  - *"Kişisel Finans Yönetimi / Portföy Takibi (Personal Finance Management)"* seçeneğini işaretleyin.
-  - Kredi verme, bankacılık veya borsa alım-satım emri aracılığı yapmadığını; sadece takip/analiz amaçlı olduğunu belirtin.
-- [ ] **4.6. Veri Güvenliği Formu (Data Safety Form)**
-  - *"Uygulamanız kullanıcı verisi topluyor veya paylaşıyor mu?"* -> **Evet**.
-  - **Toplanan Veriler:**
-    - **Kişisel Bilgiler:** E-posta adresi (Hesap oluşturma ve kimlik doğrulama için).
-    - **Finansal Bilgiler:** Kullanıcının girdiği işlem ve portföy kayıtları (Uygulama işlevselliği için).
-  - **Veri Güvenliği Taahhütleri:**
-    - Veriler aktarım sırasında şifreleniyor mu? -> **Evet (HTTPS/TLS)**.
-    - Kullanıcılar verilerinin silinmesini talep edebilir mi? -> **Evet** (Hesap silme desteği).
-- [ ] **4.7. Hükümet / Resmi Kurum Uygulaması mı?**
-  - **Hayır**.
+- [x] **4.1. Gizlilik Politikası (Privacy Policy URL):** `https://www.porttrack.com.tr/gizlilik-politikasi`
+- [x] **4.2. Oturum Açma Bilgileri (App Access):** Demo Test Hesabı (`demo@porttrack.app` / `Demo1234!`) tanımlandı.
+- [x] **4.3. Reklamlar (Ads):** "Hayır, reklam içermiyor" seçildi.
+- [x] **4.4. İçerik Derecelendirme (Content Rating):** Anket tamamlandı (PEGI 3 / Genel).
+- [x] **4.5. Hedef Kitle ve İçerik (Target Audience):** 18+ seçildi.
+- [x] **4.6. Reklam Kimliği (Advertising ID):** "Hayır" / Analiz & İşlevsellik beyan edildi.
+- [x] **4.7. Finansal Özellikler Beyanı (Financial Features):** "Diğer / Varlık takip" beyan edildi.
+- [x] **4.8. Veri Güvenliği Formu (Data Safety Form):** E-posta ve Finansal işlem verileri beyan edildi, HTTPS şifreleme ve silme linki onaylandı.
+- [x] **4.9. Resmi Kurum / Sağlık Beyanları:** Tamamlandı.
 
 ---
 
