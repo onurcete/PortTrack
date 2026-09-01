@@ -23,16 +23,12 @@ graph TD
 
 ## 1. 🏢 GELİŞTİRİCİ HESABI & HESAP AÇILIŞI
 
-- [ ] **1.1. Google Play Console Hesabı Oluşturma**
-  - [Google Play Console](https://play.google.com/console/signup) adresine gidin.
-  - $25 USD tek seferlik geliştirici kayıt ücretini ödeyin.
-- [ ] **1.2. Kimlik & Adres Doğrulaması**
-  - Bireysel hesap için kimlik belgesi (T.C. Kimlik / Pasaport / Ehliyet) ve adres kanıtı (e-Devlet ikametgah / fatura) yükleyin.
-  - Doğrulamanın Google tarafından onaylanmasını bekleyin (genelde 1-3 iş günü).
-- [ ] **1.3. Geliştirici Profil Bilgileri**
-  - Geliştirici Adı (Mağazada görünecek ad, örn: *PortTrack Labs* veya *Onur Çete*).
-  - İletişim E-posta Adresi (Kullanıcıların göreceği destek e-postası).
-  - Web Sitesi Adresi (`https://porttrack.vercel.app` veya özel alan adınız).
+- [x] **1.1. Google Play Console Hesabı Oluşturma**
+  - Google Play Console hesabı aktif ve hazır.
+- [x] **1.2. Kimlik & Adres Doğrulaması**
+  - Geliştirici kimlik ve adres doğrulaması tamamlandı.
+- [x] **1.3. Geliştirici Profil Bilgileri**
+  - Geliştirici profili ve iletişim bilgileri hazır.
 
 ---
 
