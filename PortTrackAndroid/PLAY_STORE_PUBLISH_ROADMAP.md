@@ -45,22 +45,11 @@ graph TD
   - [x] **Uygulama İkonu (`assets/icon.png`):** 512x512 px PNG oluşturuldu.
   - [x] **Adaptif İkon (`assets/adaptive-icon.png`):** 512x512 px PNG oluşturuldu.
   - [x] **Splash Ekranı (`assets/splash-icon.png`):** 512x512 px PNG oluşturuldu.
-- [ ] **2.3. EAS CLI Kurulumu ve Giriş**
-  ```bash
-  npm install -g eas-cli
-  eas login
-  ```
-- [ ] **2.4. Üretim İçin Android App Bundle (.aab) Derlemesi**
-  - Google Play artık `.apk` değil, sadece **`.aab` (Android App Bundle)** kabul etmektedir.
-  ```bash
-  cd PortTrackAndroid
-  eas build --platform android --profile production
-  ```
-  - *Not: EAS build tamamlandığında `.aab` dosyasını bilgisayarınıza indirin veya EAS linkini hazır bulundurun.*
-- [ ] **2.5. Test APK'sı Derleme (Cihazda Doğrudan Denemek İçin)**
-  ```bash
-  eas build --platform android --profile preview
-  ```
+- [x] **2.3. EAS CLI Kurulumu ve Giriş**
+  - Expo EAS bağlantısı aktif (`onurcete`).
+- [x] **2.4. Üretim İçin Android App Bundle (.aab) Derlemesi**
+  - `.aab` paketi başarıyla üretildi: `https://expo.dev/artifacts/eas/s8yQGvg1_P1c97UNosug_jRNX5kcpeTS3cXPdv0Vvi0.aab`
+- [ ] **2.5. Test APK'sı Derleme (Cihazda Doğrudan Denemek İçin - İsteğe Bağlı)**
 
 ---
 
