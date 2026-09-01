@@ -278,6 +278,14 @@ function RegisterForm() {
                 {/* Google ile Kaydol Butonu */}
                 <a
                   href="/api/auth/google"
+                  onClick={() => {
+                    if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+                      (window as any).gtag("event", "google_auth_click", {
+                        event_category: "Authentication",
+                        button_location: "register_page"
+                      });
+                    }
+                  }}
                   className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs font-black text-[var(--color-foreground)] transition-all shadow-xs hover:shadow-md cursor-pointer mb-5 group"
                 >
                   <svg className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
@@ -403,6 +411,14 @@ function RegisterForm() {
                   {/* Submit Button */}
                   <button
                     type="submit"
+                    onClick={() => {
+                      if (typeof window !== "undefined" && typeof (window as any).gtag === "function") {
+                        (window as any).gtag("event", "register_click", {
+                          event_category: "Authentication",
+                          button_location: "register_page"
+                        });
+                      }
+                    }}
                     disabled={loading || !email || !password || !isValidEmail}
                     className="btn btn-primary w-full py-3.5 text-xs font-black rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2 mt-4"
                   >
