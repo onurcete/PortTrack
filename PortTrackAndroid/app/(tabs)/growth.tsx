@@ -42,6 +42,7 @@ interface GrowthPoint {
 }
 
 const SHORT_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const FULL_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 function getMonthShortLabel(monthKey: string): string {
   const [, m] = monthKey.split('-').map(Number);
@@ -452,8 +453,9 @@ export default function GrowthScreen() {
       const prevUSD = prev ? prev.valueUSD : null;
       const returnUSD = prevUSD && prevUSD > 0 ? ((valUSD / prevUSD) - 1) * 100 : null;
 
-      const [yStr, mStr] = p.month.split('-');
-      const monthFormatted = yStr && mStr ? `${yStr.slice(2)}.${mStr}` : p.month;
+      const [, mStr] = p.month.split('-');
+      const mIdx = Number(mStr) - 1;
+      const monthFormatted = FULL_MONTHS[mIdx] ?? p.month;
 
       return {
         monthKey: p.month,
@@ -1078,11 +1080,11 @@ export default function GrowthScreen() {
             {/* Tablo Görünümü */}
             <View style={styles.tableWrapper}>
               <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <Text style={[styles.thCell, { width: '16%', textAlign: 'left', color: theme.text.muted }]} numberOfLines={1}>AY</Text>
-                <Text style={[styles.thCell, { width: '25%', textAlign: 'right', paddingRight: 6, color: theme.text.muted }]} numberOfLines={1}>TRY (₺)</Text>
+                <Text style={[styles.thCell, { width: '19%', textAlign: 'left', color: theme.text.muted }]} numberOfLines={1}>AY</Text>
+                <Text style={[styles.thCell, { width: '24%', textAlign: 'right', paddingRight: 6, color: theme.text.muted }]} numberOfLines={1}>TRY (₺)</Text>
                 <Text style={[styles.thCell, { width: '21%', textAlign: 'right', paddingRight: 6, color: theme.text.muted }]} numberOfLines={1}>USD ($)</Text>
-                <Text style={[styles.thCell, { width: '19%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>TRY %</Text>
-                <Text style={[styles.thCell, { width: '19%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>USD %</Text>
+                <Text style={[styles.thCell, { width: '18%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>TRY %</Text>
+                <Text style={[styles.thCell, { width: '18%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>USD %</Text>
               </View>
 
               {monthlyRows.map((row) => {
@@ -1092,14 +1094,14 @@ export default function GrowthScreen() {
                 return (
                   <View key={row.monthKey} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
                     {/* Ay Kolonu (Ocak, Şubat Yazıyla) */}
-                    <View style={{ width: '16%', justifyContent: 'center' }}>
-                      <Text style={[styles.rowYearText, { color: theme.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                    <View style={{ width: '19%', justifyContent: 'center' }}>
+                      <Text style={[styles.rowYearText, { color: theme.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                         {row.monthName}
                       </Text>
                     </View>
 
                     {/* TRY Değeri */}
-                    <View style={{ width: '25%', paddingRight: 6, alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <View style={{ width: '24%', paddingRight: 6, alignItems: 'flex-end', justifyContent: 'center' }}>
                       <Text
                         style={[styles.rowValuePrimary, { color: theme.text.primary, textAlign: 'right' }]}
                         numberOfLines={1}
@@ -1123,7 +1125,7 @@ export default function GrowthScreen() {
                     </View>
 
                     {/* Getiri TRY % Kapsülü */}
-                    <View style={{ width: '19%', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: '18%', alignItems: 'center', justifyContent: 'center' }}>
                       <View
                         style={[
                           styles.retPill,
@@ -1161,7 +1163,7 @@ export default function GrowthScreen() {
                     </View>
 
                     {/* Getiri USD % Kapsülü */}
-                    <View style={{ width: '19%', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: '18%', alignItems: 'center', justifyContent: 'center' }}>
                       <View
                         style={[
                           styles.retPill,

@@ -536,18 +536,23 @@ export default function AnalysisScreen() {
               style={[
                 styles.filterPill,
                 {
-                  backgroundColor: filter === 'RISING' ? 'rgba(34, 197, 94, 0.25)' : theme.surface,
-                  borderColor: filter === 'RISING' ? '#22c55e' : theme.borderSubtle,
+                  backgroundColor:
+                    filter === 'RISING'
+                      ? 'rgba(34, 197, 94, 0.28)'
+                      : 'rgba(34, 197, 94, 0.08)',
+                  borderColor: filter === 'RISING' ? '#22c55e' : 'rgba(34, 197, 94, 0.35)',
                 },
               ]}
               onPress={() => {
                 haptic.selection();
-                setFilter('RISING');
+                setFilter(filter === 'RISING' ? 'ALL' : 'RISING');
               }}
               activeOpacity={0.8}
             >
-              <TrendingUp size={13} color={filter === 'RISING' ? '#22c55e' : theme.text.muted} />
-              <Text style={[styles.filterPillText, { color: filter === 'RISING' ? '#22c55e' : theme.text.secondary }]}>
+              <View style={[styles.filterIconBadge, { backgroundColor: filter === 'RISING' ? '#22c55e' : 'rgba(34, 197, 94, 0.2)' }]}>
+                <TrendingUp size={12} color={filter === 'RISING' ? '#ffffff' : '#22c55e'} strokeWidth={2.5} />
+              </View>
+              <Text style={[styles.filterPillText, { color: '#22c55e' }]}>
                 Talep Artanlar ({risingCount})
               </Text>
             </TouchableOpacity>
@@ -556,18 +561,23 @@ export default function AnalysisScreen() {
               style={[
                 styles.filterPill,
                 {
-                  backgroundColor: filter === 'FALLING' ? 'rgba(244, 63, 94, 0.25)' : theme.surface,
-                  borderColor: filter === 'FALLING' ? '#f43f5e' : theme.borderSubtle,
+                  backgroundColor:
+                    filter === 'FALLING'
+                      ? 'rgba(244, 63, 94, 0.28)'
+                      : 'rgba(244, 63, 94, 0.08)',
+                  borderColor: filter === 'FALLING' ? '#f43f5e' : 'rgba(244, 63, 94, 0.35)',
                 },
               ]}
               onPress={() => {
                 haptic.selection();
-                setFilter('FALLING');
+                setFilter(filter === 'FALLING' ? 'ALL' : 'FALLING');
               }}
               activeOpacity={0.8}
             >
-              <TrendingDown size={13} color={filter === 'FALLING' ? '#f43f5e' : theme.text.muted} />
-              <Text style={[styles.filterPillText, { color: filter === 'FALLING' ? '#f43f5e' : theme.text.secondary }]}>
+              <View style={[styles.filterIconBadge, { backgroundColor: filter === 'FALLING' ? '#f43f5e' : 'rgba(244, 63, 94, 0.2)' }]}>
+                <TrendingDown size={12} color={filter === 'FALLING' ? '#ffffff' : '#f43f5e'} strokeWidth={2.5} />
+              </View>
+              <Text style={[styles.filterPillText, { color: '#f43f5e' }]}>
                 Talep Azalanlar ({fallingCount})
               </Text>
             </TouchableOpacity>
@@ -1089,11 +1099,18 @@ const styles = StyleSheet.create({
   filterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 14,
     borderWidth: 1,
+  },
+  filterIconBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterPillText: {
     fontSize: 11,
