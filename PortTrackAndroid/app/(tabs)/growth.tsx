@@ -468,9 +468,12 @@ export default function GrowthScreen() {
       const prevUSD = prev ? prev.valueUSD : null;
       const returnUSD = prevUSD && prevUSD > 0 ? ((valUSD / prevUSD) - 1) * 100 : null;
 
+      const [yStr, mStr] = p.month.split('-');
+      const monthFormatted = yStr && mStr ? `${yStr.slice(2)}.${mStr}` : p.month;
+
       return {
         monthKey: p.month,
-        monthName: getMonthFullLabel(p.month),
+        monthName: monthFormatted,
         valTRY,
         valUSD,
         returnTRY,

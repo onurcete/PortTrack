@@ -347,18 +347,28 @@ export default function TransactionsScreen() {
                       <View style={styles.txInfoGroup}>
                         <View style={styles.txHeaderRow}>
                           <View style={[styles.assetTypePill, { backgroundColor: badge.bg }]}>
-                            <Text style={[styles.assetTypePillText, { color: badge.text }]}>
+                            <Text style={[styles.assetTypePillText, { color: badge.text }]} numberOfLines={1}>
                               {getAssetTypeLabel(tx.assetType)}
                             </Text>
                           </View>
-                          <Text style={[styles.txSymbolText, { color: theme.text.primary }]}>
+                          <Text
+                            style={[styles.txSymbolText, { color: theme.text.primary }]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
                             {tx.symbol}
                           </Text>
                         </View>
 
-                        <Text style={[styles.txSubDetail, { color: theme.text.muted }]}>
-                          {formatQuantity(tx.quantity)} Adet • Birim: {formatCurrency(tx.unitPrice, tx.currency)}
-                        </Text>
+                        {/* Standart Alt Alta: Adet ve Birim */}
+                        <View style={styles.qtyPriceColumn}>
+                          <Text style={[styles.txSubDetail, { color: theme.text.muted }]} numberOfLines={1}>
+                            {formatQuantity(tx.quantity)} Adet
+                          </Text>
+                          <Text style={[styles.txSubDetail, { color: theme.text.muted }]} numberOfLines={1}>
+                            Birim: {formatCurrency(tx.unitPrice, tx.currency)}
+                          </Text>
+                        </View>
                       </View>
                     </View>
 
@@ -585,19 +595,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 13,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1,
   },
   txLeftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 9,
     flex: 1,
+    marginRight: 8,
   },
   sideSquare: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -610,33 +622,41 @@ const styles = StyleSheet.create({
   },
   txInfoGroup: {
     flex: 1,
-    gap: 3,
+    gap: 2,
   },
   txHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   assetTypePill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    flexShrink: 0,
   },
   assetTypePillText: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
   },
   txSymbolText: {
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '900',
+    flexShrink: 1,
+  },
+  qtyPriceColumn: {
+    gap: 1,
+    marginTop: 1,
   },
   txSubDetail: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '500',
   },
   txRightGroup: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   txAmountRow: {
     flexDirection: 'row',
