@@ -66,10 +66,10 @@ const TIMEFRAME_BUTTONS: { key: TimeframeOption; label: string }[] = [
   { key: '1G', label: '1G' },
   { key: '1H', label: '1H' },
   { key: 'MTD', label: 'MTD' },
-  { key: '1A', label: '1 Ay' },
-  { key: '3A', label: '3 Ay' },
+  { key: '1A', label: '1A' },
+  { key: '3A', label: '3A' },
   { key: 'YTD', label: 'YTD' },
-  { key: '1Y', label: '1 Yıl' },
+  { key: '1Y', label: '1Y' },
 ];
 
 function formatLastUpdated(dateStr?: string | null): string {

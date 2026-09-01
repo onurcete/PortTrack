@@ -374,6 +374,9 @@ export default function AddTransactionModal() {
                       setShowDropdown(true);
                     } else if (symbol) {
                       handleSymbolChange(symbol);
+                    } else {
+                      setSearchResults([]);
+                      setShowDropdown(false);
                     }
                   }}
                   activeOpacity={0.75}

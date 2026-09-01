@@ -157,7 +157,7 @@ function ReturnCell({ pct }: { pct: number | null }) {
           : "bg-[var(--color-loss-soft)] text-[var(--color-loss)]",
       )}
     >
-      {formatPercent(pct)}
+      %{Math.abs(pct).toFixed(1).replace(".", ",")}
     </span>
   );
 }

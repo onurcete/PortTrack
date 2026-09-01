@@ -591,6 +591,7 @@ export default function GrowthScreen() {
           {/* 3. DÖNEM METRİK KARTI (2x2 Grid) */}
           {periodSummary && (
             <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+              {/* Üst Satır: Toplam Portföy (TRY) ve Toplam Dolar (USD) */}
               <View style={styles.kpiRow}>
                 {/* Sol Üst: Toplam Portföy (TRY) */}
                 <View style={styles.kpiCell}>
@@ -608,27 +609,26 @@ export default function GrowthScreen() {
                   </Text>
                 </View>
 
-                {/* Sağ Üst: Dönem Getirisi */}
+                {/* Sağ Üst: Toplam Dolar (USD) */}
                 <View style={styles.kpiCell}>
                   <View style={styles.kpiCellHeader}>
-                    <Text style={[styles.kpiLabelText, { color: theme.text.muted }]}>DÖNEM GETİRİSİ</Text>
-                    <View style={[styles.miniBadge, { backgroundColor: theme.profit.soft }]}>
-                      <Text style={[styles.miniBadgeText, { color: theme.profit.main }]}>
-                        %{periodSummary.gainPct.toFixed(1).replace('.', ',')}
-                      </Text>
+                    <Text style={[styles.kpiLabelText, { color: theme.text.muted }]}>TOPLAM DOLAR</Text>
+                    <View style={[styles.miniBadge, { backgroundColor: 'rgba(59, 130, 246, 0.18)' }]}>
+                      <Text style={[styles.miniBadgeText, { color: '#60a5fa' }]}>USD</Text>
                     </View>
                   </View>
-                  <Text style={[styles.kpiMainValue, { color: periodSummary.gainVal >= 0 ? theme.profit.main : theme.loss.main }]}>
-                    {periodSummary.gainVal >= 0 ? '+' : ''}{formatCurrency(periodSummary.gainVal, 'TRY', 0)}
+                  <Text style={[styles.kpiMainValue, { color: theme.text.primary }]}>
+                    {formatCurrency(periodSummary.totalCurrentUSD, 'USD', 0)}
                   </Text>
-                  <Text style={[styles.kpiDateText, { color: theme.text.muted }]}>
-                    Net kazanç / kayıp
+                  <Text style={[styles.kpiDateText, { color: '#818cf8', fontWeight: '700' }]}>
+                    USD Getiri: %{Math.abs(periodSummary.usdReturnPct).toFixed(1).replace('.', ',')}
                   </Text>
                 </View>
               </View>
 
               <View style={[styles.kpiDivider, { backgroundColor: theme.borderSubtle }]} />
 
+              {/* Alt Satır: Dönem Başlangıç ve Dönem Getirisi */}
               <View style={styles.kpiRow}>
                 {/* Sol Alt: Dönem Başlangıç */}
                 <View style={styles.kpiCell}>
@@ -643,19 +643,42 @@ export default function GrowthScreen() {
                   </Text>
                 </View>
 
-                {/* Sağ Alt: Toplam USD */}
+                {/* Sağ Alt: Dönem Getirisi */}
                 <View style={styles.kpiCell}>
                   <View style={styles.kpiCellHeader}>
-                    <Text style={[styles.kpiLabelText, { color: theme.text.muted }]}>TOPLAM ( $ )</Text>
-                    <View style={[styles.miniBadge, { backgroundColor: 'rgba(59, 130, 246, 0.18)' }]}>
-                      <Text style={[styles.miniBadgeText, { color: '#60a5fa' }]}>USD</Text>
+                    <Text style={[styles.kpiLabelText, { color: theme.text.muted }]}>DÖNEM GETİRİSİ</Text>
+                    <View
+                      style={[
+                        styles.miniBadge,
+                        {
+                          backgroundColor:
+                            periodSummary.gainVal >= 0 ? theme.profit.soft : theme.loss.soft,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.miniBadgeText,
+                          {
+                            color:
+                              periodSummary.gainVal >= 0 ? theme.profit.main : theme.loss.main,
+                          },
+                        ]}
+                      >
+                        %{Math.abs(periodSummary.gainPct).toFixed(1).replace('.', ',')}
+                      </Text>
                     </View>
                   </View>
-                  <Text style={[styles.kpiSecondaryValue, { color: theme.text.primary }]}>
-                    {formatCurrency(periodSummary.totalCurrentUSD, 'USD', 0)}
+                  <Text
+                    style={[
+                      styles.kpiSecondaryValue,
+                      { color: periodSummary.gainVal >= 0 ? theme.profit.main : theme.loss.main },
+                    ]}
+                  >
+                    {periodSummary.gainVal >= 0 ? '+' : ''}{formatCurrency(periodSummary.gainVal, 'TRY', 0)}
                   </Text>
-                  <Text style={[styles.kpiDateText, { color: '#818cf8', fontWeight: '700' }]}>
-                    USD Getiri: %{periodSummary.usdReturnPct.toFixed(1).replace('.', ',')}
+                  <Text style={[styles.kpiDateText, { color: theme.text.muted }]}>
+                    Net kazanç / kayıp
                   </Text>
                 </View>
               </View>
@@ -974,7 +997,7 @@ export default function GrowthScreen() {
                           ]}
                         >
                           {row.returnTRY != null
-                            ? `${isPosTRY ? '+' : ''}%${row.returnTRY.toFixed(1).replace('.', ',')}`
+                            ? `%${Math.abs(row.returnTRY).toFixed(1).replace('.', ',')}`
                             : '—'}
                         </Text>
                       </View>
@@ -990,7 +1013,7 @@ export default function GrowthScreen() {
                               row.returnUSD == null
                                 ? 'transparent'
                                 : isPosUSD
-                                ? 'rgba(99, 102, 241, 0.15)'
+                                ? theme.profit.soft
                                 : theme.loss.soft,
                           },
                         ]}
@@ -1003,13 +1026,13 @@ export default function GrowthScreen() {
                                 row.returnUSD == null
                                   ? theme.text.muted
                                   : isPosUSD
-                                  ? '#818cf8'
+                                  ? theme.profit.main
                                   : theme.loss.main,
                             },
                           ]}
                         >
                           {row.returnUSD != null
-                            ? `${isPosUSD ? '+' : ''}%${row.returnUSD.toFixed(1).replace('.', ',')}`
+                            ? `%${Math.abs(row.returnUSD).toFixed(1).replace('.', ',')}`
                             : '—'}
                         </Text>
                       </View>
