@@ -1181,12 +1181,29 @@ export interface BenchmarkComparisonData {
 }
 
 export async function getBenchmarkComparisonData(userId: string): Promise<BenchmarkComparisonData> {
-  const [txRows, snaps, fxRows, manualSnaps] = await Promise.all([
-    prisma.transaction.findMany({
-      where: { userId },
+  const txRows = await prisma.transaction.findMany({
+    where: { userId },
+    orderBy: { date: "asc" },
+  });
+
+  const benchmarkSymbols = [
+    "XU100",
+    "XU100.IS",
+    "^GSPC",
+    "GC=F",
+    "USDTRY",
+    "USD",
+    "GRAM_ALTIN",
+    "ALTIN",
+  ];
+  const allSymbols = Array.from(new Set([...txRows.map((t) => t.symbol), ...benchmarkSymbols]));
+
+  const [snaps, fxRows, manualSnaps] = await Promise.all([
+    prisma.priceSnapshot.findMany({
+      where: { symbol: { in: allSymbols } },
       orderBy: { date: "asc" },
+      select: { symbol: true, date: true, close: true },
     }),
-    prisma.priceSnapshot.findMany({ orderBy: { date: "asc" } }),
     prisma.fxRate.findMany({ where: { pair: "USDTRY" }, orderBy: { date: "asc" } }),
     loadManualSnapshots(userId),
   ]);

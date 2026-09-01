@@ -332,75 +332,75 @@ export default function AnalysisScreen() {
             />
           }
         >
-          {/* 2. BENTO KARTLARI (2 Üst Kart) */}
-          <View style={styles.bentoRow}>
-            {/* SOL KART: GENEL FON TALEP DENGESİ */}
-            <View style={[styles.bentoCardHalf, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardHeaderLeft}>
-                  <Users size={15} color="#818cf8" />
-                  <Text style={[styles.cardHeaderLabel, { color: theme.text.muted }]} numberOfLines={2}>
-                    GENEL FON{'\n'}TALEP DENGESİ
-                  </Text>
-                </View>
-                <View
+          {/* 2. GENEL FON TALEP DENGESİ (Üstte Tek Kart / Tam Genişlik) */}
+          <View style={[styles.bentoCardFull, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardHeaderLeft}>
+                <Users size={16} color="#818cf8" />
+                <Text style={[styles.cardHeaderLabel, { color: theme.text.muted, fontSize: 10.5 }]}>
+                  GENEL FON TALEP DENGESİ
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.netBadge,
+                  {
+                    backgroundColor:
+                      totalNetDelta >= 0
+                        ? 'rgba(34, 197, 94, 0.15)'
+                        : 'rgba(244, 63, 94, 0.15)',
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.netBadge,
-                    {
-                      backgroundColor:
-                        totalNetDelta >= 0
-                          ? 'rgba(34, 197, 94, 0.15)'
-                          : 'rgba(244, 63, 94, 0.15)',
-                    },
+                    styles.netBadgeText,
+                    { color: totalNetDelta >= 0 ? '#22c55e' : '#f43f5e' },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.netBadgeText,
-                      { color: totalNetDelta >= 0 ? '#22c55e' : '#f43f5e' },
-                    ]}
-                  >
-                    Net {totalNetDelta >= 0 ? `+${formatCount(totalNetDelta)}` : formatCount(totalNetDelta)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Çok Segmentli Renk Barı */}
-              <View style={styles.multiBarContainer}>
-                <View style={[styles.multiBarSegment, { width: `${risingPct}%`, backgroundColor: '#22c55e' }]} />
-                <View style={[styles.multiBarSegment, { width: `${flatPct}%`, backgroundColor: '#eab308' }]} />
-                <View style={[styles.multiBarSegment, { width: `${fallingPct}%`, backgroundColor: '#f43f5e' }]} />
-              </View>
-
-              {/* Alt İstatistik Satırı */}
-              <View style={styles.subStatsRow}>
-                <View>
-                  <View style={styles.dotLabelRow}>
-                    <View style={[styles.miniDot, { backgroundColor: '#22c55e' }]} />
-                    <Text style={[styles.subStatLabel, { color: theme.text.secondary }]}>
-                      {risingCount} Fon Artışta
-                    </Text>
-                  </View>
-                  <Text style={[styles.subStatPct, { color: '#22c55e' }]}>
-                    %{risingPct.toFixed(0)}
-                  </Text>
-                </View>
-
-                <View style={{ alignItems: 'flex-end' }}>
-                  <View style={styles.dotLabelRow}>
-                    <View style={[styles.miniDot, { backgroundColor: '#f43f5e' }]} />
-                    <Text style={[styles.subStatLabel, { color: theme.text.secondary }]}>
-                      {fallingCount} Fon Azalışta
-                    </Text>
-                  </View>
-                  <Text style={[styles.subStatPct, { color: '#f43f5e' }]}>
-                    %{fallingPct.toFixed(0)}
-                  </Text>
-                </View>
+                  Net {totalNetDelta >= 0 ? `+${formatCount(totalNetDelta)}` : formatCount(totalNetDelta)}
+                </Text>
               </View>
             </View>
 
-            {/* SAĞ KART: HAFTANIN TALEP LİDERİ (TOP GİRİŞ) */}
+            {/* Çok Segmentli Renk Barı */}
+            <View style={styles.multiBarContainer}>
+              <View style={[styles.multiBarSegment, { width: `${risingPct}%`, backgroundColor: '#22c55e' }]} />
+              <View style={[styles.multiBarSegment, { width: `${flatPct}%`, backgroundColor: '#eab308' }]} />
+              <View style={[styles.multiBarSegment, { width: `${fallingPct}%`, backgroundColor: '#f43f5e' }]} />
+            </View>
+
+            {/* Alt İstatistik Satırı */}
+            <View style={styles.subStatsRow}>
+              <View>
+                <View style={styles.dotLabelRow}>
+                  <View style={[styles.miniDot, { backgroundColor: '#22c55e' }]} />
+                  <Text style={[styles.subStatLabel, { color: theme.text.secondary }]}>
+                    {risingCount} Fon Artışta
+                  </Text>
+                </View>
+                <Text style={[styles.subStatPct, { color: '#22c55e' }]}>
+                  %{risingPct.toFixed(0)}
+                </Text>
+              </View>
+
+              <View style={{ alignItems: 'flex-end' }}>
+                <View style={styles.dotLabelRow}>
+                  <View style={[styles.miniDot, { backgroundColor: '#f43f5e' }]} />
+                  <Text style={[styles.subStatLabel, { color: theme.text.secondary }]}>
+                    {fallingCount} Fon Azalışta
+                  </Text>
+                </View>
+                <Text style={[styles.subStatPct, { color: '#f43f5e' }]}>
+                  %{fallingPct.toFixed(0)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 3. BENTO KARTLARI (Altta Yan Yana: TOP GİRİŞ & TOP ÇIKIŞ) */}
+          <View style={styles.bentoRow}>
+            {/* SOL KART: HAFTANIN TALEP LİDERİ (TOP GİRİŞ) */}
             <TouchableOpacity
               style={[
                 styles.bentoCardHalf,
@@ -416,9 +416,9 @@ export default function AnalysisScreen() {
             >
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
-                  <TrendingUp size={14} color="#22c55e" />
-                  <Text style={[styles.cardHeaderLabel, { color: '#22c55e', fontSize: 9 }]} numberOfLines={1}>
-                    HAFTANIN TALEP LİDERİ
+                  <TrendingUp size={13} color="#22c55e" />
+                  <Text style={[styles.cardHeaderLabel, { color: '#22c55e', fontSize: 8.5 }]} numberOfLines={1}>
+                    TALEP LİDERİ
                   </Text>
                 </View>
                 <View style={[styles.topBadge, { backgroundColor: 'rgba(34, 197, 94, 0.18)' }]}>
@@ -436,7 +436,7 @@ export default function AnalysisScreen() {
                       <Text style={[styles.returnPctText, { color: '#22c55e' }]}>
                         +%{Math.abs(topInflowFund.weekDeltaPct ?? 0).toFixed(2).replace('.', ',')}
                       </Text>
-                      <ArrowUpRight size={14} color="#22c55e" strokeWidth={2.5} />
+                      <ArrowUpRight size={13} color="#22c55e" strokeWidth={2.5} />
                     </View>
                   </View>
 
@@ -444,8 +444,8 @@ export default function AnalysisScreen() {
                     ({formatCount(topInflowFund.latest)} kişi)
                   </Text>
 
-                  <Text style={[styles.deltaDescText, { color: theme.text.muted }]}>
-                    Haftalık net <Text style={{ color: '#22c55e', fontWeight: '800' }}>+{formatCount(topInflowFund.weekDelta)}</Text> yeni yatırımcı katıldı
+                  <Text style={[styles.deltaDescText, { color: theme.text.muted }]} numberOfLines={2}>
+                    Haftalık net <Text style={{ color: '#22c55e', fontWeight: '800' }}>+{formatCount(topInflowFund.weekDelta)}</Text> yeni yatırımcı
                   </Text>
                 </View>
               ) : (
@@ -454,62 +454,62 @@ export default function AnalysisScreen() {
                 </View>
               )}
             </TouchableOpacity>
-          </View>
 
-          {/* 3. EN YÜKSEK YATIRIMCI ÇIKIŞI (TOP ÇIKIŞ - Tam Genişlik Kart) */}
-          <TouchableOpacity
-            style={[
-              styles.bentoCardFull,
-              { backgroundColor: theme.surface, borderColor: 'rgba(244, 63, 94, 0.35)' },
-            ]}
-            onPress={() => {
-              if (topOutflowFund) {
-                haptic.selection();
-                setSelectedFund(topOutflowFund);
-              }
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardHeaderLeft}>
-                <TrendingDown size={14} color="#f43f5e" />
-                <Text style={[styles.cardHeaderLabel, { color: '#f43f5e' }]}>
-                  EN YÜKSEK YATIRIMCI ÇIKIŞI
-                </Text>
-              </View>
-              <View style={[styles.topBadge, { backgroundColor: 'rgba(244, 63, 94, 0.18)' }]}>
-                <Text style={[styles.topBadgeText, { color: '#f43f5e' }]}>TOP ÇIKIŞ</Text>
-              </View>
-            </View>
-
-            {topOutflowFund ? (
-              <View style={{ marginTop: 6 }}>
-                <View style={styles.symbolReturnRow}>
-                  <Text style={[styles.bentoSymbolText, { color: theme.text.primary }]}>
-                    {topOutflowFund.symbol}
+            {/* SAĞ KART: EN YÜKSEK YATIRIMCI ÇIKIŞI (TOP ÇIKIŞ) */}
+            <TouchableOpacity
+              style={[
+                styles.bentoCardHalf,
+                { backgroundColor: theme.surface, borderColor: 'rgba(244, 63, 94, 0.35)' },
+              ]}
+              onPress={() => {
+                if (topOutflowFund) {
+                  haptic.selection();
+                  setSelectedFund(topOutflowFund);
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardHeaderLeft}>
+                  <TrendingDown size={13} color="#f43f5e" />
+                  <Text style={[styles.cardHeaderLabel, { color: '#f43f5e', fontSize: 8.5 }]} numberOfLines={1}>
+                    EN ÇOK ÇIKIŞ
                   </Text>
-                  <View style={styles.returnBadgeRow}>
-                    <Text style={[styles.returnPctText, { color: '#f43f5e' }]}>
-                      -%{Math.abs(topOutflowFund.weekDeltaPct ?? 0).toFixed(2).replace('.', ',')}
-                    </Text>
-                    <ArrowDownRight size={14} color="#f43f5e" strokeWidth={2.5} />
-                  </View>
                 </View>
-
-                <Text style={[styles.investorCountSub, { color: theme.text.muted }]}>
-                  ({formatCount(topOutflowFund.latest)} kişi)
-                </Text>
-
-                <Text style={[styles.deltaDescText, { color: theme.text.muted }]}>
-                  Haftalık net <Text style={{ color: '#f43f5e', fontWeight: '800' }}>{formatCount(topOutflowFund.weekDelta)}</Text> yatırımcı ayrıldı
-                </Text>
+                <View style={[styles.topBadge, { backgroundColor: 'rgba(244, 63, 94, 0.18)' }]}>
+                  <Text style={[styles.topBadgeText, { color: '#f43f5e' }]}>TOP ÇIKIŞ</Text>
+                </View>
               </View>
-            ) : (
-              <View style={styles.noDataBox}>
-                <Text style={[styles.noDataText, { color: theme.text.muted }]}>Çıkış verisi yok</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+
+              {topOutflowFund ? (
+                <View style={{ marginTop: 6 }}>
+                  <View style={styles.symbolReturnRow}>
+                    <Text style={[styles.bentoSymbolText, { color: theme.text.primary }]}>
+                      {topOutflowFund.symbol}
+                    </Text>
+                    <View style={styles.returnBadgeRow}>
+                      <Text style={[styles.returnPctText, { color: '#f43f5e' }]}>
+                        -%{Math.abs(topOutflowFund.weekDeltaPct ?? 0).toFixed(2).replace('.', ',')}
+                      </Text>
+                      <ArrowDownRight size={13} color="#f43f5e" strokeWidth={2.5} />
+                    </View>
+                  </View>
+
+                  <Text style={[styles.investorCountSub, { color: theme.text.muted }]}>
+                    ({formatCount(topOutflowFund.latest)} kişi)
+                  </Text>
+
+                  <Text style={[styles.deltaDescText, { color: theme.text.muted }]} numberOfLines={2}>
+                    Haftalık net <Text style={{ color: '#f43f5e', fontWeight: '800' }}>{formatCount(topOutflowFund.weekDelta)}</Text> ayrılan
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.noDataBox}>
+                  <Text style={[styles.noDataText, { color: theme.text.muted }]}>Çıkış verisi yok</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* 4. FİLTRE ÇİPLERİ (Tümü / Talep Artanlar / Talep Azalanlar) */}
           <View style={styles.filterPillsRow}>
