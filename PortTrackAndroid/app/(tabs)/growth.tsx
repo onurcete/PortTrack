@@ -19,14 +19,13 @@ import {
 import { api } from '../../services/api';
 import {
   formatCurrency,
-  getAssetTypeLabel,
-  getAssetTypeBadgeColor,
 } from '../../utils/formatters';
 import { useThemeStore } from '../../stores/themeStore';
 import { useCurrencyStore } from '../../stores/currencyStore';
 import { SelectModal, SelectOption } from '../../components/SelectModal';
 import { haptic } from '../../utils/haptics';
 import { AssetType, PeriodReturns } from '../../types';
+import { darkTheme } from '../../theme/colors';
 
 export type GrowthByType = Partial<Record<AssetType, { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number }>> & {
   [key: string]: { valueTRY: number; valueUSD: number; costTRY: number; costUSD: number } | undefined;
@@ -43,29 +42,10 @@ interface GrowthPoint {
 }
 
 const SHORT_MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-const FULL_MONTHS = [
-  'Ocak',
-  'Şubat',
-  'Mart',
-  'Nisan',
-  'Mayıs',
-  'Haziran',
-  'Temmuz',
-  'Ağustos',
-  'Eylül',
-  'Ekim',
-  'Kasım',
-  'Aralık',
-];
 
 function getMonthShortLabel(monthKey: string): string {
   const [, m] = monthKey.split('-').map(Number);
   return SHORT_MONTHS[(m || 1) - 1] ?? monthKey;
-}
-
-function getMonthFullLabel(monthKey: string): string {
-  const [, m] = monthKey.split('-').map(Number);
-  return FULL_MONTHS[(m || 1) - 1] ?? monthKey;
 }
 
 function prevMonthKey(key: string): string {
@@ -75,7 +55,6 @@ function prevMonthKey(key: string): string {
 }
 
 function formatCompactMoney(value: number, currency: 'TRY' | 'USD'): string {
-  const sym = currency === 'TRY' ? '₺' : '$';
   if (value >= 1_000_000) {
     return `${(value / 1_000_000).toFixed(1)}M`;
   }
@@ -117,7 +96,7 @@ function ValueLineChart({
 }: {
   data: { month: string; label: string; value: number; cost: number }[];
   currency: 'TRY' | 'USD';
-  theme: any;
+  theme: typeof darkTheme;
   isSingleYear: boolean;
   width: number;
 }) {
@@ -573,7 +552,7 @@ export default function GrowthScreen() {
                   ]}
                   onPress={() => {
                     haptic.selection();
-                    setChartMetric(tab.key as any);
+                    setChartMetric(tab.key as 'return' | 'value' | 'allocation');
                   }}
                   activeOpacity={0.8}
                 >
