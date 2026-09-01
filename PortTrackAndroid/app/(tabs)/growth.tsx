@@ -64,6 +64,11 @@ function formatCompactMoney(value: number, currency: 'TRY' | 'USD'): string {
   return `${value.toFixed(0)}`;
 }
 
+function formatTableAmount(val: number | null | undefined): string {
+  if (val == null || isNaN(val)) return '0';
+  return Math.round(val).toLocaleString('tr-TR');
+}
+
 const ASSET_COLORS: Record<AssetType, string> = {
   BES: '#3b82f6',
   BES_FUND: '#0ea5e9',
@@ -917,11 +922,11 @@ export default function GrowthScreen() {
             {/* Tablo Görünümü */}
             <View style={styles.tableWrapper}>
               <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <Text style={[styles.thCell, { width: '14%', color: theme.text.muted }]} numberOfLines={1}>YIL</Text>
-                <Text style={[styles.thCell, { width: '28%', color: theme.text.muted }]} numberOfLines={1}>TRY (₺)</Text>
-                <Text style={[styles.thCell, { width: '22%', color: theme.text.muted }]} numberOfLines={1}>USD ($)</Text>
-                <Text style={[styles.thCell, { width: '18%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>TRY %</Text>
-                <Text style={[styles.thCell, { width: '18%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>USD %</Text>
+                <Text style={[styles.thCell, { width: '16%', textAlign: 'left', color: theme.text.muted }]} numberOfLines={1}>YIL</Text>
+                <Text style={[styles.thCell, { width: '25%', textAlign: 'right', paddingRight: 6, color: theme.text.muted }]} numberOfLines={1}>TRY (₺)</Text>
+                <Text style={[styles.thCell, { width: '21%', textAlign: 'right', paddingRight: 6, color: theme.text.muted }]} numberOfLines={1}>USD ($)</Text>
+                <Text style={[styles.thCell, { width: '19%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>TRY %</Text>
+                <Text style={[styles.thCell, { width: '19%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>USD %</Text>
               </View>
 
               {cumulativeYearlyRows.map((row) => {
@@ -931,39 +936,38 @@ export default function GrowthScreen() {
                 return (
                   <View key={row.year} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
                     {/* Yıl Kolonu */}
-                    <View style={{ width: '14%', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <View style={[styles.rowDot, { backgroundColor: '#8b5cf6' }]} />
-                      <Text style={[styles.rowYearText, { color: theme.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                    <View style={{ width: '16%', justifyContent: 'center' }}>
+                      <Text style={[styles.rowYearText, { color: theme.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                         {row.year}
                       </Text>
                     </View>
 
                     {/* TRY Değeri */}
-                    <View style={{ width: '28%', paddingRight: 4 }}>
+                    <View style={{ width: '25%', paddingRight: 6, alignItems: 'flex-end', justifyContent: 'center' }}>
                       <Text
-                        style={[styles.rowValuePrimary, { color: theme.text.primary }]}
+                        style={[styles.rowValuePrimary, { color: theme.text.primary, textAlign: 'right' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.75}
                       >
-                        {formatCurrency(row.endTRY, 'TRY', 0)}
+                        {formatTableAmount(row.endTRY)}
                       </Text>
                     </View>
 
                     {/* USD Değeri */}
-                    <View style={{ width: '22%', paddingRight: 4 }}>
+                    <View style={{ width: '21%', paddingRight: 6, alignItems: 'flex-end', justifyContent: 'center' }}>
                       <Text
-                        style={[styles.rowValuePrimary, { color: theme.text.primary }]}
+                        style={[styles.rowValuePrimary, { color: theme.text.primary, textAlign: 'right' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.75}
                       >
-                        {formatCurrency(row.endUSD, 'USD', 0)}
+                        {formatTableAmount(row.endUSD)}
                       </Text>
                     </View>
 
                     {/* Getiri TRY % Kapsülü */}
-                    <View style={{ width: '18%', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: '19%', alignItems: 'center', justifyContent: 'center' }}>
                       <View
                         style={[
                           styles.retPill,
@@ -1001,7 +1005,7 @@ export default function GrowthScreen() {
                     </View>
 
                     {/* Getiri USD % Kapsülü */}
-                    <View style={{ width: '18%', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: '19%', alignItems: 'center', justifyContent: 'center' }}>
                       <View
                         style={[
                           styles.retPill,
@@ -1074,11 +1078,11 @@ export default function GrowthScreen() {
             {/* Tablo Görünümü */}
             <View style={styles.tableWrapper}>
               <View style={[styles.tableHeaderRow, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <Text style={[styles.thCell, { width: '14%', color: theme.text.muted }]} numberOfLines={1}>AY</Text>
-                <Text style={[styles.thCell, { width: '28%', color: theme.text.muted }]} numberOfLines={1}>TRY (₺)</Text>
-                <Text style={[styles.thCell, { width: '22%', color: theme.text.muted }]} numberOfLines={1}>USD ($)</Text>
-                <Text style={[styles.thCell, { width: '18%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>TRY %</Text>
-                <Text style={[styles.thCell, { width: '18%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>USD %</Text>
+                <Text style={[styles.thCell, { width: '16%', textAlign: 'left', color: theme.text.muted }]} numberOfLines={1}>AY</Text>
+                <Text style={[styles.thCell, { width: '25%', textAlign: 'right', paddingRight: 6, color: theme.text.muted }]} numberOfLines={1}>TRY (₺)</Text>
+                <Text style={[styles.thCell, { width: '21%', textAlign: 'right', paddingRight: 6, color: theme.text.muted }]} numberOfLines={1}>USD ($)</Text>
+                <Text style={[styles.thCell, { width: '19%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>TRY %</Text>
+                <Text style={[styles.thCell, { width: '19%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={1}>USD %</Text>
               </View>
 
               {monthlyRows.map((row) => {
@@ -1088,39 +1092,38 @@ export default function GrowthScreen() {
                 return (
                   <View key={row.monthKey} style={[styles.tableBodyRow, { borderBottomColor: theme.borderSubtle }]}>
                     {/* Ay Kolonu (Ocak, Şubat Yazıyla) */}
-                    <View style={{ width: '14%', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <View style={[styles.rowDot, { backgroundColor: '#6366f1' }]} />
-                      <Text style={[styles.rowYearText, { color: theme.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                    <View style={{ width: '16%', justifyContent: 'center' }}>
+                      <Text style={[styles.rowYearText, { color: theme.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                         {row.monthName}
                       </Text>
                     </View>
 
                     {/* TRY Değeri */}
-                    <View style={{ width: '28%', paddingRight: 4 }}>
+                    <View style={{ width: '25%', paddingRight: 6, alignItems: 'flex-end', justifyContent: 'center' }}>
                       <Text
-                        style={[styles.rowValuePrimary, { color: theme.text.primary }]}
+                        style={[styles.rowValuePrimary, { color: theme.text.primary, textAlign: 'right' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.75}
                       >
-                        {formatCurrency(row.valTRY, 'TRY', 0)}
+                        {formatTableAmount(row.valTRY)}
                       </Text>
                     </View>
 
                     {/* USD Değeri */}
-                    <View style={{ width: '22%', paddingRight: 4 }}>
+                    <View style={{ width: '21%', paddingRight: 6, alignItems: 'flex-end', justifyContent: 'center' }}>
                       <Text
-                        style={[styles.rowValuePrimary, { color: theme.text.primary }]}
+                        style={[styles.rowValuePrimary, { color: theme.text.primary, textAlign: 'right' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.75}
                       >
-                        {formatCurrency(row.valUSD, 'USD', 0)}
+                        {formatTableAmount(row.valUSD)}
                       </Text>
                     </View>
 
                     {/* Getiri TRY % Kapsülü */}
-                    <View style={{ width: '18%', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: '19%', alignItems: 'center', justifyContent: 'center' }}>
                       <View
                         style={[
                           styles.retPill,
@@ -1158,7 +1161,7 @@ export default function GrowthScreen() {
                     </View>
 
                     {/* Getiri USD % Kapsülü */}
-                    <View style={{ width: '18%', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: '19%', alignItems: 'center', justifyContent: 'center' }}>
                       <View
                         style={[
                           styles.retPill,
@@ -1509,27 +1512,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderBottomWidth: 1,
   },
-  rowDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
   rowYearText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   rowValuePrimary: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   retPill: {
     paddingHorizontal: 2,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingVertical: 2.5,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    maxWidth: 50,
+    maxWidth: 52,
   },
   rowPctText: {
     fontSize: 9.5,
