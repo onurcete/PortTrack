@@ -16,6 +16,7 @@ import {
   Moon,
   Sun,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { useCurrency } from "@/context/currency";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,11 @@ export function SettingsClient() {
   const [theme, setTheme] = useState<ThemeId>("dark");
   const [defaultCurrency, setDefaultCurrencyState] = useState<"TRY" | "USD">("TRY");
   const [dailyDigestEnabled, setDailyDigestEnabled] = useState(false);
+
+  // Account Deletion State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
   // Load initial settings
   useEffect(() => {
@@ -185,6 +191,24 @@ export function SettingsClient() {
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationText.trim().toUpperCase() !== "SİL") return;
+    setDeletingAccount(true);
+    try {
+      const res = await fetch("/api/user/account", { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        window.location.href = "/login?deleted=true";
+      } else {
+        showToast(data.error || "Hesap silinemedi.", "error");
+        setDeletingAccount(false);
+      }
+    } catch {
+      showToast("Bağlantı hatası oluştu.", "error");
+      setDeletingAccount(false);
+    }
   };
 
   if (loading) {
@@ -607,8 +631,116 @@ export function SettingsClient() {
               </p>
             </div>
           </section>
+
+          {/* TEHLİKELİ BÖLGE (HESAP SİLME) */}
+          <section className="rounded-3xl border border-rose-500/25 bg-rose-500/5 p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-rose-500">
+                  Hesabı Sil
+                </h2>
+                <p className="text-xs text-[var(--color-muted)]">
+                  Hesabınızı ve verilerinizi kalıcı olarak silin.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[var(--color-muted)] leading-relaxed">
+              Hesabınızı sildiğinizde; tüm portföy kayıtlarınız, varlık geçmişiniz ve özel tercihleriniz geri döndürülemez şekilde sistemden kaldırılır.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteConfirmationText("");
+                setShowDeleteModal(true);
+              }}
+              disabled={isDemo}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-rose-500 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={15} />
+              <span>{isDemo ? "Demo Hesabı Silinemez" : "Hesabımı ve Verilerimi Kalıcı Olarak Sil"}</span>
+            </button>
+          </section>
         </div>
       </div>
+
+      {/* HESAP SİLME ONAY MODALI */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-3xl border border-rose-500/30 bg-[var(--color-surface)] p-6 shadow-2xl space-y-5">
+            <div className="flex items-center gap-3 text-rose-500">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-500/10">
+                <AlertCircle size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[var(--color-foreground)]">
+                  Hesabı Kalıcı Olarak Sil
+                </h3>
+                <p className="text-xs text-rose-500 font-semibold">
+                  Bu işlem kesinlikle geri alınamaz!
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)]/60 p-4 space-y-2 text-xs text-[var(--color-muted)] leading-relaxed">
+              <p className="font-semibold text-[var(--color-foreground)]">
+                Şu veriler anında silinecektir:
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Tüm hisse, fon, döviz ve kripto işlem kayıtlarınız</li>
+                <li>Geçmiş portföy değerlemeleri ve aylık bültenler</li>
+                <li>Kişisel ayarlarınız ve hesap kimliğiniz</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[var(--color-foreground)]">
+                Onaylamak için aşağıdaki kutuya büyük harflerle <span className="text-rose-500 font-black">SİL</span> yazın:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmationText}
+                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                placeholder="SİL"
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3.5 py-2.5 text-sm font-black text-rose-500 placeholder:text-[var(--color-muted)] focus:border-rose-500 focus:outline-hidden text-center tracking-widest uppercase"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingAccount}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-foreground)] hover:bg-[var(--color-border)]/50 transition-colors"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmationText.trim().toUpperCase() !== "SİL" || deletingAccount}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 shadow-sm"
+              >
+                {deletingAccount ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Siliniyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Hesabı Kalıcı Olarak Sil</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

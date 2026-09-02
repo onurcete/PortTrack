@@ -25,6 +25,7 @@ import {
   Mail,
   Palette,
   ExternalLink,
+  Trash2,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -39,7 +40,7 @@ const CURRENCY_OPTIONS: SelectOption[] = [
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, logout, updateSettings } = useAuthStore();
+  const { user, logout, deleteAccount, updateSettings } = useAuthStore();
   const { theme, mode, toggleTheme } = useThemeStore();
   const { currency, setCurrency } = useCurrencyStore();
 
@@ -92,6 +93,40 @@ export default function SettingsScreen() {
         },
       },
     ]);
+  };
+
+  // Hesabı Sil (Apple Guideline 5.1.1(v) Zorunlu Kural)
+  const handleDeleteAccount = () => {
+    if (user?.isDemo) {
+      Alert.alert('Uyarı', 'Demo hesabı silinemez.');
+      return;
+    }
+    haptic.light();
+    Alert.alert(
+      'Hesabımı Sil',
+      'Hesabınızı ve tüm portföy verilerinizi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem kesinlikle geri alınamaz.',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Hesabı Kalıcı Olarak Sil',
+          style: 'destructive',
+          onPress: async () => {
+            haptic.medium();
+            const res = await deleteAccount();
+            if (res.ok) {
+              Alert.alert('Hesap Silindi', 'Hesabınız ve tüm verileriniz başarıyla silindi.', [
+                {
+                  text: 'Tamam',
+                  onPress: () => router.replace('/(auth)/login' as any),
+                },
+              ]);
+            } else {
+              Alert.alert('Hata', res.error || 'Hesap silinirken bir hata oluştu.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -266,6 +301,21 @@ export default function SettingsScreen() {
           <LogOut size={17} color={theme.loss.main} />
           <Text style={[styles.logoutText, { color: theme.loss.main }]}>Oturumu Kapat</Text>
         </TouchableOpacity>
+
+        {/* 7. HESABI SİL BUTONU (Apple App Store Zorunlu Kuralı) */}
+        <TouchableOpacity
+          style={[
+            styles.deleteAccountBtn,
+            { borderColor: 'rgba(244, 63, 94, 0.2)' },
+          ]}
+          onPress={handleDeleteAccount}
+          activeOpacity={0.7}
+        >
+          <Trash2 size={16} color={theme.loss.main} />
+          <Text style={[styles.deleteAccountText, { color: theme.loss.main }]}>
+            Hesabımı ve Verilerimi Kalıcı Olarak Sil
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Para Birimi Seçim Modalı */}
@@ -419,5 +469,19 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 14,
     fontWeight: '800',
+  },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    paddingVertical: 13,
+    gap: 8,
+    borderWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  deleteAccountText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

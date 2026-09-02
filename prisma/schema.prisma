@@ -16,6 +16,7 @@ model User {
   email     String   @unique
   password  String?
   googleId  String?  @unique
+  appleId   String?  @unique
   name      String?
   role      String   @default("USER")
   isDemo    Boolean  @default(false)

@@ -17,8 +17,15 @@ interface AuthState {
   login: (email: string, password?: string) => Promise<boolean>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
   loginGoogle: (token: string) => Promise<boolean>;
+  loginApple: (payload: {
+    identityToken?: string;
+    user?: string;
+    email?: string | null;
+    fullName?: { givenName?: string | null; familyName?: string | null } | string | null;
+  }) => Promise<boolean>;
   loginDemo: () => Promise<boolean>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<{ ok: boolean; error?: string }>;
   checkAuth: () => Promise<void>;
   updateUser: (updatedUser: Partial<User>) => void;
   updateSettings: (patch: {
@@ -208,6 +215,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  loginApple: async (payload) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post<{ ok?: boolean; user?: User; token?: string; error?: string }>('/auth/apple', payload);
+      if (res.data?.user || res.data?.ok) {
+        if (res.data.token) {
+          await api.setToken(res.data.token);
+        }
+
+        let currentUser = res.data.user;
+        if (!currentUser) {
+          const meRes = await api.get<{ user: User }>('/auth/me');
+          currentUser = meRes.data?.user;
+        }
+
+        set({
+          user: currentUser || null,
+          token: res.data.token || 'apple-token',
+          isLoading: false,
+          error: null,
+          isInitialized: true,
+        });
+        return true;
+      } else {
+        const errorText = res.data?.error || (res.error as any)?.message || 'Apple ile giriş başarısız.';
+        set({ isLoading: false, error: errorText });
+        return false;
+      }
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: typeof err?.message === 'string' ? err.message : 'Apple ile giriş sırasında hata oluştu.',
+      });
+      return false;
+    }
+  },
+
   loginDemo: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -265,6 +309,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {}
     await api.removeToken();
     set({ user: null, token: null, error: null });
+  },
+
+  deleteAccount: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.delete<{ ok?: boolean; error?: string }>('/user/account');
+      if (res.data?.ok) {
+        await api.removeToken();
+        set({ user: null, token: null, isLoading: false, error: null });
+        return { ok: true };
+      } else {
+        const errorText = res.data?.error || (res.error as any)?.message || 'Hesap silinemedi.';
+        set({ isLoading: false, error: errorText });
+        return { ok: false, error: errorText };
+      }
+    } catch (err: any) {
+      const errorText = typeof err?.message === 'string' ? err.message : 'Bağlantı hatası oluştu.';
+      set({ isLoading: false, error: errorText });
+      return { ok: false, error: errorText };
+    }
   },
 
   updateUser: (updatedUser: Partial<User>) => {

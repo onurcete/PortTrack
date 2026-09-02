@@ -4,6 +4,10 @@ import type { NextRequest } from "next/server";
 export type SystemAction =
   | "LOGIN"
   | "LOGIN_FAILED"
+  | "LOGIN_APPLE"
+  | "REGISTER"
+  | "REGISTER_APPLE"
+  | "ACCOUNT_DELETED"
   | "PASSWORD_RESET"
   | "PASSWORD_RESET_REQUEST"
   | "ACTIVE_VISIT"

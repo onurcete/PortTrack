@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import {
   User as UserIcon,
   UserPlus,
@@ -62,11 +63,19 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, register, loginGoogle, loginDemo, isLoading, error, clearError } = useAuthStore();
+  const { login, register, loginGoogle, loginApple, loginDemo, isLoading, error, clearError } = useAuthStore();
   const { theme, mode } = useThemeStore();
 
   const [authModalType, setAuthModalType] = useState<'login' | 'register' | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAvailable)
+      .catch(() => setAppleAvailable(false));
+  }, []);
 
   // Form State
   const [name, setName] = useState('');
@@ -105,6 +114,42 @@ export default function LoginScreen() {
       Alert.alert('Hata', 'Google ile giriş yapılırken bir sorun oluştu.');
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    haptic.medium();
+    setAppleLoading(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (credential.identityToken) {
+        const ok = await loginApple({
+          identityToken: credential.identityToken,
+          user: credential.user,
+          email: credential.email,
+          fullName: credential.fullName,
+        });
+        if (ok) {
+          haptic.success();
+          setAuthModalType(null);
+          router.replace('/(tabs)' as any);
+        } else {
+          Alert.alert('Giriş Başarısız', error || 'Apple ile giriş tamamlanamadı.');
+        }
+      }
+    } catch (e: any) {
+      if (e.code === 'ERR_REQUEST_CANCELED') {
+        return;
+      }
+      console.error('Apple login error:', e);
+      Alert.alert('Hata', 'Apple ile giriş yapılırken bir sorun oluştu.');
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -175,6 +220,21 @@ export default function LoginScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {/* 1.1 Apple İle Giriş Yap (iOS Zorunlu Kural) */}
+          {(appleAvailable || Platform.OS === 'ios') && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={
+                mode === 'dark'
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
+              cornerRadius={16}
+              style={styles.appleBtn}
+              onPress={handleAppleLogin}
+            />
+          )}
 
           {/* VEYA Ayracı */}
           <View style={styles.dividerRow}>
@@ -437,6 +497,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 2,
+  },
+  appleBtn: {
+    width: '100%',
+    height: 48,
   },
   googleBtnModal: {
     flexDirection: 'row',

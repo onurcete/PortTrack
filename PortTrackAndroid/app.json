@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.porttrack.app"
+      "bundleIdentifier": "com.porttrack.app",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
