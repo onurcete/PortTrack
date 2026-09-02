@@ -2,7 +2,7 @@
   "expo": {
     "name": "PortTrack",
     "slug": "porttrack",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "porttrack",
@@ -23,7 +23,7 @@
         "backgroundColor": "#090d16"
       },
       "package": "com.porttrack.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "navigationBar": {
         "backgroundColor": "#090d16",
         "barStyle": "light-content"
