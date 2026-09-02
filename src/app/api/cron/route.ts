@@ -29,21 +29,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Yetkisiz" }, { status: 401 });
   }
   try {
-    // 1. Fiyatları ve Kurları Güncelle ('Fiyatları Güncelle' butonu ile aynı işlem)
-    await backfillFxHistory();
+    // 1. Kur geçmişini arka planda asenkron çalıştır (bekletme yapma)
+    backfillFxHistory().catch(() => null);
+
+    // 2. Fiyatları ve Kurları Hızlıca Güncelle (~2-3 saniye)
     const refresh = await refreshPrices();
 
-    // 2. Teknik Analiz Hesapla 
-    const analysis = await runTechnicalAnalysis();
-
-    // 3. E-Posta Bülteni: Yalnızca sabah Vercel Cron tetiklediğinde veya ?digest=true olduğunda gönder (Her 30 dakikada bir mail gitmesini engeller)
+    // 3. E-Posta Bülteni ve Teknik Analiz: Yalnızca sabah Vercel Cron tetiklediğinde veya parametre ile istendiğinde çalıştır
     const now = new Date();
     const trHour = (now.getUTCHours() + 3) % 24;
     const isVercelCron =
       req.headers.get("x-vercel-cron") === "1" ||
       req.headers.get("user-agent")?.toLowerCase().includes("vercel-cron");
     const forceDigest = req.nextUrl.searchParams.get("digest") === "true";
+    const forceAnalysis = req.nextUrl.searchParams.get("analysis") === "true";
     const shouldSendDigest = forceDigest || (isVercelCron && trHour >= 8 && trHour <= 10);
+    const shouldRunAnalysis = forceAnalysis || shouldSendDigest;
+
+    // Ağır teknik analiz sadece bültende veya açıkça istendiğinde çalışır (30 dk'lık cronları yavaşlatmaz)
+    let analysis: any = null;
+    if (shouldRunAnalysis) {
+      analysis = await runTechnicalAnalysis();
+    }
 
     let digest: any = null;
     if (shouldSendDigest) {
