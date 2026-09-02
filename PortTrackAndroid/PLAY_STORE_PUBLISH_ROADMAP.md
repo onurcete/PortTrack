@@ -102,17 +102,14 @@ graph TD
 > - En az **20 test kullanıcısı (veya 12 test kullanıcısı - hesap türüne göre)** tarafından,
 > - En az **kesintisiz 14 gün boyunca** Kapalı Test parçasına dahil edilmiş ve aktif olarak test edilmiş olması zorunludur.
 
-- [ ] **6.1. Kapalı Test Parçası (Closed Track) Oluşturma**
-  - Play Console > *Test etme* > *Kapalı Test* > *Parça Oluştur* (Örn: `Alfa Testi`).
-  - `.aab` paketini bu parçaya yükleyin.
-- [ ] **6.2. Test Kullanıcı Listesi (E-posta Listesi)**
-  - Arkadaşlarınız, aileniz veya topluluktan en az **20 kişinin Gmail adresini** içeren bir e-posta listesi (Google Group veya CSV) oluşturun.
-- [ ] **6.3. Test Davet Bağlantısını Paylaşma**
-  - Kapalı test parçası yayınlandıktan sonra oluşan *Web Davet Linki* ve *Android İndirme Linki*ni 20 test kullanıcısına gönderin.
-  - Kullanıcıların teste katıl butonuna basıp uygulamayı telefonlarına yüklemesini sağlayın.
+- [x] **6.1. Kapalı Test Parçası (Closed Track) Oluşturma**
+  - Kapalı Test - Alpha parçası oluşturuldu, sürüm `1.0.3 (5)` yüklendi.
+- [x] **6.2. Test Kullanıcı Listesi (E-posta Listesi)**
+  - Google Grubu (`testers-community@googlegroups.com`) bağlandı.
+- [x] **6.3. Test Davet Bağlantısını Paylaşma**
+  - Test linki paylaşıldı ve inceleme başvurusu aşamasına gelindi.
 - [ ] **6.4. 14 Günlük Aktif Test Takibi**
-  - Test kullanıcılarının 14 gün boyunca uygulamayı silmemesini ve ara sıra açıp kullanmasını sağlayın.
-  - Play Console Dashboard'undaki *"14 Günlük Test İlerleme Sayacı"*nın tamamlanmasını bekleyin.
+  - İnceleme onayından sonra test kullanıcılarının 14 gün boyunca aktif testi takip edilecek.
 
 ---
 
