@@ -1,11 +1,18 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LayoutDashboard, ArrowLeftRight, TrendingUp, Activity, Settings } from 'lucide-react-native';
 import { useThemeStore } from '../../stores/themeStore';
 
 export default function TabLayout() {
   const { theme } = useThemeStore();
+  const insets = useSafeAreaInsets();
+
+  // Android 3 tuşlu navigasyon çubuğu (||| O <) olduğunda insets.bottom ~48dp olur.
+  // Jestli sistemde ~16-24dp, iOS'ta ~34dp olur.
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 26);
+  const barHeight = (Platform.OS === 'android' ? 56 : 54) + bottomPadding;
 
   return (
     <Tabs
@@ -17,8 +24,8 @@ export default function TabLayout() {
           backgroundColor: theme.surface,
           borderTopColor: theme.borderSubtle,
           borderTopWidth: 1,
-          height: Platform.OS === 'android' ? 64 : 84,
-          paddingBottom: Platform.OS === 'android' ? 10 : 26,
+          height: barHeight,
+          paddingBottom: bottomPadding,
           paddingTop: 8,
           elevation: 10,
         },

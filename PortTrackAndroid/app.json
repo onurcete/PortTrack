@@ -23,7 +23,11 @@
         "backgroundColor": "#090d16"
       },
       "package": "com.porttrack.app",
-      "versionCode": 3
+      "versionCode": 4,
+      "navigationBar": {
+        "backgroundColor": "#090d16",
+        "barStyle": "light-content"
+      }
     },
     "web": {
       "bundler": "metro",
