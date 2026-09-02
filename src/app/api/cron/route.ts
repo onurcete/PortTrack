@@ -36,13 +36,24 @@ export async function GET(req: NextRequest) {
     // 2. Teknik Analiz Hesapla 
     const analysis = await runTechnicalAnalysis();
 
-    // 3. Fiyat Güncellemesi Tamamlandıktan Hemen Sonra E-Posta Özetini Gönder
-    const digest = await runDailyDigest(req);
+    // 3. E-Posta Bülteni: Yalnızca sabah Vercel Cron tetiklediğinde veya ?digest=true olduğunda gönder (Her 30 dakikada bir mail gitmesini engeller)
+    const now = new Date();
+    const trHour = (now.getUTCHours() + 3) % 24;
+    const isVercelCron =
+      req.headers.get("x-vercel-cron") === "1" ||
+      req.headers.get("user-agent")?.toLowerCase().includes("vercel-cron");
+    const forceDigest = req.nextUrl.searchParams.get("digest") === "true";
+    const shouldSendDigest = forceDigest || (isVercelCron && trHour >= 8 && trHour <= 10);
+
+    let digest: any = null;
+    if (shouldSendDigest) {
+      digest = await runDailyDigest(req);
+    }
 
     await logSystemEvent({
       action: "CRON_PRICE_REFRESH",
       status: "SUCCESS",
-      details: `Otomatik fiyat güncellemesi tamamlandı (${refresh.updated} enstrüman güncellendi). Bülten gönderimi: ${digest?.sentCount ?? 0}/${digest?.totalTargets ?? 0} mail iletildi.`,
+      details: `Otomatik fiyat güncellemesi tamamlandı (${refresh.updated} enstrüman güncellendi). Bülten gönderimi: ${digest ? `${digest.sentCount ?? 0}/${digest.totalTargets ?? 0} mail iletildi.` : 'Atlandı (yalnızca sabah bülteninde gönderilir).' }`,
       req,
     });
 
