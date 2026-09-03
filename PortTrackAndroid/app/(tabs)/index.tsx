@@ -467,26 +467,47 @@ export default function DashboardScreen() {
       return activeTimeline.map((pt) => (isTRY ? pt.valueTRY : pt.valueUSD));
     }
 
-    // Yedek Fallback (Veri henüz gelmediyse)
+    // Yedek Fallback (Veri yüklenene kadar döneme özel gerçekçi dağılım)
     const baseVal = Number.isFinite(totalValue) && totalValue > 0 ? totalValue : 100000;
     const gainPct = Number.isFinite(currentPeriodInfo.pct) ? currentPeriodInfo.pct : 0;
     const divisor = 1 + gainPct / 100;
     const startVal = Math.abs(divisor) > 1e-4 ? baseVal / divisor : baseVal;
 
-    const steps = 24;
+    const tfStepsMap: Record<TimeframeOption, number> = {
+      '1G': 12,
+      '1H': 14,
+      'MTD': 18,
+      '1A': 24,
+      '3A': 30,
+      'YTD': 36,
+      '1Y': 42,
+    };
+    const tfFreqMap: Record<TimeframeOption, number> = {
+      '1G': 1.8,
+      '1H': 2.5,
+      'MTD': 3.2,
+      '1A': 4.1,
+      '3A': 5.2,
+      'YTD': 6.5,
+      '1Y': 7.8,
+    };
+
+    const steps = tfStepsMap[timeframe] || 24;
+    const freq = tfFreqMap[timeframe] || 3.5;
     const points: number[] = [];
+
     for (let i = 0; i < steps; i++) {
       const progress = i / (steps - 1);
       const trend = startVal + (baseVal - startVal) * progress;
       const wave =
-        Math.sin(progress * Math.PI * 3.5) *
-        (Math.abs(baseVal - startVal) * 0.15 + (Math.abs(gainPct) > 0.01 ? baseVal * 0.012 : 0));
-      const val = i === steps - 1 ? baseVal : i === 0 ? startVal : trend + wave;
+        Math.sin(progress * Math.PI * freq) * (Math.abs(baseVal - startVal) * 0.18);
+      const secondary = Math.cos(progress * Math.PI * (freq * 1.5)) * (Math.abs(baseVal - startVal) * 0.08);
+      const val = i === steps - 1 ? baseVal : i === 0 ? startVal : trend + wave + secondary;
       points.push(Number.isFinite(val) ? Math.max(1, val) : baseVal);
     }
 
     return points;
-  }, [activeTimeline, isTRY, totalValue, currentPeriodInfo]);
+  }, [activeTimeline, isTRY, totalValue, currentPeriodInfo, timeframe]);
 
   // Parmak Gezdirme (Scrubbing) Durumu
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
