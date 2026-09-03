@@ -17,6 +17,7 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
   Stop,
   Circle,
+  Line,
 } from 'react-native-svg';
 import {
   RefreshCw,
@@ -172,17 +173,23 @@ function DonutChart({
   );
 }
 
-// Hero Portföy Çizgi Grafiği (Neon Bezier Gradient Line)
+// Hero Portföy Çizgi Grafiği (İnteraktif Dokunmatik Neon Bezier Gradient)
 function PortfolioHeroChart({
   points,
   width,
-  height = 92,
+  height = 96,
   color = '#8b5cf6',
+  scrubIndex = null,
+  onScrub,
+  onScrubEnd,
 }: {
   points: number[];
   width: number;
   height?: number;
   color?: string;
+  scrubIndex?: number | null;
+  onScrub?: (index: number) => void;
+  onScrubEnd?: () => void;
 }) {
   if (!points || points.length < 2 || width <= 0) return null;
 
@@ -191,7 +198,7 @@ function PortfolioHeroChart({
   const max = Math.max(...validPoints);
   const range = max - min || 1;
 
-  const paddingY = 8;
+  const paddingY = 10;
   const drawHeight = Math.max(10, height - paddingY * 2);
 
   const coords = validPoints.map((val, idx) => {
@@ -220,18 +227,68 @@ function PortfolioHeroChart({
 
   const fillD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
 
+  const scrubCoord = scrubIndex != null && coords[scrubIndex] ? coords[scrubIndex] : null;
+
+  const handleTouch = (touchX: number) => {
+    if (!onScrub || width <= 0) return;
+    const clampedX = Math.max(0, Math.min(width, touchX));
+    const idx = Math.round((clampedX / width) * (coords.length - 1));
+    onScrub(idx);
+  };
+
   return (
-    <Svg width={width} height={height}>
-      <Defs>
-        <SvgLinearGradient id="heroGradientFill" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor={color} stopOpacity="0.45" />
-          <Stop offset="75%" stopColor={color} stopOpacity="0.10" />
-          <Stop offset="100%" stopColor={color} stopOpacity="0.0" />
-        </SvgLinearGradient>
-      </Defs>
-      <Path d={fillD} fill="url(#heroGradientFill)" />
-      <Path d={pathD} stroke={color} strokeWidth={2.4} fill="none" strokeLinecap="round" />
-    </Svg>
+    <View
+      style={{ width, height }}
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => true}
+      onResponderGrant={(evt) => handleTouch(evt.nativeEvent.locationX)}
+      onResponderMove={(evt) => handleTouch(evt.nativeEvent.locationX)}
+      onResponderRelease={() => onScrubEnd && onScrubEnd()}
+      onResponderTerminate={() => onScrubEnd && onScrubEnd()}
+    >
+      <Svg width={width} height={height}>
+        <Defs>
+          <SvgLinearGradient id="heroGradientFill" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor={color} stopOpacity="0.45" />
+            <Stop offset="75%" stopColor={color} stopOpacity="0.10" />
+            <Stop offset="100%" stopColor={color} stopOpacity="0.0" />
+          </SvgLinearGradient>
+        </Defs>
+        <Path d={fillD} fill="url(#heroGradientFill)" />
+        <Path d={pathD} stroke={color} strokeWidth={2.5} fill="none" strokeLinecap="round" />
+
+        {/* İnteraktif Dokunmatik Scrubber Çizgisi & Neon Noktası */}
+        {scrubCoord && (
+          <>
+            <Line
+              x1={scrubCoord.x}
+              y1={0}
+              x2={scrubCoord.x}
+              y2={height}
+              stroke="rgba(255, 255, 255, 0.45)"
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+            />
+            {/* Dış Yumuşak Aura */}
+            <Circle
+              cx={scrubCoord.x}
+              cy={scrubCoord.y}
+              r={11}
+              fill="rgba(139, 92, 246, 0.32)"
+            />
+            {/* İç Beyaz & Çerçeveli Odak Noktası */}
+            <Circle
+              cx={scrubCoord.x}
+              cy={scrubCoord.y}
+              r={5}
+              fill="#ffffff"
+              stroke={color}
+              strokeWidth={2.5}
+            />
+          </>
+        )}
+      </Svg>
+    </View>
   );
 }
 
@@ -397,8 +454,20 @@ export default function DashboardScreen() {
     }
   }, [timeframe, isTRY, pReturns]);
 
-  // Seçili Döneme Göre Sentetik / Akıcı Çizgi Noktaları
+  // Gerçek Zaman Serisi (Real Timeline Data)
+  const activeTimeline = useMemo(() => {
+    const tl = portfolio?.timelines?.[timeframe] || pReturns?.timelines?.[timeframe];
+    if (tl && tl.length >= 2) return tl;
+    return null;
+  }, [portfolio, pReturns, timeframe]);
+
+  // Seçili Döneme Göre Çizgi Noktaları (Gerçek Veri Öncelikli)
   const chartPoints = useMemo(() => {
+    if (activeTimeline && activeTimeline.length >= 2) {
+      return activeTimeline.map((pt) => (isTRY ? pt.valueTRY : pt.valueUSD));
+    }
+
+    // Yedek Fallback (Veri henüz gelmediyse)
     const baseVal = Number.isFinite(totalValue) && totalValue > 0 ? totalValue : 100000;
     const gainPct = Number.isFinite(currentPeriodInfo.pct) ? currentPeriodInfo.pct : 0;
     const divisor = 1 + gainPct / 100;
@@ -406,24 +475,67 @@ export default function DashboardScreen() {
 
     const steps = 24;
     const points: number[] = [];
-
-    // Gerçekçi akıcı piyasa eğrisi üretimi
     for (let i = 0; i < steps; i++) {
       const progress = i / (steps - 1);
       const trend = startVal + (baseVal - startVal) * progress;
       const wave =
         Math.sin(progress * Math.PI * 3.5) *
         (Math.abs(baseVal - startVal) * 0.15 + (Math.abs(gainPct) > 0.01 ? baseVal * 0.012 : 0));
-      const micro = Math.abs(gainPct) > 0.01 ? Math.cos(i * 1.8) * (baseVal * 0.005) : 0;
-      const val = i === steps - 1 ? baseVal : i === 0 ? startVal : trend + wave + micro;
+      const val = i === steps - 1 ? baseVal : i === 0 ? startVal : trend + wave;
       points.push(Number.isFinite(val) ? Math.max(1, val) : baseVal);
     }
 
     return points;
-  }, [totalValue, currentPeriodInfo]);
+  }, [activeTimeline, isTRY, totalValue, currentPeriodInfo]);
 
-  const isPeriodPos = currentPeriodInfo.pct >= 0;
-  const periodGainColor = isPeriodPos ? theme.profit.main : theme.loss.main;
+  // Parmak Gezdirme (Scrubbing) Durumu
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+
+  const handleScrub = useCallback((idx: number) => {
+    setScrubIndex((prev) => {
+      if (prev !== idx) {
+        haptic.selection();
+      }
+      return idx;
+    });
+  }, []);
+
+  const handleScrubEnd = useCallback(() => {
+    setScrubIndex(null);
+  }, []);
+
+  // Parmak Gezdirme Sırasındaki Dinamik Değerler
+  const scrubbedInfo = useMemo(() => {
+    if (scrubIndex == null || !chartPoints || scrubIndex < 0 || scrubIndex >= chartPoints.length) {
+      return null;
+    }
+    const val = chartPoints[scrubIndex];
+    const startVal = chartPoints[0] || val;
+    const diff = val - startVal;
+    const pct = startVal > 0 ? (diff / startVal) * 100 : 0;
+
+    let dateLabel = '';
+    if (activeTimeline && activeTimeline[scrubIndex]) {
+      dateLabel = `• ${activeTimeline[scrubIndex].label}`;
+    } else {
+      dateLabel = `• Aşama ${scrubIndex + 1}/${chartPoints.length}`;
+    }
+
+    return {
+      value: val,
+      diff,
+      pct,
+      dateLabel,
+      isPos: diff >= 0,
+    };
+  }, [scrubIndex, chartPoints, activeTimeline]);
+
+  const displayedValue = scrubbedInfo ? scrubbedInfo.value : totalValue;
+  const displayedGainAmt = scrubbedInfo ? scrubbedInfo.diff : currentPeriodInfo.amt;
+  const displayedGainPct = scrubbedInfo ? scrubbedInfo.pct : currentPeriodInfo.pct;
+  const displayedLabel = scrubbedInfo ? scrubbedInfo.dateLabel : currentPeriodInfo.label;
+  const isDisplayedPos = scrubbedInfo ? scrubbedInfo.isPos : currentPeriodInfo.pct >= 0;
+  const displayedGainColor = isDisplayedPos ? theme.profit.main : theme.loss.main;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
@@ -509,12 +621,12 @@ export default function DashboardScreen() {
             {/* Üst Başlık Satırı */}
             <View style={styles.heroTopRow}>
               <Text style={[styles.heroSubTitle, { color: theme.text.muted }]}>
-                TOPLAM PORTFÖY DEĞERİ ({currency})
+                {scrubIndex != null ? 'SEÇİLEN TARİH DEĞERİ' : `TOPLAM PORTFÖY DEĞERİ (${currency})`}
               </Text>
               <View style={[styles.statusBadge, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 }]}>
                 <Clock size={10} color={theme.text.muted} />
                 <Text style={[styles.statusBadgeText, { color: theme.text.muted, fontSize: 10, fontWeight: '700' }]}>
-                  {formatLastUpdated(portfolio?.lastUpdated)}
+                  {scrubIndex != null ? displayedLabel : formatLastUpdated(portfolio?.lastUpdated)}
                 </Text>
               </View>
             </View>
@@ -522,7 +634,7 @@ export default function DashboardScreen() {
             {/* Büyük Tutar & Göz İkonu */}
             <View style={styles.heroBalanceRow}>
               <Text style={[styles.heroBalanceText, { color: theme.text.primary }]}>
-                {showValues ? formatCurrency(totalValue, currency, 0) : '••••••••'}
+                {showValues ? formatCurrency(displayedValue, currency, 0) : '••••••••'}
               </Text>
               <TouchableOpacity
                 onPress={() => {
@@ -542,16 +654,16 @@ export default function DashboardScreen() {
 
             {/* Getiri Özeti */}
             <View style={styles.heroGainRow}>
-              <Text style={[styles.heroGainAmt, { color: periodGainColor }]}>
+              <Text style={[styles.heroGainAmt, { color: displayedGainColor }]}>
                 {showValues
-                  ? (isPeriodPos ? '+' : '') + formatCurrency(currentPeriodInfo.amt, currency, 0)
+                  ? (isDisplayedPos ? '+' : '') + formatCurrency(displayedGainAmt, currency, 0)
                   : '••••'}
               </Text>
-              <Text style={[styles.heroGainPct, { color: periodGainColor }]}>
-                ({showValues ? (isPeriodPos ? '+' : '') + currentPeriodInfo.pct.toFixed(2).replace('.', ',') : '••••'}%)
+              <Text style={[styles.heroGainPct, { color: displayedGainColor }]}>
+                ({showValues ? (isDisplayedPos ? '+' : '') + displayedGainPct.toFixed(2).replace('.', ',') : '••••'}%)
               </Text>
               <Text style={[styles.heroGainLabel, { color: theme.text.muted }]}>
-                {currentPeriodInfo.label}
+                {displayedLabel}
               </Text>
             </View>
 
@@ -562,6 +674,9 @@ export default function DashboardScreen() {
                 width={windowWidth - 64}
                 height={100}
                 color={theme.brand.strong || '#8b5cf6'}
+                scrubIndex={scrubIndex}
+                onScrub={handleScrub}
+                onScrubEnd={handleScrubEnd}
               />
             </View>
 
@@ -578,6 +693,7 @@ export default function DashboardScreen() {
                     ]}
                     onPress={() => {
                       haptic.selection();
+                      setScrubIndex(null);
                       setTimeframe(tf.key);
                     }}
                     activeOpacity={0.8}

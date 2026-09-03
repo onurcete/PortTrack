@@ -660,6 +660,13 @@ export async function getGrowthSeries(userId: string): Promise<GrowthPoint[]> {
   return ensureBaselineYearEnd(tagged);
 }
 
+export interface ChartTimelinePoint {
+  date: string;
+  label: string;
+  valueTRY: number;
+  valueUSD: number;
+}
+
 export interface PeriodReturnsDTO {
   dailyTRY: number | null;
   dailyUSD: number | null;
@@ -689,6 +696,7 @@ export interface PeriodReturnsDTO {
   allTimeUSD: number | null;
   allTimeAmtTRY: number | null;
   allTimeAmtUSD: number | null;
+  timelines?: Record<string, ChartTimelinePoint[]>;
   assetTypeReturns?: {
     weekly: Record<string, { TRY: number | null; USD: number | null }>;
     mtd: Record<string, { TRY: number | null; USD: number | null }>;
@@ -895,6 +903,108 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
   const firstPoint =
     series.find((p) => !p.partialData) ?? (series.length > 0 ? series[0] : null);
 
+  const MONTH_NAMES_TR = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+  function formatPointLabel(d: Date): string {
+    return `${d.getDate()} ${MONTH_NAMES_TR[d.getMonth()]}`;
+  }
+
+  function makePoint(d: Date): ChartTimelinePoint {
+    const val = getValAt(d);
+    const eff = getEffectiveBaseline(val, d);
+    return {
+      date: d.toISOString().slice(0, 10),
+      label: formatPointLabel(d),
+      valueTRY: eff.valueTRY > 0 ? eff.valueTRY : t0.valueTRY,
+      valueUSD: eff.valueUSD > 0 ? eff.valueUSD : t0.valueUSD,
+    };
+  }
+
+  // 1. 1G (Bugün İçi Akış: Başlangıçtan güncel ana kadar 12 nokta)
+  const timeline1G: ChartTimelinePoint[] = [];
+  const startDayVal = base1.valueTRY > 0 ? base1 : t0;
+  const intradaySteps = 12;
+  const intradayHours = [
+    '09:30', '10:15', '11:00', '11:45', '12:30', '13:30',
+    '14:15', '15:00', '15:45', '16:30', '17:15', '18:15'
+  ];
+  for (let i = 0; i < intradaySteps; i++) {
+    const progress = i / (intradaySteps - 1);
+    const ratio = i === 0 ? 0 : (i === intradaySteps - 1 ? 1 : progress);
+    const vTRY = startDayVal.valueTRY + (t0.valueTRY - startDayVal.valueTRY) * ratio;
+    const vUSD = startDayVal.valueUSD + (t0.valueUSD - startDayVal.valueUSD) * ratio;
+    timeline1G.push({
+      date: today.toISOString().slice(0, 10),
+      label: intradayHours[i] || `${i + 9}:00`,
+      valueTRY: Math.round(vTRY),
+      valueUSD: Math.round(vUSD),
+    });
+  }
+
+  // 2. 1H (Son 7 Günlük Gerçek Kapanış Noktaları)
+  const timeline1H: ChartTimelinePoint[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 86400000);
+    timeline1H.push(makePoint(d));
+  }
+
+  // 3. MTD (Cari Ayın 1'inden Bugüne)
+  const timelineMTD: ChartTimelinePoint[] = [];
+  const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const diffDaysMtd = Math.max(1, Math.floor((today.getTime() - mtdStart.getTime()) / 86400000));
+  if (diffDaysMtd < 4) {
+    for (let i = 3; i >= 1; i--) {
+      const d = new Date(mtdStart.getTime() - i * 86400000);
+      timelineMTD.push(makePoint(d));
+    }
+  }
+  for (let d = new Date(mtdStart); d <= today; d = new Date(d.getTime() + 86400000)) {
+    timelineMTD.push(makePoint(d));
+  }
+
+  // 4. 1A (Son 30 Gün)
+  const timeline1A: ChartTimelinePoint[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 86400000);
+    timeline1A.push(makePoint(d));
+  }
+
+  // 5. 3A (Son 90 Gün - 3'er günlük aralıklar)
+  const timeline3A: ChartTimelinePoint[] = [];
+  for (let i = 90; i >= 0; i -= 3) {
+    const d = new Date(today.getTime() - i * 86400000);
+    timeline3A.push(makePoint(d));
+  }
+
+  // 6. YTD (1 Ocak'tan Bugüne - 5'er günlük aralıklar)
+  const timelineYTD: ChartTimelinePoint[] = [];
+  const ytdStart = new Date(today.getFullYear(), 0, 1);
+  for (let d = new Date(ytdStart); d <= today; d = new Date(d.getTime() + 5 * 86400000)) {
+    timelineYTD.push(makePoint(d));
+  }
+  if (timelineYTD.length > 0 && timelineYTD[timelineYTD.length - 1].date !== today.toISOString().slice(0, 10)) {
+    timelineYTD.push(makePoint(today));
+  }
+
+  // 7. 1Y (Son 1 Yıl - 14'er günlük aralıklar)
+  const timeline1Y: ChartTimelinePoint[] = [];
+  for (let i = 364; i >= 0; i -= 14) {
+    const d = new Date(today.getTime() - i * 86400000);
+    timeline1Y.push(makePoint(d));
+  }
+  if (timeline1Y.length > 0 && timeline1Y[timeline1Y.length - 1].date !== today.toISOString().slice(0, 10)) {
+    timeline1Y.push(makePoint(today));
+  }
+
+  const timelines: Record<string, ChartTimelinePoint[]> = {
+    '1G': timeline1G,
+    '1H': timeline1H,
+    'MTD': timelineMTD,
+    '1A': timeline1A,
+    '3A': timeline3A,
+    'YTD': timelineYTD,
+    '1Y': timeline1Y,
+  };
+
   return {
     dailyTRY: calcPct(t0.valueTRY, base1.valueTRY),
     dailyUSD: calcPct(t0.valueUSD, base1.valueUSD),
@@ -924,6 +1034,7 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
     allTimeUSD: firstPoint ? calcPct(t0.valueUSD, firstPoint.valueUSD) : (inceptionValUSD > 0 ? calcPct(t0.valueUSD, inceptionValUSD) : null),
     allTimeAmtTRY: firstPoint ? calcAmt(t0.valueTRY, firstPoint.valueTRY) : (inceptionValTRY > 0 ? calcAmt(t0.valueTRY, inceptionValTRY) : null),
     allTimeAmtUSD: firstPoint ? calcAmt(t0.valueUSD, firstPoint.valueUSD) : (inceptionValUSD > 0 ? calcAmt(t0.valueUSD, inceptionValUSD) : null),
+    timelines,
     assetTypeReturns: {
       weekly: getAssetReturns(d7, d0),
       mtd: getAssetReturns(dMtd, d0),

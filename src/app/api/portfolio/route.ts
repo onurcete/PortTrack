@@ -122,6 +122,7 @@ export async function GET(req: NextRequest) {
       dailyChangePercent,
       currentUsdTry,
       periodReturns,
+      timelines: periodReturns?.timelines ?? null,
       positions: formattedPositions,
       assetBreakdown,
       lastUpdated: portfolio.lastUpdated,

@@ -100,6 +100,14 @@ export interface PeriodReturns {
   oneYearUSD?: number | null;
   oneYearAmtTRY?: number | null;
   oneYearAmtUSD?: number | null;
+  timelines?: Record<string, ChartTimelinePoint[]>;
+}
+
+export interface ChartTimelinePoint {
+  date: string;
+  label: string;
+  valueTRY: number;
+  valueUSD: number;
 }
 
 export interface PortfolioSummary {
@@ -115,6 +123,7 @@ export interface PortfolioSummary {
   dailyChangePercent: number;
   currentUsdTry?: number;
   periodReturns?: PeriodReturns | null;
+  timelines?: Record<string, ChartTimelinePoint[]> | null;
   positions: PortfolioPosition[];
   assetBreakdown: {
     type: AssetType;
