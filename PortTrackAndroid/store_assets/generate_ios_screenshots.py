@@ -101,19 +101,19 @@ for idx, item in enumerate(SCREENS):
     
     raw_img = Image.open(img_path).convert("RGBA")
     
-    # 1. Tuval Arka Planı (Lüks Koyu Gece Mavisi / İndigo Gradient)
-    canvas = create_gradient(CANVAS_W, CANVAS_H, (10, 15, 29), (18, 26, 47)).convert("RGBA")
+    # 1. Tuval Arka Planı (Şık, Ferah Apple Açık Tema: İpeksi Beyaz -> Buzul Mavi Gradient)
+    canvas = create_gradient(CANVAS_W, CANVAS_H, (246, 248, 253), (232, 238, 249)).convert("RGBA")
     draw = ImageDraw.Draw(canvas)
     
-    # Dekoratif Üst Işıltı (Glow efekti)
+    # Dekoratif Üst Işıltı (Yumuşak pastel mor/indigo aura)
     glow = Image.new("RGBA", (CANVAS_W, CANVAS_H), (0, 0, 0, 0))
     glow_draw = ImageDraw.Draw(glow)
-    glow_draw.ellipse([CANVAS_W // 2 - 500, 200, CANVAS_W // 2 + 500, 1000], fill=(99, 102, 241, 35))
-    glow = glow.filter(ImageFilter.GaussianBlur(120))
+    glow_draw.ellipse([CANVAS_W // 2 - 550, 100, CANVAS_W // 2 + 550, 950], fill=(129, 140, 248, 28))
+    glow = glow.filter(ImageFilter.GaussianBlur(140))
     canvas = Image.alpha_composite(canvas, glow)
     draw = ImageDraw.Draw(canvas)
     
-    # 2. Üst Metinler
+    # 2. Üst Metinler (Açık Tema Kontrastlı Tipografi)
     # A) Kapsül Etiket (Tag Badge)
     tag_text = item["tag"]
     tag_bbox = font_tag.getbbox(tag_text)
@@ -125,17 +125,17 @@ for idx, item in enumerate(SCREENS):
     badge_pad_x = 36
     badge_pad_y = 16
     
-    # Rozet arka planı
+    # Açık tema rozet arka planı (Soft indigo kapsül)
     badge_box = [
         tag_x - badge_pad_x,
         tag_y - badge_pad_y,
         tag_x + tag_w + badge_pad_x,
         tag_y + tag_h + badge_pad_y + 4
     ]
-    draw.rounded_rectangle(badge_box, radius=24, fill=(30, 41, 69, 220), outline=(99, 102, 241, 160), width=2)
-    draw.text((tag_x, tag_y), tag_text, font=font_tag, fill=(165, 180, 252))
+    draw.rounded_rectangle(badge_box, radius=24, fill=(238, 242, 255, 240), outline=(199, 210, 254, 255), width=2)
+    draw.text((tag_x, tag_y), tag_text, font=font_tag, fill=(67, 56, 202))
     
-    # B) Ana Başlık (Title)
+    # B) Ana Başlık (Title - Derin Lacivert / Siyah #0f172a)
     title_text = item["title"]
     title_lines = title_text.split("\n")
     cur_y = 260
@@ -143,18 +143,17 @@ for idx, item in enumerate(SCREENS):
         line_bbox = font_title.getbbox(line)
         line_w = line_bbox[2] - line_bbox[0]
         line_x = (CANVAS_W - line_w) // 2
-        draw.text((line_x, cur_y), line, font=font_title, fill=(255, 255, 255))
+        draw.text((line_x, cur_y), line, font=font_title, fill=(15, 23, 42))
         cur_y += 94
         
-    # C) Alt Başlık (Subtitle)
+    # C) Alt Başlık (Subtitle - Şık Slate Gri #475569)
     sub_text = item["subtitle"]
     sub_bbox = font_subtitle.getbbox(sub_text)
     sub_w = sub_bbox[2] - sub_bbox[0]
     sub_x = (CANVAS_W - sub_w) // 2
-    draw.text((sub_x, cur_y + 16), sub_text, font=font_subtitle, fill=(148, 163, 184))
+    draw.text((sub_x, cur_y + 16), sub_text, font=font_subtitle, fill=(71, 85, 105))
     
     # 3. Telefon Ekranı / Çerçevesi
-    # Ekran boyutlandırma: Genişlik 1020px
     phone_w = 1040
     scale = phone_w / float(raw_img.width)
     phone_h = int(raw_img.height * scale)
@@ -168,25 +167,25 @@ for idx, item in enumerate(SCREENS):
     phone_x = (CANVAS_W - phone_w) // 2
     phone_y = 650
     
-    # Gölgelendirme (Drop Shadow)
+    # Yumuşak Gerçekçi Gölge (Açık tema zemin üzerinde havalanan telefon efekti)
     shadow = Image.new("RGBA", (CANVAS_W, CANVAS_H), (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow)
     shadow_draw.rounded_rectangle(
-        [phone_x - 4, phone_y + 16, phone_x + phone_w + 4, phone_y + phone_h + 20],
+        [phone_x - 4, phone_y + 16, phone_x + phone_w + 4, phone_y + phone_h + 24],
         radius=corner_radius + 4,
-        fill=(0, 0, 0, 160)
+        fill=(15, 23, 42, 45)
     )
-    shadow = shadow.filter(ImageFilter.GaussianBlur(32))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(36))
     canvas = Image.alpha_composite(canvas, shadow)
     
-    # Ekranın şık dış çerçevesi (border)
+    # Ekranın şık gümüş/titanyum çerçevesi (border)
     border_img = Image.new("RGBA", (phone_w + 16, phone_h + 16), (0, 0, 0, 0))
     b_draw = ImageDraw.Draw(border_img)
     b_draw.rounded_rectangle(
         [0, 0, phone_w + 15, phone_h + 15],
         radius=corner_radius + 6,
-        fill=(25, 33, 50, 255),
-        outline=(70, 85, 120, 200),
+        fill=(255, 255, 255, 255),
+        outline=(218, 225, 238, 255),
         width=4
     )
     canvas.paste(border_img, (phone_x - 8, phone_y - 8), border_img)
