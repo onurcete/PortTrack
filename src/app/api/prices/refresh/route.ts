@@ -149,11 +149,18 @@ export async function POST(req: NextRequest) {
       req,
     });
 
-    return NextResponse.json({
-      ok: true,
-      ...result,
-      portfolio: portfolioSummary,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        ...result,
+        portfolio: portfolioSummary,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (err: any) {
     await logSystemEvent({
       userId,

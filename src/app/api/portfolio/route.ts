@@ -108,25 +108,32 @@ export async function GET(req: NextRequest) {
       color: ASSET_COLOR_MAP[slice.assetType] || "#8b5cf6",
     }));
 
-    return NextResponse.json({
-      ok: true,
-      totalValueTRY: portfolio.totals.valueTRY,
-      totalValueUSD: portfolio.totals.valueUSD ?? (portfolio.totals.valueTRY / currentUsdTry),
-      totalCostTRY: portfolio.totals.costTRY,
-      totalCostUSD: portfolio.totals.costUSD ?? (portfolio.totals.costTRY / currentUsdTry),
-      totalProfitTRY: portfolio.totals.unrealizedTRY,
-      totalProfitUSD: portfolio.totals.unrealizedUSD ?? (portfolio.totals.unrealizedTRY / currentUsdTry),
-      totalProfitPercent: portfolio.totals.unrealizedPctTRY,
-      dailyChangeTRY,
-      dailyChangeUSD: dailyChangeTRY / currentUsdTry,
-      dailyChangePercent,
-      currentUsdTry,
-      periodReturns,
-      timelines: periodReturns?.timelines ?? null,
-      positions: formattedPositions,
-      assetBreakdown,
-      lastUpdated: portfolio.lastUpdated,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        totalValueTRY: portfolio.totals.valueTRY,
+        totalValueUSD: portfolio.totals.valueUSD ?? (portfolio.totals.valueTRY / currentUsdTry),
+        totalCostTRY: portfolio.totals.costTRY,
+        totalCostUSD: portfolio.totals.costUSD ?? (portfolio.totals.costTRY / currentUsdTry),
+        totalProfitTRY: portfolio.totals.unrealizedTRY,
+        totalProfitUSD: portfolio.totals.unrealizedUSD ?? (portfolio.totals.unrealizedTRY / currentUsdTry),
+        totalProfitPercent: portfolio.totals.unrealizedPctTRY,
+        dailyChangeTRY,
+        dailyChangeUSD: dailyChangeTRY / currentUsdTry,
+        dailyChangePercent,
+        currentUsdTry,
+        periodReturns,
+        timelines: periodReturns?.timelines ?? null,
+        positions: formattedPositions,
+        assetBreakdown,
+        lastUpdated: portfolio.lastUpdated,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("❌ Portfolio API Error:", err);
     return NextResponse.json(
