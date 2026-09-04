@@ -102,6 +102,9 @@ function RegisterForm() {
             });
             sessionStorage.setItem("pt_registered_conversion_fired", "true");
           }
+          if (typeof (window as any).twq === "function") {
+            (window as any).twq("event", "tw-reyfv-reyly", {});
+          }
         }
         const next = params.get("next") || "/";
         const redirectTarget = next.includes("?")
