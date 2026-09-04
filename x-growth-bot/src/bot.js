@@ -14,6 +14,7 @@ const rootDir = path.resolve(__dirname, "..");
 const userDataDir = path.resolve(rootDir, "user_data");
 const configPath = path.resolve(rootDir, "config.json");
 const historyPath = path.resolve(rootDir, "history.json");
+const mediaDir = path.resolve(rootDir, "media");
 
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 const MAX_REPLIES = parseInt(process.env.MAX_REPLIES_PER_RUN || "3", 10);
@@ -189,6 +190,13 @@ async function startBot() {
         }
 
         console.log(`✨ UYGUN BULUNDU! (${aiEvaluation.reason})`);
+        if (aiEvaluation.selectedImage) {
+          const imagePath = path.resolve(mediaDir, aiEvaluation.selectedImage);
+          const hasImage = fs.existsSync(imagePath);
+          console.log(`📸 Seçilen Görsel: ${aiEvaluation.selectedImage} ${hasImage ? "✅ (Klasörde Mevcut)" : "⚠️ (Klasörde Bulunamadı)"}`);
+        } else {
+          console.log(`📸 Seçilen Görsel: Yok (Sadece metin)`);
+        }
         console.log(`✍️ Önerilen Yanıt:\n"${aiEvaluation.replyText}"`);
 
         // 4. Onay mekanizması
@@ -228,9 +236,27 @@ async function startBot() {
         await tweetPage.click(replyInputSelector);
         await sleep(1000);
 
-        // İnsan gibi yaz
+        // İnsan gibi metni yaz
         await humanType(tweetPage, replyInputSelector, aiEvaluation.replyText);
-        await sleep(randomDelay(1500, 3000));
+        await sleep(randomDelay(1000, 2000));
+
+        // Varsa görseli yükle
+        if (aiEvaluation.selectedImage) {
+          const imagePath = path.resolve(mediaDir, aiEvaluation.selectedImage);
+          if (fs.existsSync(imagePath)) {
+            console.log(`📸 Görsel yükleniyor: ${aiEvaluation.selectedImage}...`);
+            const fileInput = await tweetPage.$('input[data-testid="fileInput"]');
+            if (fileInput) {
+              await fileInput.setInputFiles(imagePath);
+              console.log("✅ Görsel yüklendi.");
+              await sleep(3500); // Önizlemenin ve yüklemenin tamamlanmasını bekle
+            } else {
+              console.warn("⚠️ Görsel yükleme inputu (fileInput) bulunamadı.");
+            }
+          }
+        }
+
+        await sleep(randomDelay(1000, 2000));
 
         // 'Yanıtla' butonunu bul ve tıkla
         const replyButtonSelector = 'button[data-testid="tweetButtonInline"]';
@@ -246,6 +272,7 @@ async function startBot() {
             url: tweetUrl,
             author,
             reply: aiEvaluation.replyText,
+            image: aiEvaluation.selectedImage || null,
             status: "replied",
             date: new Date().toISOString(),
           });

@@ -1,0 +1,17 @@
+{
+  "aciklama": "Bu dosyada media klasörüne eklediğiniz görselleri tanıtabilirsiniz. GPT-4o mini tweetin konusuna en uygun görseli buradan seçip yanıta ekleyecektir.",
+  "gorseller": [
+    {
+      "dosya": "portfoy-ozet.png",
+      "aciklama": "PortTrack genel portföy özeti, toplam varlık ve kâr/zarar ekran görüntüsü. Genel portföy ve borsa tweetleri için uygundur."
+    },
+    {
+      "dosya": "tefas-fon-takip.png",
+      "aciklama": "TEFAS yatırım fonları getiri listesi ve dağılım grafiği. Fon, tefas veya bes ile ilgili tweetler için uygundur."
+    },
+    {
+      "dosya": "varlik-dagilimi.png",
+      "aciklama": "Hisse, fon, altın ve nakit varlık dağılım pasta grafiği. Portföy çeşitlendirme ve dengeleme tweetleri için uygundur."
+    }
+  ]
+}

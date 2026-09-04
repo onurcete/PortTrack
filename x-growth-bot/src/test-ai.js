@@ -46,6 +46,7 @@ async function test() {
     console.log(`👉 Cevap Verilsin mi?: ${result.shouldReply ? "EVET ✅" : "HAYIR ❌"}`);
     console.log(`💡 Sebep: ${result.reason}`);
     if (result.shouldReply) {
+      console.log(`📸 Seçilen Görsel: ${result.selectedImage || "Yok (Sadece Metin)"}`);
       console.log(`✍️ Hazırlanan Yanıt: "${result.replyText}"`);
     }
     console.log("----------------------------------------------------");
