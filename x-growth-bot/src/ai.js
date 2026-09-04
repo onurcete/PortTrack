@@ -70,8 +70,15 @@ export async function evaluateAndDraftReply(tweetText, author = "", config = {})
     ? `Elimizdeki Mevcut Ekran Görüntüleri ve Post Resimleri:
 ${availableMedia.map((m) => `- "${m.fileName}": ${m.description}`).join("\n")}
 
-Eğer tweetin konusu bu resimlerden biriyle doğrudan uyuşuyorsa (örneğin fonlardan bahsediliyorsa fon ekranı, kâr zarardan bahsediliyorsa portföy özeti), "selectedImage" alanına dosya adını yaz. Görsel eklemek yanıtın etkileşimini çok artırır! Zorlama olacaksa null bırak.`
-    : "Şu anda ekli görsel dosyası bulunmuyor (selectedImage: null).";
+ÖNEMLİ GÖRSEL KURALI:
+X paylaşımlarında görsel eklemek etkileşimi 5 katına çıkarır. Bu nedenle "shouldReply": true olduğunda "selectedImage" alanını ASLA boş veya null bırakma!
+- Eğer fon/tefas konuşuluyorsa: "21ed93f8-2cf5-4e90-9b1b-7b79fba28f34.png" (TEFAS analizi)
+- Eğer excel veya aylık getiri konuşuluyorsa: "2f0e5ea2-dd90-412a-945a-6c184b9ba845.png" (Laptop arayüzü)
+- Eğer mobil uygulama veya telefondan takip konuşuluyorsa: "a31ac981-ba68-459a-a5d7-97e0a556edfc.png" veya "x5.png"
+- Eğer genel borsa, portföy dağılımı veya borsa düşüşü konuşuluyorsa: "x4.png", "x3.png" veya "d3751bb0-5058-46e0-8dc3-9efce02107c2.png"
+- Eğer yatırım planı/stratejisi konuşuluyorsa: "x6.png" veya "7.png"
+Mutlaka yukarıdaki listeden en uygun bir görselin dosya adını "selectedImage" alanına yaz.`
+    : "Şu anda ekli görsel dosyası bulunmuyor.";
 
   const systemPrompt = `Sen Türkiye finans ve borsa topluluğunda aktif, yardımsever, finansal okuryazarlığı yüksek bir yatırımcısın ve aynı zamanda yerli portföy takip platformu PortTrack'in (www.porttrack.com.tr) ekibindensin.
 
@@ -88,13 +95,14 @@ ${mediaPrompt}
 4. Maksimum 240 karakter civarında olsun. Emojileri abartma (en fazla 1-2 adet).
 5. Kripto pump, forex, vip telegram grupları veya küfür/argo içeren tweetlere ASLA cevap verme.
 6. Eğer tweet PortTrack'in çözdüğü konularla (hisse, borsa, fon, tefas, portföy, excel, kâr/zarar, yatırımcı sayısı) uzaktan yakından alakalı değilse kesinlikle cevap verme (shouldReply: false).
+7. Eğer cevap veriyorsan (shouldReply: true), "selectedImage" alanına yukarıdaki listeden MUTLAKA en uygun görselin dosya adını yaz.
 
 Yanıtını YALNIZCA şu JSON formatında döndür:
 {
   "shouldReply": true veya false,
   "reason": "Neden yanıt verilmeli veya neden verilmemeli açıklaması",
   "replyText": "Eğer shouldReply true ise buraya atılacak tweet yanıtı, false ise boş string",
-  "selectedImage": "Uygun görselin dosya adı (örn: portfoy-ozet.png) veya uygun görsel yoksa null"
+  "selectedImage": "Listedeki görsellerden birinin tam dosya adı (Örn: x4.png)"
 }`;
 
   try {

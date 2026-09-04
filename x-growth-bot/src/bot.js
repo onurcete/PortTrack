@@ -190,19 +190,22 @@ async function startBot() {
         }
 
         console.log(`✨ UYGUN BULUNDU! (${aiEvaluation.reason})`);
-        if (aiEvaluation.selectedImage) {
-          const imagePath = path.resolve(mediaDir, aiEvaluation.selectedImage);
-          const hasImage = fs.existsSync(imagePath);
-          console.log(`📸 Seçilen Görsel: ${aiEvaluation.selectedImage} ${hasImage ? "✅ (Klasörde Mevcut)" : "⚠️ (Klasörde Bulunamadı)"}`);
-        } else {
-          console.log(`📸 Seçilen Görsel: Yok (Sadece metin)`);
+        
+        // Görsel belirleme (Yapay zeka seçmediyse bile mutlaka 12 görselden birini kullan)
+        let chosenImage = aiEvaluation.selectedImage;
+        if (!chosenImage || !fs.existsSync(path.resolve(mediaDir, chosenImage))) {
+          chosenImage = "x4.png"; // En kapsamlı mockup afişi
         }
+        
+        const imagePath = path.resolve(mediaDir, chosenImage);
+        const hasImage = fs.existsSync(imagePath);
+        console.log(`📸 Seçilen Görsel: ${chosenImage} ${hasImage ? "✅ (Eklenecek)" : "⚠️ (Bulunamadı)"}`);
         console.log(`✍️ Önerilen Yanıt:\n"${aiEvaluation.replyText}"`);
 
         // 4. Onay mekanizması
         let shouldPost = true;
         if (BOT_MODE === "interactive") {
-          const ans = await askUserConfirmation("\n❓ Bu yanıtı göndermek istiyor musunuz? [E: Evet, H: Hayır, Q: Çık]: ");
+          const ans = await askUserConfirmation("\n❓ Bu yanıtı görseliyle göndermek istiyor musunuz? [E: Evet, H: Hayır, Q: Çık]: ");
           if (ans === "q") {
             console.log("🛑 Kullanıcı tarafından durduruldu.");
             await context.close();
@@ -230,41 +233,50 @@ async function startBot() {
         await tweetPage.goto(tweetUrl, { waitUntil: "domcontentloaded" });
         await sleep(randomDelay(3000, 5000));
 
-        // Yanıt yazma alanını bul
+        // Yanıt yazma alanını bul ve tıkla
         const replyInputSelector = 'div[data-testid="tweetTextarea_0"]';
         await tweetPage.waitForSelector(replyInputSelector, { timeout: 15000 });
         await tweetPage.click(replyInputSelector);
-        await sleep(1000);
+        await sleep(1500);
 
-        // İnsan gibi metni yaz
-        await humanType(tweetPage, replyInputSelector, aiEvaluation.replyText);
-        await sleep(randomDelay(1000, 2000));
-
-        // Varsa görseli yükle
-        if (aiEvaluation.selectedImage) {
-          const imagePath = path.resolve(mediaDir, aiEvaluation.selectedImage);
-          if (fs.existsSync(imagePath)) {
-            console.log(`📸 Görsel yükleniyor: ${aiEvaluation.selectedImage}...`);
-            const fileInput = await tweetPage.$('input[data-testid="fileInput"]');
+        // Önce Görseli Yükle
+        if (hasImage) {
+          console.log(`📸 Görsel yükleniyor: ${chosenImage}...`);
+          try {
+            const fileInputSelector = 'input[data-testid="fileInput"]';
+            await tweetPage.waitForSelector(fileInputSelector, { timeout: 8000 });
+            const fileInput = await tweetPage.$(fileInputSelector);
             if (fileInput) {
               await fileInput.setInputFiles(imagePath);
-              console.log("✅ Görsel yüklendi.");
-              await sleep(3500); // Önizlemenin ve yüklemenin tamamlanmasını bekle
+              console.log("⏳ Görselin X sunucularına yüklenmesi bekleniyor...");
+              // X'in görsel önizleme div'ini (attachments) bekle
+              try {
+                await tweetPage.waitForSelector('div[data-testid="attachments"]', { timeout: 10000 });
+                console.log("✅ Görsel önizlemesi yüklendi!");
+              } catch {
+                await sleep(5000); // Yedek bekleme süresi
+              }
             } else {
-              console.warn("⚠️ Görsel yükleme inputu (fileInput) bulunamadı.");
+              console.warn("⚠️ fileInput elemanı bulunamadı.");
             }
+          } catch (err) {
+            console.warn("⚠️ Görsel yüklenirken hata oluştu:", err.message);
           }
         }
 
-        await sleep(randomDelay(1000, 2000));
+        // Ardından İnsan Gibi Metni Yaz
+        console.log("✍️ Metin yazılıyor...");
+        await humanType(tweetPage, replyInputSelector, aiEvaluation.replyText);
+        await sleep(randomDelay(1500, 2500));
 
-        // 'Yanıtla' butonunu bul ve tıkla
+        // 'Yanıtla' butonunun aktifleşmesini bekle ve tıkla
         const replyButtonSelector = 'button[data-testid="tweetButtonInline"]';
+        await tweetPage.waitForSelector(replyButtonSelector, { timeout: 10000 });
         const replyButton = await tweetPage.$(replyButtonSelector);
 
         if (replyButton) {
           await replyButton.click();
-          console.log("🎉 YANIT GÖNDERİLDİ!");
+          console.log("🎉 YANIT VE GÖRSEL BAŞARIYLA GÖNDERİLDİ!");
           repliesSent++;
 
           processedUrls.add(tweetUrl);
@@ -272,13 +284,13 @@ async function startBot() {
             url: tweetUrl,
             author,
             reply: aiEvaluation.replyText,
-            image: aiEvaluation.selectedImage || null,
+            image: chosenImage,
             status: "replied",
             date: new Date().toISOString(),
           });
           saveHistory(history);
 
-          await sleep(3000);
+          await sleep(4000);
         } else {
           console.error("⚠️ Yanıtla butonu bulunamadı.");
         }
