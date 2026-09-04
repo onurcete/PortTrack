@@ -53,12 +53,12 @@ PortTrack, dağınık haldeki tüm bu varlıkları tek bir modern, hızlı ve ş
 3. **TEFAS Fon Takibi Açısı:**
    *"Banka uygulamaları TEFAS fonlarının detaylı getiri analizini göstermekte çok yetersiz. Tüm fonlarınızı tek listede toplayıp anlık değerini takip edin."*
 4. **Finansal Okuryazarlık & Net Servet:**
-   *"Nereye ne kadar yatırım yaptığını bilmeyen birikim yapamaz. BIST, TEFAS, Altın, Döviz ve BES'i tek ekranda birleştiren ücretsiz asistan: porttrack.app"*
+   *"Nereye ne kadar yatırım yaptığını bilmeyen birikim yapamaz. BIST, TEFAS, Altın, Döviz ve BES'i tek ekranda birleştiren ücretsiz asistan: www.porttrack.com.tr"*
 
 ---
 
 ## 6. Sosyal Medya Üslubu ve Kuralları
 - **Tonlama:** Samimi, finansal okuryazarlığı yüksek, kibar, sade ve çözüm odaklı.
 - **Asla Yapma:** Ucuz pazarlamacı dili ("Kaçırmayın!", "Şok kampanya!"), hisse/kripto al-sat tavsiyesi verme, robotik ve kurumsal soğukluk.
-- **İmza & Bağlantı:** https://porttrack.app
+- **İmza & Bağlantı:** https://www.porttrack.com.tr
 - **Popüler Etiketler:** #bist100 #borsa #tefas #yatırım #temettü #hisse #fon #finans

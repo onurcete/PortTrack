@@ -1,17 +1,53 @@
 {
-  "aciklama": "Bu dosyada media klasörüne eklediğiniz görselleri tanıtabilirsiniz. GPT-4o mini tweetin konusuna en uygun görseli buradan seçip yanıta ekleyecektir.",
+  "aciklama": "PortTrack görsel kütüphanesi. GPT-4o mini tweetin konusuna en uygun görseli buradan seçerek yanıta ekler.",
   "gorseller": [
     {
-      "dosya": "portfoy-ozet.png",
-      "aciklama": "PortTrack genel portföy özeti, toplam varlık ve kâr/zarar ekran görüntüsü. Genel portföy ve borsa tweetleri için uygundur."
+      "dosya": "21ed93f8-2cf5-4e90-9b1b-7b79fba28f34.png",
+      "aciklama": "TEFAS fon analizleri, yatırımcı sayısı artış/azalış listesi, fon büyüklükleri ve trendleri. TEFAS fonları, fon yatırımcısı sayısı değişimi veya fon seçimiyle ilgili tweetler için birebirdir."
     },
     {
-      "dosya": "tefas-fon-takip.png",
-      "aciklama": "TEFAS yatırım fonları getiri listesi ve dağılım grafiği. Fon, tefas veya bes ile ilgili tweetler için uygundur."
+      "dosya": "2f0e5ea2-dd90-412a-945a-6c184b9ba845.png",
+      "aciklama": "Laptop ekranında PortTrack web arayüzü: Aylık getiri (%) bileşik büyüme çubuk grafiği, varlık dağılım pasta grafiği, Dolar ($) bazında portföy değeri ve son işlemler tablosu. Excel çilesi, genel portföy veya Dolar bazlı getiri tweetleri için uygundur."
     },
     {
-      "dosya": "varlik-dagilimi.png",
-      "aciklama": "Hisse, fon, altın ve nakit varlık dağılım pasta grafiği. Portföy çeşitlendirme ve dengeleme tweetleri için uygundur."
+      "dosya": "a31ac981-ba68-459a-a5d7-97e0a556edfc.png",
+      "aciklama": "PortTrack Mobil Uygulama ekranı (Google Play & App Store logolu). Telefonda portföy değeri, dokunmatik zaman serisi grafiği ve varlık dağılımı. Mobil uygulama veya pratik telefon takibi arayanlar için uygundur."
+    },
+    {
+      "dosya": "d3751bb0-5058-46e0-8dc3-9efce02107c2.png",
+      "aciklama": "PortTrack web arayüzü kartları: Portföy dağılımı, aylık getiri çubukları, BIST, TEFAS, BES, Döviz, Emtia ikonları ve 'Daha net bir finansal gelecek'. Net servet ve genel portföy takibi tweetleri için uygundur."
+    },
+    {
+      "dosya": "x3.png",
+      "aciklama": "Karanlık mod (Dark mode) dikey afiş: 'Tüm yatırımların tek ekranı'. Laptop ve mobil telefon üzerinde BIST, TEFAS, Yabancı Borsa, Kripto, Döviz, BES ve altın takibi. Şık arayüz ve genel tanıtım için uygundur."
+    },
+    {
+      "dosya": "x4.png",
+      "aciklama": "Karanlık mod yatay laptop ve telefon mockup'ı: 'Tüm yatırımların tek ekranda. Dağınık yatırımlarına veda et. Üye olmadan demoyu inceleyebilirsin'. Kapsamlı portföy ve borsa tweetleri için uygundur."
+    },
+    {
+      "dosya": "x5.png",
+      "aciklama": "Açık tema elde telefon tutulan samimi mockup: 'Yatırımlarını tek bir noktada görmenin zamanı!'. Kahve eşliğinde telefon ekranında portföy kâr/zarar ve varlık dağılımı."
+    },
+    {
+      "dosya": "x6.png",
+      "aciklama": "Çalışma masası defter ve telefon mockup: 'Yatırım yapmak plan ister, takip kazandırır'. Yatırım stratejisi, bütçe yönetimi ve disiplinli birikim tweetleri için uygundur."
+    },
+    {
+      "dosya": "7.png",
+      "aciklama": "Açık tema tablet ve kahve mockup: 'Tüm yatırımların resmini büyük gör'. Dağınık yatırımları tek portföyde toplayıp net görmek isteyenler için uygundur."
+    },
+    {
+      "dosya": "x8.png",
+      "aciklama": "Karanlık mod minimalist mobil ekran: 'Tüm yatırımların tek portföyde. Net görün'. BIST, TEFAS, BES ve kıymetli madenler tek ekranda."
+    },
+    {
+      "dosya": "2addf72a-fe1a-4561-86de-a55156a2800c.png",
+      "aciklama": "Koyu tema lüks dikey ekran mockup: 'Yatırımların daha net bir gelecek. Yatırımda sadelik güçtür'."
+    },
+    {
+      "dosya": "4c825558-190e-4ab5-ba5d-8672f1a2b3bc.png",
+      "aciklama": "Açık tema minimalist masaüstü: 'Yatırımlarında sadelik, daha net kararlar. Zaman içinde takip et'."
     }
   ]
 }
