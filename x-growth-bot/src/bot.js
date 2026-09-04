@@ -19,6 +19,10 @@ const mediaDir = path.resolve(rootDir, "media");
 const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
 const MAX_REPLIES = parseInt(process.env.MAX_REPLIES_PER_RUN || "3", 10);
 const BOT_MODE = process.env.BOT_MODE || "interactive"; // 'interactive' veya 'auto'
+const MAX_TWEET_AGE_HOURS = parseInt(
+  process.env.MAX_TWEET_AGE_HOURS || String(config.maxTweetAgeHours || 24),
+  10
+);
 
 // Rastgele bekleme fonksiyonu
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,7 +71,7 @@ async function humanType(page, selector, text) {
 async function startBot() {
   console.log("====================================================");
   console.log("🚀 PortTrack X (Twitter) Akıllı Büyüme Botu");
-  console.log(`Mod: ${BOT_MODE.toUpperCase()} | Maksimum Yanıt: ${MAX_REPLIES}`);
+  console.log(`Mod: ${BOT_MODE.toUpperCase()} | Maksimum Yanıt: ${MAX_REPLIES} | Maks Tweet Yaşı: ${MAX_TWEET_AGE_HOURS}s`);
   console.log("====================================================\n");
 
   if (!fs.existsSync(userDataDir)) {
@@ -91,7 +95,7 @@ async function startBot() {
 
   const page = context.pages().length > 0 ? context.pages()[0] : await context.newPage();
 
-  // 1. Oturum kontrolü
+  // 1. Oturum kontrolü ve Aktif Profil Tespiti
   console.log("🔍 Oturum doğrulanıyor...");
   await page.goto("https://x.com/home", { waitUntil: "domcontentloaded" });
   await sleep(3000);
@@ -102,20 +106,44 @@ async function startBot() {
     await context.close();
     process.exit(1);
   }
-  console.log("✅ X Oturumu aktif!\n");
+
+  // Profil kullanıcı adını dinamik olarak tespit et (fallback: env veya config)
+  let ownUsername = (process.env.TWITTER_USERNAME || config.ownUsername || "porttrackx")
+    .toLowerCase()
+    .replace("@", "")
+    .trim();
+
+  try {
+    const profileLink = await page.$('a[data-testid="AppTabBar_Profile_Link"]');
+    if (profileLink) {
+      const href = await profileLink.getAttribute("href");
+      if (href) {
+        const detected = href.replace(/^\//, "").split("/")[0].trim().toLowerCase();
+        if (detected) {
+          ownUsername = detected;
+        }
+      }
+    }
+  } catch {
+    // Varsayılan ownUsername kullanılır
+  }
+
+  console.log(`✅ X Oturumu aktif! (Hesap: @${ownUsername})\n`);
 
   let repliesSent = 0;
 
   // 2. Anahtar kelimeleri sırayla tara
-  for (const query of config.searchQueries) {
+  for (const rawQuery of config.searchQueries) {
     if (repliesSent >= MAX_REPLIES) {
       console.log(`🎯 Günlük hedef (${MAX_REPLIES} yanıt) tamamlandı. Oturum sonlandırılıyor.`);
       break;
     }
 
-    console.log(`\n🔎 Aranıyor: "${query}" (En son sekmesi)`);
+    // Arama sorgusuna kendi hesabımızı hariç tutma filtresi ekle (-from:username)
+    const searchQuery = `${rawQuery} -from:${ownUsername}`;
+    console.log(`\n🔎 Aranıyor: "${rawQuery}" (En son sekmesi, @${ownUsername} hariç)`);
     // f=live en güncel tweetleri getirir
-    const searchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&f=live`;
+    const searchUrl = `https://x.com/search?q=${encodeURIComponent(searchQuery)}&f=live`;
     await page.goto(searchUrl, { waitUntil: "domcontentloaded" });
     await sleep(randomDelay(4000, 6000));
 
@@ -127,8 +155,11 @@ async function startBot() {
       if (repliesSent >= MAX_REPLIES) break;
 
       try {
-        // Tweet linkini ve metnini çek
-        const statusLinkElem = await article.$('a[href*="/status/"]');
+        // Tweet linkini ve zamanını çek (a:has(time) en güvenilir seçicidir)
+        let statusLinkElem = await article.$('a:has(time)');
+        if (!statusLinkElem) {
+          statusLinkElem = await article.$('a[href*="/status/"]');
+        }
         if (!statusLinkElem) continue;
 
         const href = await statusLinkElem.getAttribute("href");
@@ -136,20 +167,51 @@ async function startBot() {
 
         const tweetUrl = href.startsWith("http") ? href : `https://x.com${href}`;
 
+        // URL'den yazar adı ayıkla (Örn: /porttrackx/status/123456 -> porttrackx)
+        const urlAuthorMatch = href.match(/^\/?([^\/]+)\/status\//);
+        const urlAuthor = urlAuthorMatch ? urlAuthorMatch[1].toLowerCase() : "";
+
+        // 1. Kendi hesabımıza ait tweet mi kontrolü
+        if (
+          urlAuthor === ownUsername ||
+          tweetUrl.toLowerCase().includes(`/${ownUsername}/status/`)
+        ) {
+          continue;
+        }
+
         // Zaten işlem yapılmış mı kontrol et
         if (processedUrls.has(tweetUrl)) {
           continue;
         }
 
-        // Tweet metnini al
-        const textElem = await article.$('div[data-testid="tweetText"]');
-        const tweetText = textElem ? (await textElem.innerText()).trim() : "";
-
         // Tweet yazarını al
         const userElem = await article.$('div[data-testid="User-Name"]');
         const userText = userElem ? await userElem.innerText() : "";
         const authorMatch = userText.match(/@(\w+)/);
-        const author = authorMatch ? authorMatch[1] : "yatırımcı";
+        const author = authorMatch ? authorMatch[1] : (urlAuthor || "yatırımcı");
+
+        // İkinci kontrol: Yazar adı kendi kullanıcı adımız mı?
+        if (author.toLowerCase() === ownUsername) {
+          continue;
+        }
+
+        // 2. Tweet Yaşı Kontrolü (Çok eski / 5 gün önceki tweetleri filtrele)
+        const timeElem = await article.$('time');
+        if (timeElem) {
+          const datetime = await timeElem.getAttribute("datetime");
+          if (datetime) {
+            const tweetDate = new Date(datetime);
+            const ageHours = (Date.now() - tweetDate.getTime()) / (1000 * 60 * 60);
+            if (ageHours > MAX_TWEET_AGE_HOURS) {
+              processedUrls.add(tweetUrl);
+              continue;
+            }
+          }
+        }
+
+        // Tweet metnini al
+        const textElem = await article.$('div[data-testid="tweetText"]');
+        const tweetText = textElem ? (await textElem.innerText()).trim() : "";
 
         if (!tweetText || tweetText.length < 15) {
           continue;

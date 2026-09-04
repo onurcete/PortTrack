@@ -56,6 +56,16 @@ function getAvailableMedia() {
  * @returns {Promise<{ shouldReply: boolean, reason: string, replyText?: string, selectedImage?: string | null }>}
  */
 export async function evaluateAndDraftReply(tweetText, author = "", config = {}, recentImages = []) {
+  const ownUsername = (process.env.TWITTER_USERNAME || config.ownUsername || "porttrackx").toLowerCase().replace("@", "");
+  if (author.toLowerCase() === ownUsername) {
+    return {
+      shouldReply: false,
+      reason: `Kendi hesabımızın (@${author}) tweeti olduğu için yanıt verilmez.`,
+      replyText: "",
+      selectedImage: null,
+    };
+  }
+
   // Proje bilgi bankasını oku
   let projectKnowledge = "";
   if (fs.existsSync(knowledgeBasePath)) {

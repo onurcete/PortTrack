@@ -16,6 +16,8 @@
     "hisse maliyet hesaplama",
     "altın fonu portföy"
   ],
+  "ownUsername": "porttrackx",
+  "maxTweetAgeHours": 24,
   "minDelayBetweenActionsMs": 3000,
   "maxDelayBetweenActionsMs": 7000,
   "minDelayBetweenRepliesMs": 45000,
