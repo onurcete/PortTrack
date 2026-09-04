@@ -171,9 +171,15 @@ async function startBot() {
         console.log(`📝 Tweet: "${tweetText.substring(0, 120)}..."`);
         console.log(`🔗 Link: ${tweetUrl}`);
 
+        // Son kullanılan görselleri tespit et (son 4 görsel)
+        const recentImages = history
+          .filter((h) => h.status === "replied" && h.image)
+          .map((h) => h.image)
+          .slice(-4);
+
         // 3. AI ile değerlendir ve taslak üret
         console.log("🤖 GPT-4o mini değerlendiriyor...");
-        const aiEvaluation = await evaluateAndDraftReply(tweetText, author, config);
+        const aiEvaluation = await evaluateAndDraftReply(tweetText, author, config, recentImages);
 
         if (!aiEvaluation.shouldReply || !aiEvaluation.replyText) {
           console.log(`⏭️ Pas geçildi. Neden: ${aiEvaluation.reason}`);
@@ -191,16 +197,29 @@ async function startBot() {
 
         console.log(`✨ UYGUN BULUNDU! (${aiEvaluation.reason})`);
         
-        // Görsel belirleme (Yapay zeka seçmediyse bile mutlaka 12 görselden birini kullan)
+        // Medya klasöründeki tüm geçerli görselleri listele
+        const allMediaFiles = fs.existsSync(mediaDir)
+          ? fs.readdirSync(mediaDir).filter((f) => /\.(png|jpe?g|webp)$/i.test(f))
+          : [];
+
+        // Dinamik Görsel Seçimi ve Rotasyon (Üst üste aynı görseli engelle)
         let chosenImage = aiEvaluation.selectedImage;
-        if (!chosenImage || !fs.existsSync(path.resolve(mediaDir, chosenImage))) {
-          chosenImage = "x4.png"; // En kapsamlı mockup afişi
+        const lastTwoImages = recentImages.slice(-2);
+
+        // Eğer görsel yoksa, dosya bulunamadıysa veya son 2 paylaşımda aynısı kullanıldıysa rotasyona sok
+        if (!chosenImage || !fs.existsSync(path.resolve(mediaDir, chosenImage)) || lastTwoImages.includes(chosenImage)) {
+          const freshCandidates = allMediaFiles.filter((f) => !lastTwoImages.includes(f));
+          if (freshCandidates.length > 0) {
+            chosenImage = freshCandidates[Math.floor(Math.random() * freshCandidates.length)];
+          } else if (allMediaFiles.length > 0) {
+            chosenImage = allMediaFiles[Math.floor(Math.random() * allMediaFiles.length)];
+          }
         }
         
-        const imagePath = path.resolve(mediaDir, chosenImage);
-        const hasImage = fs.existsSync(imagePath);
+        const imagePath = chosenImage ? path.resolve(mediaDir, chosenImage) : null;
+        const hasImage = imagePath && fs.existsSync(imagePath);
         console.log(`📸 Seçilen Görsel: ${chosenImage} ${hasImage ? "✅ (Eklenecek)" : "⚠️ (Bulunamadı)"}`);
-        console.log(`✍️ Önerilen Yanıt:\n"${aiEvaluation.replyText}"`);
+        console.log(`✍️ Hazırlanan Yanıt:\n"${aiEvaluation.replyText}"`);
 
         // 4. Onay mekanizması
         let shouldPost = true;
@@ -212,6 +231,8 @@ async function startBot() {
             process.exit(0);
           }
           shouldPost = ans === "e" || ans === "evet";
+        } else {
+          console.log("⚡ [OTOMATİK MOD] Kullanıcı onayı gerekmeden doğrudan gönderiliyor...");
         }
 
         if (!shouldPost) {

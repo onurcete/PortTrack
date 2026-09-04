@@ -55,7 +55,7 @@ function getAvailableMedia() {
  * @param {object} config
  * @returns {Promise<{ shouldReply: boolean, reason: string, replyText?: string, selectedImage?: string | null }>}
  */
-export async function evaluateAndDraftReply(tweetText, author = "", config = {}) {
+export async function evaluateAndDraftReply(tweetText, author = "", config = {}, recentImages = []) {
   // Proje bilgi bankasını oku
   let projectKnowledge = "";
   if (fs.existsSync(knowledgeBasePath)) {
@@ -66,18 +66,19 @@ export async function evaluateAndDraftReply(tweetText, author = "", config = {})
 
   // Medya klasöründeki mevcut resimleri al
   const availableMedia = getAvailableMedia();
+  const recentImagesText = recentImages.length > 0 
+    ? `\nSON PAYLAŞILAN GÖRSELLER (Tekrara düşmemek için bunları mümkünse SEÇME): ${recentImages.join(", ")}\n` 
+    : "";
+
   const mediaPrompt = availableMedia.length > 0
     ? `Elimizdeki Mevcut Ekran Görüntüleri ve Post Resimleri:
 ${availableMedia.map((m) => `- "${m.fileName}": ${m.description}`).join("\n")}
-
-ÖNEMLİ GÖRSEL KURALI:
-X paylaşımlarında görsel eklemek etkileşimi 5 katına çıkarır. Bu nedenle "shouldReply": true olduğunda "selectedImage" alanını ASLA boş veya null bırakma!
-- Eğer fon/tefas konuşuluyorsa: "21ed93f8-2cf5-4e90-9b1b-7b79fba28f34.png" (TEFAS analizi)
-- Eğer excel veya aylık getiri konuşuluyorsa: "2f0e5ea2-dd90-412a-945a-6c184b9ba845.png" (Laptop arayüzü)
-- Eğer mobil uygulama veya telefondan takip konuşuluyorsa: "a31ac981-ba68-459a-a5d7-97e0a556edfc.png" veya "x5.png"
-- Eğer genel borsa, portföy dağılımı veya borsa düşüşü konuşuluyorsa: "x4.png", "x3.png" veya "d3751bb0-5058-46e0-8dc3-9efce02107c2.png"
-- Eğer yatırım planı/stratejisi konuşuluyorsa: "x6.png" veya "7.png"
-Mutlaka yukarıdaki listeden en uygun bir görselin dosya adını "selectedImage" alanına yaz.`
+${recentImagesText}
+ÖNEMLİ GÖRSEL ÇEŞİTLİLİĞİ KURALI:
+X paylaşımlarında görsel eklemek etkileşimi 5 katına çıkarır.
+- "shouldReply": true olduğunda "selectedImage" alanına MUTLAKA yukarıdaki listeden bir görsel seç.
+- ASLA sürekli aynı görseli seçme! Elimizde tam 12 farklı görsel var (mockup'lar, mobil uygulama ekranları, koyu/açık tema afişler, çalışma masası vb.).
+- Son paylaşılan görseller listesindeki görsellerden KAÇIN ve tweetin bağlamına uyabilecek diğer alternatif görselleri (örneğin x3.png, x4.png, x5.png, x6.png, x8.png, 7.png, 2f0e5ea2-dd90-412a-945a-6c184b9ba845.png, a31ac981-ba68-459a-a5d7-97e0a556edfc.png, d3751bb0-5058-46e0-8dc3-9efce02107c2.png vb.) sırayla rotasyona sokarak kullan.`
     : "Şu anda ekli görsel dosyası bulunmuyor.";
 
   const systemPrompt = `Sen Türkiye finans ve borsa topluluğunda aktif, yardımsever, finansal okuryazarlığı yüksek bir yatırımcısın ve aynı zamanda yerli portföy takip platformu PortTrack'in (www.porttrack.com.tr) ekibindensin.
@@ -95,14 +96,14 @@ ${mediaPrompt}
 4. Maksimum 240 karakter civarında olsun. Emojileri abartma (en fazla 1-2 adet).
 5. Kripto pump, forex, vip telegram grupları veya küfür/argo içeren tweetlere ASLA cevap verme.
 6. Eğer tweet PortTrack'in çözdüğü konularla (hisse, borsa, fon, tefas, portföy, excel, kâr/zarar, yatırımcı sayısı) uzaktan yakından alakalı değilse kesinlikle cevap verme (shouldReply: false).
-7. Eğer cevap veriyorsan (shouldReply: true), "selectedImage" alanına yukarıdaki listeden MUTLAKA en uygun görselin dosya adını yaz.
+7. Eğer cevap veriyorsan (shouldReply: true), "selectedImage" alanına yukarıdaki listeden MUTLAKA en uygun görselin dosya adını yaz (ve son kullanılanlardan farklı bir görsel seçmeye özen göster).
 
 Yanıtını YALNIZCA şu JSON formatında döndür:
 {
   "shouldReply": true veya false,
   "reason": "Neden yanıt verilmeli veya neden verilmemeli açıklaması",
   "replyText": "Eğer shouldReply true ise buraya atılacak tweet yanıtı, false ise boş string",
-  "selectedImage": "Listedeki görsellerden birinin tam dosya adı (Örn: x4.png)"
+  "selectedImage": "Listedeki görsellerden birinin tam dosya adı (Örn: x5.png)"
 }`;
 
   try {

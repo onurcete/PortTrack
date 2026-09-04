@@ -5,9 +5,16 @@
     "fon takip",
     "hangi fon",
     "tefas fon önerisi",
+    "yatırım fonları getiri",
+    "bist100 portföy",
+    "borsa portföyüm",
+    "temettü portföyü",
     "hisse takip uygulaması",
     "portföy yönetimi borsa",
-    "temettü takip excel"
+    "temettü takip excel",
+    "bes fon dağılımı",
+    "hisse maliyet hesaplama",
+    "altın fonu portföy"
   ],
   "minDelayBetweenActionsMs": 3000,
   "maxDelayBetweenActionsMs": 7000,
