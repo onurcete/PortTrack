@@ -1,0 +1,38 @@
+{
+  "searchQueries": [
+    "portföy takip",
+    "excel portföy",
+    "fon takip",
+    "hangi fon",
+    "tefas fon önerisi",
+    "hisse takip uygulaması",
+    "portföy yönetimi borsa",
+    "temettü takip excel"
+  ],
+  "minDelayBetweenActionsMs": 3000,
+  "maxDelayBetweenActionsMs": 7000,
+  "minDelayBetweenRepliesMs": 45000,
+  "maxDelayBetweenRepliesMs": 90000,
+  "brandContext": {
+    "name": "PortTrack",
+    "website": "porttrack.app",
+    "features": [
+      "BIST hisseleri ve TEFAS fonlarını otomatik güncel fiyatlarla takip etme",
+      "Kâr/zarar, maliyet ve temettü hesaplama",
+      "Döviz, altın ve kripto varlıkları tek ekranda toplama",
+      "Karmaşık Excel tabloları yerine sade, modern ve ücretsiz arayüz"
+    ]
+  },
+  "blockedWords": [
+    "telegram",
+    "vip grup",
+    "garanti kazanç",
+    "pump",
+    "sinyal",
+    "fx",
+    "forex",
+    "kaldıraç",
+    "kumar",
+    "bahis"
+  ]
+}

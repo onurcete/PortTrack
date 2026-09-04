@@ -1,0 +1,17 @@
+{
+  "name": "x-growth-bot",
+  "version": "1.0.0",
+  "description": "PortTrack için bağımsız X (Twitter) akıllı etkileşim ve organik büyüme botu",
+  "main": "src/bot.js",
+  "type": "module",
+  "scripts": {
+    "login": "node src/login.js",
+    "start": "node src/bot.js",
+    "test-ai": "node src/test-ai.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "openai": "^4.86.0",
+    "playwright": "^1.50.1"
+  }
+}

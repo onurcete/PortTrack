@@ -42,3 +42,10 @@ next-env.d.ts
 
 # SQLite database (production uses Neon PostgreSQL)
 prisma/dev.db
+
+# x-growth-bot (independent automation tool)
+x-growth-bot/node_modules/
+x-growth-bot/.env
+!x-growth-bot/.env.example
+x-growth-bot/user_data/
+x-growth-bot/history.json
