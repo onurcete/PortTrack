@@ -107,52 +107,57 @@ function fmtTefasDate(d: Date): string {
   ).padStart(2, "0")}`;
 }
 
+function getLatestBusinessDate(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() - offsetDays);
+  // Hafta sonu ise Cuma gününe git
+  if (d.getDay() === 0) d.setDate(d.getDate() - 2); // Pazar -> Cuma
+  else if (d.getDay() === 6) d.setDate(d.getDate() - 1); // Cumartesi -> Cuma
+  return fmtTefasDate(d);
+}
+
+const TEFAS_HEADERS: Record<string, string> = {
+  "Content-Type": "application/json; charset=UTF-8",
+  Accept: "application/json, text/plain, */*",
+  "X-Requested-With": "XMLHttpRequest",
+  Origin: "https://www.tefas.gov.tr",
+  Referer: "https://www.tefas.gov.tr/TarihselVeriler.aspx",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+  "Accept-Language": "tr-TR,tr;q=0.9",
+};
+
 /**
- * TEFAS API'sinden fonların varlık dağılımlarını çeker
+ * TEFAS API'sinden fonların varlık dağılımlarını tek seferde toplu çeker
  */
 async function fetchTefasAllocations(symbols: Set<string>): Promise<Map<string, FundAllocationSlice[]>> {
   const result = new Map<string, FundAllocationSlice[]>();
   if (symbols.size === 0) return result;
 
-  const now = new Date();
-  // Son iş gününü bul (Hafta sonu ise Cuma gününe git)
-  const d = new Date(now);
-  if (d.getDay() === 0) d.setDate(d.getDate() - 2); // Pazar -> Cuma
-  else if (d.getDay() === 6) d.setDate(d.getDate() - 1); // Cumartesi -> Cuma
-  const dateStr = fmtTefasDate(d);
+  const dateStr = getLatestBusinessDate(0);
 
   try {
-    // TEFAS dagilimSiraliGetirT sayfası 1000'erli bloklar halinde döner
-    // Sembollerimizi bulana kadar ilk 3 sayfayı (3000 fon) tara
-    for (const startIdx of [1, 1001, 2001]) {
-      if (result.size >= symbols.size) break;
+    const res = await fetch("https://www.tefas.gov.tr/api/funds/dagilimSiraliGetirT", {
+      method: "POST",
+      headers: TEFAS_HEADERS,
+      body: JSON.stringify({
+        fonTipi: "YAT",
+        basTarih: dateStr,
+        bitTarih: dateStr,
+        basSira: 1,
+        bitSira: 2500,
+        dil: "TR",
+      }),
+      cache: "no-store",
+    });
 
-      const res = await fetch("https://www.tefas.gov.tr/api/funds/dagilimSiraliGetirT", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json; charset=UTF-8",
-          Accept: "application/json, text/plain, */*",
-          "User-Agent": UA,
-        },
-        body: JSON.stringify({
-          fonTipi: "YAT",
-          basTarih: dateStr,
-          bitTarih: dateStr,
-          basSira: startIdx,
-          bitSira: startIdx + 999,
-          dil: "TR",
-        }),
-        cache: "no-store",
-      });
-
-      if (!res.ok) continue;
+    if (res.ok) {
       const json = await res.json();
       const rows: any[] = json?.resultList ?? [];
-      if (rows.length === 0) break;
 
       for (const row of rows) {
         const sym = row.fonKodu?.toUpperCase();
-        if (symbols.has(sym) && !result.has(sym)) {
+        if (symbols.has(sym)) {
           const slices: FundAllocationSlice[] = [];
           let otherPct = 0;
 
@@ -194,7 +199,7 @@ async function fetchTefasAllocations(symbols: Set<string>): Promise<Map<string, 
 }
 
 /**
- * TEFAS API'sinden güncel ve 7 gün önceki fon büyüklüklerini & pay sayılarını çeker
+ * TEFAS API'sinden güncel ve 7 gün önceki fon büyüklüklerini, pay sayılarını ve yatırımcı sayılarını tek seferde toplu çeker
  */
 async function fetchTefasMetrics(
   symbols: Set<string>
@@ -209,6 +214,8 @@ async function fetchTefasMetrics(
       price: number;
       fundUnvan: string;
       date: string;
+      kisiSayisi: number;
+      kisiSayisiDeltaWeek: number;
     }
   >
 > {
@@ -222,68 +229,86 @@ async function fetchTefasMetrics(
       price: number;
       fundUnvan: string;
       date: string;
+      kisiSayisi: number;
+      kisiSayisiDeltaWeek: number;
     }
   >();
 
   if (symbols.size === 0) return result;
 
-  const now = new Date();
-  const past7 = new Date(now);
-  past7.setDate(past7.getDate() - 10);
-
-  const startStr = fmtTefasDate(past7);
-  const endStr = fmtTefasDate(now);
+  const latestDateStr = getLatestBusinessDate(0);
+  const priorDateStr = getLatestBusinessDate(7);
 
   try {
-    for (const sym of symbols) {
-      const res = await fetch("https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir", {
+    const [resLatest, resPrior] = await Promise.all([
+      fetch("https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json; charset=UTF-8",
-          Accept: "application/json, text/plain, */*",
-          "User-Agent": UA,
-        },
+        headers: TEFAS_HEADERS,
         body: JSON.stringify({
           fonTipi: "YAT",
-          fonKodu: sym,
-          basTarih: startStr,
-          bitTarih: endStr,
+          basTarih: latestDateStr,
+          bitTarih: latestDateStr,
           basSira: 1,
-          bitSira: 50,
+          bitSira: 2500,
           dil: "TR",
         }),
         cache: "no-store",
-      });
+      }),
+      fetch("https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir", {
+        method: "POST",
+        headers: TEFAS_HEADERS,
+        body: JSON.stringify({
+          fonTipi: "YAT",
+          basTarih: priorDateStr,
+          bitTarih: priorDateStr,
+          basSira: 1,
+          bitSira: 2500,
+          dil: "TR",
+        }),
+        cache: "no-store",
+      }),
+    ]);
 
-      if (!res.ok) continue;
-      const json = await res.json();
-      const rows: any[] = json?.resultList ?? [];
-      if (rows.length === 0) continue;
+    if (resLatest.ok) {
+      const jsonLatest = await resLatest.json();
+      const latestRows: any[] = jsonLatest?.resultList ?? [];
 
-      // Tarihe göre sırala
-      rows.sort((a, b) => new Date(a.tarih).getTime() - new Date(b.tarih).getTime());
+      const priorMap = new Map<string, any>();
+      if (resPrior.ok) {
+        const jsonPrior = await resPrior.json();
+        const priorRows: any[] = jsonPrior?.resultList ?? [];
+        for (const pr of priorRows) {
+          if (pr.fonKodu) priorMap.set(pr.fonKodu.toUpperCase(), pr);
+        }
+      }
 
-      const latest = rows[rows.length - 1];
-      const previous = rows.length >= 2 ? rows[0] : latest;
+      for (const row of latestRows) {
+        const sym = row.fonKodu?.toUpperCase();
+        if (symbols.has(sym)) {
+          const prior = priorMap.get(sym);
+          const latestShares = Number(row.tedPaySayisi) || 0;
+          const prevShares = Number(prior?.tedPaySayisi) || latestShares;
+          const deltaShares = latestShares - prevShares;
+          const price = Number(row.fiyat) || 0;
+          const fundSizeTRY = Number(row.portfoyBuyukluk) || 0;
+          const capitalFlowTRY = deltaShares * price;
+          const kisiSayisi = Number(row.kisiSayisi) || 0;
+          const prevKisiSayisi = Number(prior?.kisiSayisi) || kisiSayisi;
+          const kisiSayisiDeltaWeek = kisiSayisi - prevKisiSayisi;
 
-      const latestShares = Number(latest.tedPaySayisi) || 0;
-      const prevShares = Number(previous.tedPaySayisi) || latestShares;
-      const deltaShares = latestShares - prevShares;
-      const price = Number(latest.fiyat) || 0;
-      const fundSizeTRY = Number(latest.portfoyBuyukluk) || 0;
-
-      // Net Sermaye Akışı = Pay Değişimi * Güncel Fiyat
-      const capitalFlowTRY = deltaShares * price;
-
-      result.set(sym, {
-        fundSizeTRY,
-        sharesCount: latestShares,
-        sharesDeltaWeek: deltaShares,
-        capitalFlowTRY,
-        price,
-        fundUnvan: latest.fonUnvan || "",
-        date: latest.tarih || "",
-      });
+          result.set(sym, {
+            fundSizeTRY,
+            sharesCount: latestShares,
+            sharesDeltaWeek: deltaShares,
+            capitalFlowTRY,
+            price,
+            fundUnvan: row.fonUnvan || "",
+            date: row.tarih || latestDateStr,
+            kisiSayisi,
+            kisiSayisiDeltaWeek,
+          });
+        }
+      }
     }
   } catch (err) {
     console.error("❌ TEFAS Fon Metrikleri Çekme Hatası:", err);
@@ -363,7 +388,7 @@ export async function buildTefasAnalysisSummary(
       totalNetFlowTRY += metrics.capitalFlowTRY;
     }
 
-    // Yatırımcı analizi
+    // Yatırımcı analizi (DB snapshotları öncelikli, yoksa canlı TEFAS kisiSayisi)
     const snaps = (investorSnapsBySym.get(sym) || []).sort(
       (a, b) => a.date.getTime() - b.date.getTime()
     );
@@ -386,9 +411,18 @@ export async function buildTefasAnalysisSummary(
       }
     }
 
+    const finalInv =
+      latestInv ?? (metrics?.kisiSayisi && metrics.kisiSayisi > 0 ? metrics.kisiSayisi : null);
+    const finalDeltaInv = weekDeltaInv ?? metrics?.kisiSayisiDeltaWeek ?? null;
+    const finalDeltaPctInv =
+      weekDeltaPctInv ??
+      (metrics && metrics.kisiSayisi > 0 && finalDeltaInv != null
+        ? (finalDeltaInv / (metrics.kisiSayisi - finalDeltaInv)) * 100
+        : null);
+
     const avgTicketTRY =
-      metrics?.fundSizeTRY && latestInv && latestInv > 0
-        ? metrics.fundSizeTRY / latestInv
+      metrics?.fundSizeTRY && finalInv && finalInv > 0
+        ? metrics.fundSizeTRY / finalInv
         : null;
 
     // Kümülatif dağılıma katkı
@@ -422,9 +456,9 @@ export async function buildTefasAnalysisSummary(
       sharesCount: metrics?.sharesCount ?? null,
       sharesDeltaWeek: metrics?.sharesDeltaWeek ?? null,
       capitalFlowTRY: metrics?.capitalFlowTRY ?? null,
-      investorCount: latestInv,
-      investorDeltaWeek: weekDeltaInv,
-      investorDeltaPct: weekDeltaPctInv,
+      investorCount: finalInv,
+      investorDeltaWeek: finalDeltaInv,
+      investorDeltaPct: finalDeltaPctInv,
       avgTicketTRY,
       allocations,
       primaryAsset: primary?.label || "Karma",
