@@ -152,6 +152,51 @@ function Stock52WeekBar({
   );
 }
 
+// Mini 52-Week Range Bar for Stock Table Row
+function Table52WeekBar({
+  price,
+  low52,
+  high52,
+  theme,
+}: {
+  price: number;
+  low52: number | null;
+  high52: number | null;
+  theme: any;
+}) {
+  if (low52 == null || high52 == null || high52 <= low52) {
+    return null;
+  }
+
+  const range = high52 - low52;
+  const rawPct = ((price - low52) / range) * 100;
+  const pct = Math.max(3, Math.min(97, rawPct));
+
+  return (
+    <View style={[styles.tableMiniRangeTrack, { backgroundColor: theme.surfaceMuted }]}>
+      <View
+        style={[
+          styles.tableMiniRangeFill,
+          {
+            width: `${pct}%`,
+            backgroundColor: pct > 70 ? '#22c55e' : pct > 35 ? '#818cf8' : '#f59e0b',
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.tableMiniRangeThumb,
+          {
+            left: `${pct}%`,
+            backgroundColor: theme.surface,
+            borderColor: pct > 70 ? '#22c55e' : pct > 35 ? '#818cf8' : '#f59e0b',
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
 // Mini Sparkline SVG for trend column
 function MiniSparkline({
   points,
@@ -1142,7 +1187,15 @@ export default function AnalysisScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Hisse Kartları Listesi */}
+            {/* İpucu Bildirimi */}
+            <View style={styles.hintNoticeRow}>
+              <Info size={13} color="#818cf8" />
+              <Text style={[styles.hintNoticeText, { color: theme.text.muted }]}>
+                Detay ve grafik için hisseye tıklayın.
+              </Text>
+            </View>
+
+            {/* Hisse Analiz Tablosu */}
             {filteredStocks.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle, marginTop: 10 }]}>
                 <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
@@ -1156,132 +1209,148 @@ export default function AnalysisScreen() {
                 </Text>
               </View>
             ) : (
-              filteredStocks.map((stock) => (
-                <TouchableOpacity
-                  key={stock.symbol}
-                  style={[styles.stockCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
-                  onPress={() => {
-                    haptic.selection();
-                    router.push(`/asset/${stock.symbol}` as any);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  {/* Başlık ve Fiyat Satırı */}
-                  <View style={styles.stockCardTopRow}>
-                    <View style={styles.stockCardLeft}>
-                      <Text style={[styles.stockSymbolText, { color: theme.text.primary }]}>
-                        {stock.symbol}
-                      </Text>
-                      <View
-                        style={[
-                          styles.stockTypeBadge,
-                          {
-                            backgroundColor:
-                              stock.assetType === 'BIST'
-                                ? 'rgba(56, 189, 248, 0.15)'
-                                : 'rgba(168, 85, 247, 0.15)',
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.stockTypeBadgeText,
-                            { color: stock.assetType === 'BIST' ? '#38bdf8' : '#c084fc' },
-                          ]}
-                        >
-                          {stock.assetType === 'BIST' ? 'BIST' : 'YABANCI'}
+              <View style={[styles.tableContainer, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                {/* Tablo Başlıkları */}
+                <View style={[styles.tableHeader, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                  <Text style={[styles.thText, { width: '28%', textAlign: 'left', color: theme.text.muted }]} numberOfLines={2}>
+                    HİSSE{'\n'}KODU
+                  </Text>
+                  <Text style={[styles.thText, { width: '24%', textAlign: 'left', color: theme.text.muted }]} numberOfLines={2}>
+                    GÜNCEL FİYAT{'\n'}(GÜNLÜK)
+                  </Text>
+                  <Text style={[styles.thText, { width: '26%', textAlign: 'center', color: theme.text.muted }]} numberOfLines={2}>
+                    52H MARJ{'\n'}(İSKONTO)
+                  </Text>
+                  <Text style={[styles.thText, { width: '22%', textAlign: 'right', color: theme.text.muted }]} numberOfLines={2}>
+                    F/K{'\n'}PD/DD
+                  </Text>
+                </View>
+
+                {/* Tablo Satırları (Geniş & Rahat Satır) */}
+                {filteredStocks.map((stock, idx) => {
+                  const isDailyPos = (stock.dailyChangePct ?? 0) >= 0;
+                  const hasDiscount = stock.discountFromHighPct != null;
+                  const isDiscountHigh = (stock.discountFromHighPct ?? 0) < -15;
+                  const isDiscountMed = (stock.discountFromHighPct ?? 0) < -5;
+
+                  return (
+                    <TouchableOpacity
+                      key={stock.symbol || `stock-${idx}`}
+                      style={[styles.stockTableRow, { borderBottomColor: theme.borderSubtle }]}
+                      onPress={() => {
+                        haptic.selection();
+                        router.push(`/asset/${stock.symbol}` as any);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      {/* Kolon 1: HİSSE KODU & İSİM */}
+                      <View style={{ width: '28%', justifyContent: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={[styles.stockTableSymbol, { color: theme.text.primary }]} numberOfLines={1}>
+                            {stock.symbol}
+                          </Text>
+                          {(stock.recommendation === 'buy' || stock.recommendation === 'strong_buy') && (
+                            <View style={styles.tableBuyBadge}>
+                              <Text style={styles.tableBuyText}>AL</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={[styles.stockTableName, { color: theme.text.muted }]} numberOfLines={1}>
+                          {stock.name}
                         </Text>
                       </View>
-                      {(stock.recommendation === 'buy' || stock.recommendation === 'strong_buy') && (
-                        <View style={styles.analystBuyBadge}>
-                          <Sparkles size={10} color="#22c55e" />
-                          <Text style={styles.analystBuyText}>AL</Text>
-                        </View>
-                      )}
-                    </View>
 
-                    <View style={styles.stockCardRight}>
-                      <Text style={[styles.stockPriceText, { color: theme.text.primary }]}>
-                        {formatCurrency(stock.price, stock.currency, 2)}
-                      </Text>
-                      {stock.dailyChangePct != null && (
-                        <View
-                          style={[
-                            styles.stockDailyBadge,
-                            {
-                              backgroundColor:
-                                stock.dailyChangePct >= 0
-                                  ? 'rgba(34, 197, 94, 0.12)'
-                                  : 'rgba(244, 63, 94, 0.12)',
-                            },
-                          ]}
-                        >
-                          {stock.dailyChangePct >= 0 ? (
-                            <ArrowUpRight size={11} color="#22c55e" />
-                          ) : (
-                            <ArrowDownRight size={11} color="#f43f5e" />
-                          )}
-                          <Text
+                      {/* Kolon 2: GÜNCEL FİYAT & GÜNLÜK DEĞİŞİM */}
+                      <View style={{ width: '24%', justifyContent: 'center' }}>
+                        <Text style={[styles.stockTablePrice, { color: theme.text.primary }]} numberOfLines={1}>
+                          {formatCurrency(stock.price, stock.currency, 2)}
+                        </Text>
+                        {stock.dailyChangePct != null && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 2 }}>
+                            {isDailyPos ? (
+                              <ArrowUpRight size={10} color="#22c55e" />
+                            ) : (
+                              <ArrowDownRight size={10} color="#f43f5e" />
+                            )}
+                            <Text
+                              style={[
+                                styles.stockTableDailyText,
+                                { color: isDailyPos ? '#22c55e' : '#f43f5e' },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {isDailyPos ? '+' : ''}%{Math.abs(stock.dailyChangePct).toFixed(2).replace('.', ',')}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Kolon 3: 52H MARJ & İSKONTO */}
+                      <View style={{ width: '26%', alignItems: 'center', justifyContent: 'center' }}>
+                        {hasDiscount ? (
+                          <View
                             style={[
-                              styles.stockDailyText,
-                              { color: stock.dailyChangePct >= 0 ? '#22c55e' : '#f43f5e' },
+                              styles.tableDiscountBadge,
+                              {
+                                backgroundColor: isDiscountHigh
+                                  ? 'rgba(244, 63, 94, 0.15)'
+                                  : isDiscountMed
+                                  ? 'rgba(245, 158, 11, 0.15)'
+                                  : 'rgba(34, 197, 94, 0.15)',
+                                borderColor: isDiscountHigh
+                                  ? 'rgba(244, 63, 94, 0.3)'
+                                  : isDiscountMed
+                                  ? 'rgba(245, 158, 11, 0.3)'
+                                  : 'rgba(34, 197, 94, 0.3)',
+                              },
                             ]}
                           >
-                            {stock.dailyChangePct >= 0 ? '+' : ''}%{stock.dailyChangePct.toFixed(2).replace('.', ',')}
-                          </Text>
+                            <Text
+                              style={[
+                                styles.tableDiscountText,
+                                {
+                                  color: isDiscountHigh
+                                    ? '#f43f5e'
+                                    : isDiscountMed
+                                    ? '#f59e0b'
+                                    : '#22c55e',
+                                },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {(stock.discountFromHighPct ?? 0) < -0.5
+                                ? `-%${Math.abs(stock.discountFromHighPct!).toFixed(1).replace('.', ',')}`
+                                : 'Zirvede'}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={{ fontSize: 10, color: theme.text.muted }}>-</Text>
+                        )}
+
+                        {/* Mini 52H Bar */}
+                        <View style={{ width: '85%', marginTop: 5 }}>
+                          <Table52WeekBar
+                            price={stock.price}
+                            low52={stock.low52}
+                            high52={stock.high52}
+                            theme={theme}
+                          />
                         </View>
-                      )}
-                    </View>
-                  </View>
+                      </View>
 
-                  {/* Şirket Adı */}
-                  <Text style={[styles.stockNameText, { color: theme.text.muted }]} numberOfLines={1}>
-                    {stock.name}
-                  </Text>
-
-                  {/* 52 Haftalık Fiyat Aralığı Barı */}
-                  <Stock52WeekBar
-                    price={stock.price}
-                    low52={stock.low52}
-                    high52={stock.high52}
-                    currency={stock.currency}
-                    discountPct={stock.discountFromHighPct}
-                    gainFromLowPct={stock.gainFromLowPct}
-                    theme={theme}
-                  />
-
-                  {/* Değerleme Çarpanları: F/K, PD/DD, Hedef Potansiyel (Temettü/Hacim/Portföy Payı GÖSTERİLMEZ) */}
-                  <View style={styles.stockMultiplesRow}>
-                    <View style={[styles.stockMultipleBox, { backgroundColor: theme.surfaceMuted }]}>
-                      <Text style={[styles.stockMultipleLabel, { color: theme.text.muted }]}>F/K</Text>
-                      <Text style={[styles.stockMultipleValue, { color: theme.text.primary }]}>
-                        {stock.pe != null && stock.pe > 0 ? `${stock.pe.toFixed(1).replace('.', ',')}x` : '-'}
-                      </Text>
-                    </View>
-
-                    <View style={[styles.stockMultipleBox, { backgroundColor: theme.surfaceMuted }]}>
-                      <Text style={[styles.stockMultipleLabel, { color: theme.text.muted }]}>PD/DD</Text>
-                      <Text style={[styles.stockMultipleValue, { color: theme.text.primary }]}>
-                        {stock.pb != null && stock.pb > 0 ? `${stock.pb.toFixed(1).replace('.', ',')}x` : '-'}
-                      </Text>
-                    </View>
-
-                    {stock.targetUpsidePct != null && (
-                      <View style={[styles.stockMultipleBox, { backgroundColor: theme.surfaceMuted }]}>
-                        <Text style={[styles.stockMultipleLabel, { color: theme.text.muted }]}>Hedef Potansiyel</Text>
-                        <Text
-                          style={[
-                            styles.stockMultipleValue,
-                            { color: stock.targetUpsidePct >= 0 ? '#22c55e' : '#f43f5e' },
-                          ]}
-                        >
-                          {stock.targetUpsidePct >= 0 ? '+' : ''}%{stock.targetUpsidePct.toFixed(1).replace('.', ',')}
+                      {/* Kolon 4: F/K & PD/DD */}
+                      <View style={{ width: '22%', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <Text style={[styles.stockTablePeText, { color: theme.text.primary }]} numberOfLines={1}>
+                          F/K: {stock.pe != null && stock.pe > 0 ? stock.pe.toFixed(1).replace('.', ',') : '-'}
+                        </Text>
+                        <Text style={[styles.stockTablePbText, { color: theme.text.muted }]} numberOfLines={1}>
+                          PD: {stock.pb != null && stock.pb > 0 ? stock.pb.toFixed(1).replace('.', ',') : '-'}
                         </Text>
                       </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             )}
           </ScrollView>
         )
@@ -2080,5 +2149,82 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     marginTop: 1,
+  },
+  stockTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+  },
+  stockTableSymbol: {
+    fontSize: 13.5,
+    fontWeight: '900',
+  },
+  tableBuyBadge: {
+    paddingHorizontal: 3.5,
+    paddingVertical: 1,
+    borderRadius: 3,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+  },
+  tableBuyText: {
+    fontSize: 7.5,
+    fontWeight: '900',
+    color: '#22c55e',
+  },
+  stockTableName: {
+    fontSize: 9.5,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  stockTablePrice: {
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  stockTableDailyText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  tableDiscountBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  tableDiscountText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  tableMiniRangeTrack: {
+    height: 3.5,
+    borderRadius: 2,
+    position: 'relative',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  tableMiniRangeFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 2,
+  },
+  tableMiniRangeThumb: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    borderWidth: 1.5,
+    marginLeft: -3.5,
+    top: -1.75,
+  },
+  stockTablePeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  stockTablePbText: {
+    fontSize: 9.5,
+    fontWeight: '600',
+    marginTop: 2,
   },
 });
