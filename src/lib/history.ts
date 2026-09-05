@@ -698,8 +698,11 @@ export interface PeriodReturnsDTO {
   allTimeAmtUSD: number | null;
   timelines?: Record<string, ChartTimelinePoint[]>;
   assetTypeReturns?: {
+    daily?: Record<string, { TRY: number | null; USD: number | null }>;
     weekly: Record<string, { TRY: number | null; USD: number | null }>;
     mtd: Record<string, { TRY: number | null; USD: number | null }>;
+    monthly?: Record<string, { TRY: number | null; USD: number | null }>;
+    threeMonths?: Record<string, { TRY: number | null; USD: number | null }>;
     ytd: Record<string, { TRY: number | null; USD: number | null }>;
     oneYear?: Record<string, { TRY: number | null; USD: number | null }>;
   };
@@ -1036,8 +1039,11 @@ export async function getPeriodReturns(userId: string): Promise<PeriodReturnsDTO
     allTimeAmtUSD: firstPoint ? calcAmt(t0.valueUSD, firstPoint.valueUSD) : (inceptionValUSD > 0 ? calcAmt(t0.valueUSD, inceptionValUSD) : null),
     timelines,
     assetTypeReturns: {
+      daily: getAssetReturns(d1, d0),
       weekly: getAssetReturns(d7, d0),
       mtd: getAssetReturns(dMtd, d0),
+      monthly: getAssetReturns(d30, d0),
+      threeMonths: getAssetReturns(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), d0),
       ytd: getAssetReturns(dYtd, d0),
       oneYear: getAssetReturns(d1Y, d0),
     },

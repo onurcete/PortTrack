@@ -101,6 +101,15 @@ export interface PeriodReturns {
   oneYearAmtTRY?: number | null;
   oneYearAmtUSD?: number | null;
   timelines?: Record<string, ChartTimelinePoint[]>;
+  assetTypeReturns?: {
+    daily?: Record<string, { TRY: number | null; USD: number | null }>;
+    weekly?: Record<string, { TRY: number | null; USD: number | null }>;
+    mtd?: Record<string, { TRY: number | null; USD: number | null }>;
+    monthly?: Record<string, { TRY: number | null; USD: number | null }>;
+    threeMonths?: Record<string, { TRY: number | null; USD: number | null }>;
+    ytd?: Record<string, { TRY: number | null; USD: number | null }>;
+    oneYear?: Record<string, { TRY: number | null; USD: number | null }>;
+  };
 }
 
 export interface ChartTimelinePoint {

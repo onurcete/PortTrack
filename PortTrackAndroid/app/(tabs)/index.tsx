@@ -27,6 +27,7 @@ import {
   Moon,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   TrendingUp,
   TrendingDown,
   Layers,
@@ -305,6 +306,7 @@ export default function DashboardScreen() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [positionTab, setPositionTab] = useState<'OPEN' | 'CLOSED'>('OPEN');
   const [timeframe, setTimeframe] = useState<TimeframeOption>('1A');
+  const [allocationViewMode, setAllocationViewMode] = useState<'AMOUNT' | 'PERCENT'>('AMOUNT');
 
   const fetchPortfolio = useCallback(async () => {
     try {
@@ -453,6 +455,88 @@ export default function DashboardScreen() {
         };
     }
   }, [timeframe, isTRY, pReturns]);
+
+  // Varlık Dağılımı Dönemlik Performans Hesaplaması (Seçili timeframe ile %100 senkronize)
+  const allocationItems = useMemo(() => {
+    if (!portfolio?.assetBreakdown) return [];
+
+    const tfKey = ((): 'daily' | 'weekly' | 'mtd' | 'monthly' | 'threeMonths' | 'ytd' | 'oneYear' => {
+      switch (timeframe) {
+        case '1G': return 'daily';
+        case '1H': return 'weekly';
+        case 'MTD': return 'mtd';
+        case '1A': return 'monthly';
+        case '3A': return 'threeMonths';
+        case 'YTD': return 'ytd';
+        case '1Y':
+        default: return 'oneYear';
+      }
+    })();
+
+    const assetReturns = pReturns?.assetTypeReturns?.[tfKey];
+
+    return portfolio.assetBreakdown.map((item) => {
+      const badge = getAssetTypeBadgeColor(item.type);
+      const catVal = isTRY
+        ? item.valueTRY
+        : (item.valueUSD ?? item.valueTRY / (portfolio?.currentUsdTry || 1));
+
+      let periodPct: number | null = null;
+      let periodAmt: number | null = null;
+
+      // 1. Backend assetTypeReturns kontrolü
+      if (assetReturns && assetReturns[item.type]) {
+        const retObj = assetReturns[item.type];
+        periodPct = isTRY ? retObj.TRY : retObj.USD;
+        if (periodPct != null && Number.isFinite(periodPct)) {
+          const baseVal = catVal / (1 + periodPct / 100);
+          periodAmt = catVal - baseVal;
+        }
+      }
+
+      // 2. 1G (Günlük) ise ve backend retObj boşsa, kategorideki açık pozisyonların günlük değişimlerinden hesapla
+      if ((periodPct == null || periodAmt == null) && timeframe === '1G') {
+        const catPositions = openPositions.filter((p) => p.assetType === item.type);
+        let dailyChangeSumTRY = 0;
+        for (const p of catPositions) {
+          if (p.dailyChangePct != null && p.currentValueTRY > 0) {
+            dailyChangeSumTRY += (p.currentValueTRY * p.dailyChangePct) / 100;
+          }
+        }
+        const dailyChangeSum = isTRY
+          ? dailyChangeSumTRY
+          : dailyChangeSumTRY / (portfolio?.currentUsdTry || 1);
+        const prevVal = catVal - dailyChangeSum;
+        periodPct = prevVal > 0 ? (dailyChangeSum / prevVal) * 100 : 0;
+        periodAmt = dailyChangeSum;
+      }
+
+      // 3. Eğer veri null ise (örneğin BES gibi sabit varlıklar veya veri henüz yoksa)
+      if (periodPct == null || !Number.isFinite(periodPct)) {
+        periodPct = 0;
+      }
+      if (periodAmt == null || !Number.isFinite(periodAmt)) {
+        periodAmt = (catVal * periodPct) / 100;
+      }
+
+      return {
+        type: item.type,
+        label: getAssetTypeLabel(item.type),
+        value: catVal,
+        percent: item.percent,
+        color: badge.text || item.color || '#8b5cf6',
+        periodPct,
+        periodAmt,
+      };
+    });
+  }, [
+    portfolio?.assetBreakdown,
+    portfolio?.currentUsdTry,
+    pReturns?.assetTypeReturns,
+    timeframe,
+    isTRY,
+    openPositions,
+  ]);
 
   // Gerçek Zaman Serisi (Real Timeline Data)
   const activeTimeline = useMemo(() => {
@@ -741,38 +825,127 @@ export default function DashboardScreen() {
               <Text style={[styles.sectionCardTitle, { color: theme.text.primary }]}>
                 Varlık Dağılımı
               </Text>
-              <View style={styles.sectionCardRightBadge}>
-                <Text style={[styles.sectionCountText, { color: theme.text.muted }]}>
-                  {openPositions.length} Varlık
-                </Text>
-                <ChevronDown size={14} color={theme.text.muted} />
+
+              {/* [ Tutar | Yüzde ] Toggle Butonları */}
+              <View style={[styles.allocToggleContainer, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.allocToggleBtn,
+                    allocationViewMode === 'AMOUNT' && [styles.allocToggleBtnActive, { backgroundColor: '#5b4df5' }],
+                  ]}
+                  onPress={() => {
+                    haptic.selection();
+                    setAllocationViewMode('AMOUNT');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.allocToggleText,
+                      { color: allocationViewMode === 'AMOUNT' ? '#ffffff' : theme.text.muted },
+                      allocationViewMode === 'AMOUNT' && { fontWeight: '800' },
+                    ]}
+                  >
+                    Tutar
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.allocToggleBtn,
+                    allocationViewMode === 'PERCENT' && [styles.allocToggleBtnActive, { backgroundColor: '#5b4df5' }],
+                  ]}
+                  onPress={() => {
+                    haptic.selection();
+                    setAllocationViewMode('PERCENT');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.allocToggleText,
+                      { color: allocationViewMode === 'PERCENT' ? '#ffffff' : theme.text.muted },
+                      allocationViewMode === 'PERCENT' && { fontWeight: '800' },
+                    ]}
+                  >
+                    Yüzde
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
             {/* Donut Grafik ve Liste Yan Yana */}
-            {portfolio?.assetBreakdown && portfolio.assetBreakdown.length > 0 && (
+            {allocationItems && allocationItems.length > 0 && (
               <View style={styles.donutSectionBody}>
-                {/* Sol: Donut Grafik */}
+                {/* Sol: Donut Grafik (Ortasında Toplam Değer) */}
                 <View style={styles.donutLeft}>
-                  <DonutChart data={portfolio.assetBreakdown} size={110} strokeWidth={15} />
+                  <View style={styles.donutContainer}>
+                    <DonutChart data={allocationItems} size={118} strokeWidth={14} />
+                    <View style={styles.donutCenterContent} pointerEvents="none">
+                      <Text
+                        style={[styles.donutCenterValue, { color: theme.text.primary }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {showValues ? formatCurrency(totalValue, isTRY ? 'TRY' : 'USD', 0) : '••••••'}
+                      </Text>
+                      <Text style={[styles.donutCenterLabel, { color: theme.text.muted }]}>
+                        Toplam Değer
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
                 {/* Sağ: Kategori Dağılım Listesi */}
                 <View style={styles.donutListRight}>
-                  {portfolio.assetBreakdown.map((item, idx) => {
-                    const badge = getAssetTypeBadgeColor(item.type);
+                  {allocationItems.map((item, idx) => {
+                    const isPositive = item.periodAmt > 0.001;
+                    const isNegative = item.periodAmt < -0.001;
+                    const returnColor = isPositive ? '#10b981' : isNegative ? '#ef4444' : theme.text.muted;
+                    const sign = isPositive ? '+' : '';
+                    const amtDecimals = Math.abs(item.periodAmt) >= 100 ? 0 : 2;
+
                     return (
-                      <View key={`breakdown-${item.type}-${idx}`} style={styles.donutListItem}>
+                      <TouchableOpacity
+                        key={`breakdown-${item.type}-${idx}`}
+                        style={styles.donutListItem}
+                        activeOpacity={0.7}
+                        onPress={() => toggleSection(item.type)}
+                      >
+                        {/* Sol: Renk Noktası ve Kategori Adı */}
                         <View style={styles.donutItemLeft}>
-                          <View style={[styles.donutColorDot, { backgroundColor: badge.text }]} />
-                          <Text style={[styles.donutItemLabel, { color: theme.text.secondary }]}>
-                            {getAssetTypeLabel(item.type)}
+                          <View style={[styles.donutColorDot, { backgroundColor: item.color }]} />
+                          <Text
+                            style={[styles.donutItemLabel, { color: theme.text.secondary }]}
+                            numberOfLines={1}
+                          >
+                            {item.label}
                           </Text>
                         </View>
-                        <Text style={[styles.donutItemPercent, { color: theme.text.primary }]}>
-                          %{item.percent.toFixed(1)}
-                        </Text>
-                      </View>
+
+                        {/* Sağ: Tutar/Yüzde + Dönemlik Getiri + Chevron */}
+                        <View style={styles.donutItemRight}>
+                          <View style={styles.donutValueCol}>
+                            {/* Üst: Kategori Toplam Değeri veya Yüzdesi */}
+                            <Text style={[styles.donutItemValText, { color: theme.text.primary }]}>
+                              {showValues
+                                ? (allocationViewMode === 'AMOUNT'
+                                    ? formatCurrency(item.value, isTRY ? 'TRY' : 'USD', 0)
+                                    : `%${item.percent.toFixed(1)}`)
+                                : '••••••'}
+                            </Text>
+
+                            {/* Alt: Seçili Dönemdeki Kâr/Zarar ve Yüzdesi (Örn: +15.700 ₺ (+0,72%)) */}
+                            <Text style={[styles.donutItemReturnText, { color: returnColor }]}>
+                              {showValues
+                                ? `${sign}${formatCurrency(item.periodAmt, isTRY ? 'TRY' : 'USD', amtDecimals)} (${sign}${formatPercent(item.periodPct)})`
+                                : '••••••'}
+                            </Text>
+                          </View>
+
+                          <ChevronRight size={13} color={theme.text.muted} style={{ opacity: 0.5, marginLeft: 2 }} />
+                        </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
@@ -1243,14 +1416,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
-  sectionCardRightBadge: {
+  allocToggleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
+    borderRadius: 8,
+    padding: 2,
+    borderWidth: 1,
   },
-  sectionCountText: {
-    fontSize: 12,
-    fontWeight: '600',
+  allocToggleBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  allocToggleBtnActive: {
+    shadowColor: '#5b4df5',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  allocToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   donutSectionBody: {
     flexDirection: 'row',
@@ -1262,10 +1450,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  donutContainer: {
+    width: 118,
+    height: 118,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutCenterContent: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 82,
+  },
+  donutCenterValue: {
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  donutCenterLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 1,
+    textAlign: 'center',
+  },
   donutListRight: {
     flex: 1,
-    gap: 7,
-    paddingLeft: 4,
+    gap: 9,
+    paddingLeft: 6,
   },
   donutListItem: {
     flexDirection: 'row',
@@ -1276,6 +1489,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
+    flexShrink: 1,
   },
   donutColorDot: {
     width: 7,
@@ -1284,11 +1498,24 @@ const styles = StyleSheet.create({
   },
   donutItemLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  donutItemPercent: {
+  donutItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 1,
+  },
+  donutValueCol: {
+    alignItems: 'flex-end',
+  },
+  donutItemValText: {
     fontSize: 11,
     fontWeight: '800',
+  },
+  donutItemReturnText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    marginTop: 1,
   },
   posTabContainer: {
     flexDirection: 'row',

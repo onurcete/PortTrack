@@ -69,13 +69,13 @@ export function formatDate(dateInput: string | Date | null | undefined): string 
 export function getAssetTypeLabel(type: string): string {
   const map: Record<string, string> = {
     BIST: 'BIST Hisse',
-    TEFAS: 'Yatırım Fonu',
+    TEFAS: 'TEFAS Fon',
     BES_FUND: 'BES Fon',
-    FOREIGN: 'Yabancı Hisse',
+    FOREIGN: 'Yabancı Borsa',
     FX: 'Döviz',
     METAL: 'Kıymetli Maden',
-    CRYPTO: 'Kripto Para',
-    BES: 'Bireysel Emeklilik',
+    CRYPTO: 'Kripto',
+    BES: 'BES',
   };
   return map[type] || type;
 }
@@ -84,20 +84,20 @@ export function getAssetTypeBadgeColor(type: string): { bg: string; text: string
   switch (type) {
     case 'TEFAS':
       return { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' };
-    case 'BES_FUND':
-      return { bg: 'rgba(14, 165, 233, 0.15)', text: '#0ea5e9' };
-    case 'BES':
-      return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' };
     case 'FOREIGN':
-      return { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981' };
+      return { bg: 'rgba(6, 182, 212, 0.15)', text: '#06b6d4' };
     case 'METAL':
       return { bg: 'rgba(234, 179, 8, 0.15)', text: '#eab308' };
     case 'CRYPTO':
-      return { bg: 'rgba(249, 115, 22, 0.15)', text: '#f97316' };
+      return { bg: 'rgba(236, 72, 153, 0.15)', text: '#ec4899' };
+    case 'BES':
+      return { bg: 'rgba(100, 116, 139, 0.15)', text: '#64748b' };
+    case 'BES_FUND':
+      return { bg: 'rgba(14, 165, 233, 0.15)', text: '#0ea5e9' };
     case 'BIST':
-      return { bg: 'rgba(6, 182, 212, 0.15)', text: '#06b6d4' };
+      return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' };
     case 'FX':
-      return { bg: 'rgba(99, 102, 241, 0.15)', text: '#6366f1' };
+      return { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981' };
     default:
       return { bg: 'rgba(148, 163, 184, 0.15)', text: '#94a3b8' };
   }
