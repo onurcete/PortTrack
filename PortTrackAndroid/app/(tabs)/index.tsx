@@ -114,63 +114,43 @@ function getSymbolAvatarStyle(symbol: string, assetType: string): { bg: string; 
   return { bg: '#10b981', text: '#ffffff' };
 }
 
-// Donut Grafik Bileşeni (SVG Donut Chart)
-function DonutChart({
+// Yatay Dağılım Segment Barı (Allocation Strip — Web ile Birebir Uyumlu)
+function AllocationStrip({
   data,
-  size = 114,
-  strokeWidth = 14,
+  theme,
 }: {
-  data: { type: string; percent: number; color?: string }[];
-  size?: number;
-  strokeWidth?: number;
+  data: { type: string; percent: number; color?: string; label?: string }[];
+  theme: any;
 }) {
-  if (!data || data.length === 0) return null;
-  const radius = Math.max(10, (size - strokeWidth) / 2);
-  const circumference = 2 * Math.PI * radius;
-  const center = size / 2;
-
   const validData = data.filter((d) => Number.isFinite(d.percent) && d.percent > 0);
-  const total = validData.reduce((sum, d) => sum + d.percent, 0) || 100;
-
-  let cumulativeLength = 0;
+  if (validData.length === 0) return null;
 
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {/* Boş Halka Arka Planı */}
-      <Circle
-        cx={center}
-        cy={center}
-        r={radius}
-        stroke="rgba(255, 255, 255, 0.08)"
-        strokeWidth={strokeWidth}
-        fill="transparent"
-      />
+    <View
+      style={[
+        styles.allocationStripContainer,
+        {
+          backgroundColor: theme.surfaceMuted,
+          borderColor: theme.borderSubtle,
+        },
+      ]}
+    >
       {validData.map((item, idx) => {
-        const itemPercent = (item.percent / total) * 100;
-        const sliceLength = (itemPercent / 100) * circumference;
-        const strokeDasharray = `${sliceLength} ${circumference}`;
-        const strokeDashoffset = -cumulativeLength;
-        cumulativeLength += sliceLength;
-        const sliceColor = getAssetTypeBadgeColor(item.type).text || item.color || '#8b5cf6';
-
+        const itemColor = getAssetTypeBadgeColor(item.type).text || item.color || '#8b5cf6';
         return (
-          <Circle
-            key={`donut-slice-${item.type}-${idx}`}
-            cx={center}
-            cy={center}
-            r={radius}
-            stroke={sliceColor}
-            strokeWidth={strokeWidth}
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="butt"
-            fill="transparent"
-            origin={`${center}, ${center}`}
-            rotation={-90}
+          <View
+            key={`allocation-strip-${item.type}-${idx}`}
+            style={[
+              styles.allocationStripSegment,
+              {
+                backgroundColor: itemColor,
+                flex: Math.max(item.percent, 1.5),
+              },
+            ]}
           />
         );
       })}
-    </Svg>
+    </View>
   );
 }
 
@@ -817,43 +797,22 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* 3. VARLIK DAĞILIMI (ODAKLI MERKEZİ DONUT & GENİŞ KATEGORİ LİSTESİ) */}
+          {/* 3. VARLIK DAĞILIMI (KOMPAKT YATAY SEGMENT BARI & KATEGORİ LİSTESİ) */}
           <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
-            {/* Kart Başlığı */}
+            {/* Kart Başlığı: Sol Varlık Dağılımı - Sağ Toplam Değer */}
             <View style={styles.sectionCardHeader}>
               <Text style={[styles.sectionCardTitle, { color: theme.text.primary }]}>
                 Varlık Dağılımı
               </Text>
-              <View style={[styles.categoryCountBadge, { backgroundColor: theme.surfaceMuted }]}>
-                <Text style={[styles.categoryCountBadgeText, { color: theme.text.muted }]}>
-                  {allocationItems.length} Kategori
-                </Text>
-              </View>
+              <Text style={[styles.allocationTotalValText, { color: theme.text.muted }]}>
+                {showValues ? formatCurrency(totalValue, isTRY ? 'TRY' : 'USD', 0) : '••••••'}
+              </Text>
             </View>
 
             {allocationItems && allocationItems.length > 0 && (
               <View style={styles.donutSectionContainer}>
-                {/* Üst Kısım: Odaklı Donut Grafik & Ortasında Toplam Değer */}
-                <View style={styles.donutHeroWrapper}>
-                  <View style={styles.donutContainer}>
-                    <DonutChart data={allocationItems} size={126} strokeWidth={15} />
-                    <View style={styles.donutCenterContent} pointerEvents="none">
-                      <Text
-                        style={[styles.donutCenterValue, { color: theme.text.primary }]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                      >
-                        {showValues ? formatCurrency(totalValue, isTRY ? 'TRY' : 'USD', 0) : '••••••'}
-                      </Text>
-                      <Text style={[styles.donutCenterLabel, { color: theme.text.muted }]}>
-                        Toplam Değer
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Zarif Ayırıcı Çizgi */}
-                <View style={[styles.donutDivider, { backgroundColor: theme.borderSubtle }]} />
+                {/* Web Tarzı Yatay Dağılım Segment Barı (Allocation Strip) */}
+                <AllocationStrip data={allocationItems} theme={theme} />
 
                 {/* Alt Kısım: Geniş, Ferah ve Çakışmayan Kategori Listesi */}
                 <View style={styles.donutListStacked}>
@@ -1380,40 +1339,23 @@ const styles = StyleSheet.create({
   donutSectionContainer: {
     width: '100%',
   },
-  donutHeroWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
+  allocationStripContainer: {
+    flexDirection: 'row',
+    height: 12,
+    borderRadius: 999,
+    overflow: 'hidden',
+    gap: 3,
+    padding: 2,
+    marginBottom: 16,
+    borderWidth: 1,
   },
-  donutContainer: {
-    width: 126,
-    height: 126,
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
+  allocationStripSegment: {
+    height: '100%',
+    borderRadius: 999,
   },
-  donutCenterContent: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-  },
-  donutCenterValue: {
-    fontSize: 14,
-    fontWeight: '900',
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  donutCenterLabel: {
-    fontSize: 9.5,
-    fontWeight: '600',
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  donutDivider: {
-    height: 1,
-    width: '100%',
-    marginVertical: 12,
+  allocationTotalValText: {
+    fontSize: 13,
+    fontWeight: '800',
   },
   donutListStacked: {
     gap: 11,
