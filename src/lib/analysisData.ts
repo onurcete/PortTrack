@@ -52,11 +52,16 @@ import {
   buildStockAnalysisSummary,
   type StockAnalysisSummary,
 } from "./stockAnalysis";
+import {
+  buildTefasAnalysisSummary,
+  type TefasAnalysisSummary,
+} from "./tefasAnalysis";
 
 export interface AnalysisPageBundle {
   pulse: AnalysisPulse;
   holdings: HoldingDTO[];
   tefasInvestors: TefasInvestorSummary | null;
+  tefasAnalysis: TefasAnalysisSummary | null;
   bistAnalysis: StockAnalysisSummary | null;
   foreignAnalysis: StockAnalysisSummary | null;
   context: AnalysisContext;
@@ -187,7 +192,8 @@ export async function loadAnalysisBundle(
     tefasInvestors,
   );
 
-  const [bistAnalysis, foreignAnalysis] = await Promise.all([
+  const [tefasAnalysis, bistAnalysis, foreignAnalysis] = await Promise.all([
+    buildTefasAnalysisSummary(holdings, tefasSnaps),
     buildStockAnalysisSummary(holdings, "BIST"),
     buildStockAnalysisSummary(holdings, "FOREIGN"),
   ]);
@@ -196,6 +202,7 @@ export async function loadAnalysisBundle(
     pulse,
     holdings,
     tefasInvestors,
+    tefasAnalysis,
     bistAnalysis,
     foreignAnalysis,
     context,

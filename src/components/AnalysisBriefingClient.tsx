@@ -11,8 +11,10 @@ import {
 } from "lucide-react";
 import type { HoldingDTO } from "@/lib/analysisData";
 import type { TefasInvestorSummary } from "@/lib/tefasInvestors";
+import type { TefasAnalysisSummary } from "@/lib/tefasAnalysis";
 import type { StockAnalysisSummary } from "@/lib/stockAnalysis";
 import { TefasInvestorSection } from "./TefasInvestorSection";
+import { TefasAnalysisSection } from "./TefasAnalysisSection";
 import { StockAnalysisSection } from "./StockAnalysisSection";
 import {
   PerformanceHeatmapSection,
@@ -23,6 +25,7 @@ import { cn } from "@/lib/utils";
 interface AnalysisBriefingClientProps {
   holdings: HoldingDTO[];
   tefasInvestors: TefasInvestorSummary | null;
+  tefasAnalysis?: TefasAnalysisSummary | null;
   bistAnalysis: StockAnalysisSummary | null;
   foreignAnalysis: StockAnalysisSummary | null;
   lastTechnicalDate: string | null;
@@ -34,11 +37,15 @@ type AnalysisTab = "TEFAS" | "BIST" | "FOREIGN";
 export function AnalysisBriefingClient({
   holdings,
   tefasInvestors,
+  tefasAnalysis,
   bistAnalysis,
   foreignAnalysis,
   productPerformance,
 }: AnalysisBriefingClientProps) {
-  const tefasCount = tefasInvestors?.funds?.length ?? holdings.filter((h) => h.assetType === "TEFAS").length;
+  const tefasCount =
+    tefasAnalysis?.funds?.length ??
+    tefasInvestors?.funds?.length ??
+    holdings.filter((h) => h.assetType === "TEFAS").length;
   const bistCount = bistAnalysis?.stocks?.length ?? holdings.filter((h) => h.assetType === "BIST").length;
   const foreignCount = foreignAnalysis?.stocks?.length ?? holdings.filter((h) => h.assetType === "FOREIGN").length;
 
@@ -128,7 +135,12 @@ export function AnalysisBriefingClient({
       {/* 2. Aktif Sekmeye Göre Analiz Bölümü */}
       {activeTab === "TEFAS" && (
         <>
-          {tefasInvestors && tefasInvestors.funds.length > 0 ? (
+          {tefasAnalysis && tefasAnalysis.funds.length > 0 ? (
+            <TefasAnalysisSection
+              tefasAnalysis={tefasAnalysis}
+              symbolNotes={new Map()}
+            />
+          ) : tefasInvestors && tefasInvestors.funds.length > 0 ? (
             <TefasInvestorSection
               tefasInvestors={tefasInvestors}
               symbolNotes={new Map()}

@@ -16,6 +16,7 @@ export default async function AnalysisPage() {
     <AnalysisBriefingClient
       holdings={bundle.holdings}
       tefasInvestors={bundle.tefasInvestors}
+      tefasAnalysis={bundle.tefasAnalysis}
       bistAnalysis={bundle.bistAnalysis}
       foreignAnalysis={bundle.foreignAnalysis}
       lastTechnicalDate={bundle.lastTechnicalDate}
