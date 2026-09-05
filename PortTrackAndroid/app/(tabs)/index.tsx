@@ -306,7 +306,6 @@ export default function DashboardScreen() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [positionTab, setPositionTab] = useState<'OPEN' | 'CLOSED'>('OPEN');
   const [timeframe, setTimeframe] = useState<TimeframeOption>('1A');
-  const [allocationViewMode, setAllocationViewMode] = useState<'AMOUNT' | 'PERCENT'>('AMOUNT');
 
   const fetchPortfolio = useCallback(async () => {
     try {
@@ -818,69 +817,26 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* 3. VARLIK DAĞILIMI (DONUT CHART & DETAYLI LİSTE) */}
+          {/* 3. VARLIK DAĞILIMI (ODAKLI MERKEZİ DONUT & GENİŞ KATEGORİ LİSTESİ) */}
           <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
             {/* Kart Başlığı */}
             <View style={styles.sectionCardHeader}>
               <Text style={[styles.sectionCardTitle, { color: theme.text.primary }]}>
                 Varlık Dağılımı
               </Text>
-
-              {/* [ Tutar | Yüzde ] Toggle Butonları */}
-              <View style={[styles.allocToggleContainer, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
-                <TouchableOpacity
-                  style={[
-                    styles.allocToggleBtn,
-                    allocationViewMode === 'AMOUNT' && [styles.allocToggleBtnActive, { backgroundColor: '#5b4df5' }],
-                  ]}
-                  onPress={() => {
-                    haptic.selection();
-                    setAllocationViewMode('AMOUNT');
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.allocToggleText,
-                      { color: allocationViewMode === 'AMOUNT' ? '#ffffff' : theme.text.muted },
-                      allocationViewMode === 'AMOUNT' && { fontWeight: '800' },
-                    ]}
-                  >
-                    Tutar
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.allocToggleBtn,
-                    allocationViewMode === 'PERCENT' && [styles.allocToggleBtnActive, { backgroundColor: '#5b4df5' }],
-                  ]}
-                  onPress={() => {
-                    haptic.selection();
-                    setAllocationViewMode('PERCENT');
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.allocToggleText,
-                      { color: allocationViewMode === 'PERCENT' ? '#ffffff' : theme.text.muted },
-                      allocationViewMode === 'PERCENT' && { fontWeight: '800' },
-                    ]}
-                  >
-                    Yüzde
-                  </Text>
-                </TouchableOpacity>
+              <View style={[styles.categoryCountBadge, { backgroundColor: theme.surfaceMuted }]}>
+                <Text style={[styles.categoryCountBadgeText, { color: theme.text.muted }]}>
+                  {allocationItems.length} Kategori
+                </Text>
               </View>
             </View>
 
-            {/* Donut Grafik ve Liste Yan Yana */}
             {allocationItems && allocationItems.length > 0 && (
-              <View style={styles.donutSectionBody}>
-                {/* Sol: Donut Grafik (Ortasında Toplam Değer) */}
-                <View style={styles.donutLeft}>
+              <View style={styles.donutSectionContainer}>
+                {/* Üst Kısım: Odaklı Donut Grafik & Ortasında Toplam Değer */}
+                <View style={styles.donutHeroWrapper}>
                   <View style={styles.donutContainer}>
-                    <DonutChart data={allocationItems} size={118} strokeWidth={14} />
+                    <DonutChart data={allocationItems} size={126} strokeWidth={15} />
                     <View style={styles.donutCenterContent} pointerEvents="none">
                       <Text
                         style={[styles.donutCenterValue, { color: theme.text.primary }]}
@@ -896,54 +852,59 @@ export default function DashboardScreen() {
                   </View>
                 </View>
 
-                {/* Sağ: Kategori Dağılım Listesi */}
-                <View style={styles.donutListRight}>
+                {/* Zarif Ayırıcı Çizgi */}
+                <View style={[styles.donutDivider, { backgroundColor: theme.borderSubtle }]} />
+
+                {/* Alt Kısım: Geniş, Ferah ve Çakışmayan Kategori Listesi */}
+                <View style={styles.donutListStacked}>
                   {allocationItems.map((item, idx) => {
                     const isPositive = item.periodAmt > 0.001;
                     const isNegative = item.periodAmt < -0.001;
                     const returnColor = isPositive ? '#10b981' : isNegative ? '#ef4444' : theme.text.muted;
-                    const sign = isPositive ? '+' : '';
-                    const amtDecimals = Math.abs(item.periodAmt) >= 100 ? 0 : 2;
+                    const absAmt = Math.abs(item.periodAmt);
+                    const absPct = Math.abs(item.periodPct);
+                    const amtDecimals = absAmt >= 100 ? 0 : 2;
+                    const amtStr = formatCurrency(absAmt, isTRY ? 'TRY' : 'USD', amtDecimals);
+                    const pctStr = `%${absPct.toFixed(2).replace('.', ',')}`;
 
                     return (
                       <TouchableOpacity
                         key={`breakdown-${item.type}-${idx}`}
-                        style={styles.donutListItem}
+                        style={styles.donutStackedRow}
                         activeOpacity={0.7}
                         onPress={() => toggleSection(item.type)}
                       >
-                        {/* Sol: Renk Noktası ve Kategori Adı */}
-                        <View style={styles.donutItemLeft}>
+                        {/* Sol: Renk Noktası, Kategori Adı ve Yüzde Rozeti */}
+                        <View style={styles.donutRowLeft}>
                           <View style={[styles.donutColorDot, { backgroundColor: item.color }]} />
                           <Text
-                            style={[styles.donutItemLabel, { color: theme.text.secondary }]}
+                            style={[styles.donutCategoryLabel, { color: theme.text.primary }]}
                             numberOfLines={1}
                           >
                             {item.label}
                           </Text>
+                          <View style={[styles.donutPercentPill, { backgroundColor: theme.surfaceMuted }]}>
+                            <Text style={[styles.donutPercentPillText, { color: theme.text.muted }]}>
+                              %{item.percent.toFixed(1)}
+                            </Text>
+                          </View>
                         </View>
 
-                        {/* Sağ: Tutar/Yüzde + Dönemlik Getiri + Chevron */}
-                        <View style={styles.donutItemRight}>
+                        {/* Sağ: Tutar + Dönemlik Kâr/Zarar (İşaretsiz, Sadece Renkle) + Chevron */}
+                        <View style={styles.donutRowRight}>
                           <View style={styles.donutValueCol}>
-                            {/* Üst: Kategori Toplam Değeri veya Yüzdesi */}
+                            {/* Üst: Kategori Toplam Değeri */}
                             <Text style={[styles.donutItemValText, { color: theme.text.primary }]}>
-                              {showValues
-                                ? (allocationViewMode === 'AMOUNT'
-                                    ? formatCurrency(item.value, isTRY ? 'TRY' : 'USD', 0)
-                                    : `%${item.percent.toFixed(1)}`)
-                                : '••••••'}
+                              {showValues ? formatCurrency(item.value, isTRY ? 'TRY' : 'USD', 0) : '••••••'}
                             </Text>
 
-                            {/* Alt: Seçili Dönemdeki Kâr/Zarar ve Yüzdesi (Örn: +15.700 ₺ (+0,72%)) */}
+                            {/* Alt: Seçili Dönemdeki Değişim (Örn: 4.717 ₺ (%2,16) - Asla + ya da - yok) */}
                             <Text style={[styles.donutItemReturnText, { color: returnColor }]}>
-                              {showValues
-                                ? `${sign}${formatCurrency(item.periodAmt, isTRY ? 'TRY' : 'USD', amtDecimals)} (${sign}${formatPercent(item.periodPct)})`
-                                : '••••••'}
+                              {showValues ? `${amtStr} (${pctStr})` : '••••••'}
                             </Text>
                           </View>
 
-                          <ChevronRight size={13} color={theme.text.muted} style={{ opacity: 0.5, marginLeft: 2 }} />
+                          <ChevronRight size={14} color={theme.text.muted} style={{ opacity: 0.45 }} />
                         </View>
                       </TouchableOpacity>
                     );
@@ -1416,43 +1377,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
-  allocToggleContainer: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    padding: 2,
-    borderWidth: 1,
+  donutSectionContainer: {
+    width: '100%',
   },
-  allocToggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 3.5,
-    borderRadius: 6,
+  donutHeroWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  allocToggleBtnActive: {
-    shadowColor: '#5b4df5',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  allocToggleText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  donutSectionBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  donutLeft: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 6,
   },
   donutContainer: {
-    width: 118,
-    height: 118,
+    width: 126,
+    height: 126,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1461,59 +1396,72 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 82,
+    width: 90,
   },
   donutCenterValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   donutCenterLabel: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '600',
-    marginTop: 1,
+    marginTop: 2,
     textAlign: 'center',
   },
-  donutListRight: {
-    flex: 1,
-    gap: 9,
-    paddingLeft: 6,
+  donutDivider: {
+    height: 1,
+    width: '100%',
+    marginVertical: 12,
   },
-  donutListItem: {
+  donutListStacked: {
+    gap: 11,
+  },
+  donutStackedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 2,
   },
-  donutItemLeft: {
+  donutRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
     flexShrink: 1,
   },
   donutColorDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  donutItemLabel: {
-    fontSize: 11,
+  donutCategoryLabel: {
+    fontSize: 13,
     fontWeight: '700',
   },
-  donutItemRight: {
+  donutPercentPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
+  },
+  donutPercentPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  donutRowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 1,
+    gap: 5,
   },
   donutValueCol: {
     alignItems: 'flex-end',
   },
   donutItemValText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '800',
   },
   donutItemReturnText: {
-    fontSize: 9.5,
+    fontSize: 10.5,
     fontWeight: '700',
     marginTop: 1,
   },
