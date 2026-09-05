@@ -816,6 +816,7 @@ export default function DashboardScreen() {
                 {/* Alt Kısım: Geniş, Ferah ve Çakışmayan Kategori Listesi */}
                 <View style={styles.donutListStacked}>
                   {allocationItems.map((item, idx) => {
+                    const isBes = item.type === 'BES' || item.type === 'BES_FUND';
                     const isPositive = item.periodAmt > 0.001;
                     const isNegative = item.periodAmt < -0.001;
                     const returnColor = isPositive ? '#10b981' : isNegative ? '#ef4444' : theme.text.muted;
@@ -824,6 +825,7 @@ export default function DashboardScreen() {
                     const amtDecimals = absAmt >= 100 ? 0 : 2;
                     const amtStr = formatCurrency(absAmt, isTRY ? 'TRY' : 'USD', amtDecimals);
                     const pctStr = `%${absPct.toFixed(2).replace('.', ',')}`;
+                    const besValStr = formatCurrency(item.value, isTRY ? 'TRY' : 'USD', 0);
 
                     return (
                       <TouchableOpacity
@@ -848,10 +850,15 @@ export default function DashboardScreen() {
                           </View>
                         </View>
 
-                        {/* Sağ: Sadece Dönemlik Kâr/Zarar Tutarı ve % (İşaretsiz, Sadece Renkle) + Chevron */}
+                        {/* Sağ: BES satırına özel sadece tutar, diğerleri için Dönemlik Değişim Tutarı ve % */}
                         <View style={styles.donutRowRight}>
-                          <Text style={[styles.donutItemReturnText, { color: returnColor }]}>
-                            {showValues ? `${amtStr} (${pctStr})` : '••••••'}
+                          <Text
+                            style={[
+                              styles.donutItemReturnText,
+                              { color: isBes ? theme.text.primary : returnColor },
+                            ]}
+                          >
+                            {showValues ? (isBes ? besValStr : `${amtStr} (${pctStr})`) : '••••••'}
                           </Text>
                           <ChevronRight size={14} color={theme.text.muted} style={{ opacity: 0.45 }} />
                         </View>
