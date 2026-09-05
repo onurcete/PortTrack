@@ -273,38 +273,70 @@ function PortfolioHeroChart({
   );
 }
 
+// Modül seviyesinde oturum süresince son portföy verisini tut (Sekmeler arası ve anlık render)
+let cachedPortfolioMemory: PortfolioSummary | null = null;
+
 export default function DashboardScreen() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
+  const { user, isInitialized } = useAuthStore();
   const { theme, mode, toggleTheme } = useThemeStore();
   const { currency, isTRY, toggleCurrency } = useCurrencyStore();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedPortfolioMemory);
   const [refreshing, setRefreshing] = useState(false);
   const [showValues, setShowValues] = useState(true);
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(cachedPortfolioMemory);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [positionTab, setPositionTab] = useState<'OPEN' | 'CLOSED'>('OPEN');
   const [timeframe, setTimeframe] = useState<TimeframeOption>('1A');
 
-  const fetchPortfolio = useCallback(async () => {
+  const portfolioRef = React.useRef<PortfolioSummary | null>(cachedPortfolioMemory);
+  portfolioRef.current = portfolio;
+
+  const fetchPortfolio = useCallback(async (retryCount = 0) => {
     try {
+      if (!portfolioRef.current) {
+        setLoading(true);
+      }
       const res = await api.get<PortfolioSummary>('/portfolio');
       if (res.data) {
+        cachedPortfolioMemory = res.data;
         setPortfolio(res.data);
+      } else if (!portfolioRef.current && retryCount < 2) {
+        // İlk açılışta soğuk başlangıç / ağ gecikmesi olduysa otomatik tekrar dene
+        setTimeout(() => {
+          fetchPortfolio(retryCount + 1);
+        }, 1200);
+        return;
       }
     } catch (err) {
       console.error('Portföy yükleme hatası:', err);
+      if (!portfolioRef.current && retryCount < 2) {
+        setTimeout(() => {
+          fetchPortfolio(retryCount + 1);
+        }, 1500);
+        return;
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
+  // 1. Kimlik doğrulama tamamlandığında portföyü otomatik çek
+  useEffect(() => {
+    if (isInitialized && user) {
+      fetchPortfolio();
+    }
+  }, [isInitialized, user, fetchPortfolio]);
+
+  // 2. Tab ekranına odaklanıldığında (Focus) çek
   useFocusEffect(
     useCallback(() => {
-      fetchPortfolio();
-    }, [fetchPortfolio])
+      if (isInitialized && user) {
+        fetchPortfolio();
+      }
+    }, [isInitialized, user, fetchPortfolio])
   );
 
   const onRefresh = useCallback(async () => {
@@ -313,6 +345,7 @@ export default function DashboardScreen() {
     try {
       const res = await api.post<{ ok: boolean; portfolio?: PortfolioSummary }>('/prices/refresh');
       if (res.data?.portfolio) {
+        cachedPortfolioMemory = res.data.portfolio;
         setPortfolio(res.data.portfolio);
       } else {
         await fetchPortfolio();
@@ -691,7 +724,7 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {loading ? (
+      {loading && !portfolio ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={theme.brand.primary} />
           <Text style={[styles.loadingText, { color: theme.text.muted }]}>Veriler yükleniyor...</Text>

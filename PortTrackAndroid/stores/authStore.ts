@@ -55,6 +55,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      // Bellek önbelleğini senkronize tut
+      await api.setToken(token);
+
       const res = await api.get<{ user: User }>('/auth/me');
       if (res.data?.user) {
         set({
@@ -63,12 +66,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
           isInitialized: true,
         });
-      } else {
+      } else if (res.status === 401) {
+        // Yalnızca oturum geçersiz kılındığında token'ı sil
         await api.removeToken();
         set({ user: null, token: null, isLoading: false, isInitialized: true });
+      } else {
+        // Geçici ağ / sunucu hatasında token'ı silme, oturumu açık tut
+        set({
+          token,
+          isLoading: false,
+          isInitialized: true,
+        });
       }
     } catch {
-      set({ user: null, token: null, isLoading: false, isInitialized: true });
+      set({ isLoading: false, isInitialized: true });
     }
   },
 

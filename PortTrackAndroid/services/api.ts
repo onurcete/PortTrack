@@ -12,26 +12,46 @@ const API_BASE_URL = 'https://port-track-ten.vercel.app/api';
 
 class ApiService {
   private baseUrl: string;
+  private memoryToken: string | null = null;
+  private tokenPromise: Promise<string | null> | null = null;
 
   constructor() {
     this.baseUrl = API_BASE_URL.replace(/\/$/, '');
   }
 
   /**
-   * Cihaz hafızasındaki oturum anahtarını (JWT/Session) getirir
+   * Cihaz hafızasındaki oturum anahtarını (JWT/Session) getirir.
+   * Bellekte varsa anında döner, yoksa eşzamanlı istekleri tek bir SecureStore çağrısında birleştirir.
    */
   async getToken(): Promise<string | null> {
-    try {
-      return await SecureStore.getItemAsync(TOKEN_KEY);
-    } catch {
-      return null;
+    if (this.memoryToken) {
+      return this.memoryToken;
     }
+
+    if (this.tokenPromise) {
+      return this.tokenPromise;
+    }
+
+    this.tokenPromise = (async () => {
+      try {
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        this.memoryToken = token;
+        return token;
+      } catch {
+        return null;
+      } finally {
+        this.tokenPromise = null;
+      }
+    })();
+
+    return this.tokenPromise;
   }
 
   /**
-   * Oturum anahtarını şifreli saklar
+   * Oturum anahtarını şifreli saklar ve anında belleğe alır
    */
   async setToken(token: string): Promise<void> {
+    this.memoryToken = token;
     try {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
     } catch (e) {
@@ -43,6 +63,7 @@ class ApiService {
    * Oturum anahtarını siler (Çıkış Yap)
    */
   async removeToken(): Promise<void> {
+    this.memoryToken = null;
     try {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
     } catch (e) {
@@ -85,7 +106,9 @@ class ApiService {
 
       // 401 Unauthorized durumunda oturumu temizle
       if (status === 401) {
-        await this.removeToken();
+        if (token) {
+          await this.removeToken();
+        }
         return {
           data: null,
           error: 'Oturum süreniz doldu, lütfen tekrar giriş yapın.',
