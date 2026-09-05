@@ -16,6 +16,7 @@ import {
   ExternalLink,
   ChevronRight,
   SlidersHorizontal,
+  Info,
 } from "lucide-react";
 import type { StockAnalysisSummary, StockAnalysisItem } from "@/lib/stockAnalysis";
 import { cn, formatNumber, formatPercent } from "@/lib/utils";
@@ -23,6 +24,47 @@ import { cn, formatNumber, formatPercent } from "@/lib/utils";
 function fmt(val: number | null | undefined, decimals = 2): string {
   if (val == null || !Number.isFinite(val)) return "—";
   return formatNumber(val, decimals);
+}
+
+function ColumnTooltip({
+  title,
+  desc,
+  align = "center",
+}: {
+  title: string;
+  desc: string;
+  align?: "left" | "center" | "right";
+}) {
+  return (
+    <span className="relative inline-flex items-center group/tip ml-1.5 align-middle cursor-help">
+      <span className="h-3.5 w-3.5 rounded-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] flex items-center justify-center text-[9px] font-bold text-[var(--color-muted)] group-hover/tip:text-[var(--color-foreground)] group-hover/tip:border-[var(--color-brand)] group-hover/tip:bg-[var(--color-brand-soft)] transition-colors shadow-2xs">
+        i
+      </span>
+      <span
+        className={cn(
+          "absolute top-full mt-2 hidden group-hover/tip:flex flex-col z-50 w-56 sm:w-64 p-2.5 rounded-xl",
+          "bg-slate-900/95 dark:bg-slate-900/95 text-slate-100 backdrop-blur-md shadow-2xl border border-slate-700/70 text-[11px] font-normal normal-case leading-relaxed pointer-events-none text-left",
+          align === "left" && "left-0",
+          align === "center" && "left-1/2 -translate-x-1/2",
+          align === "right" && "right-0"
+        )}
+      >
+        <span className="font-extrabold text-[11.5px] text-white mb-1 tracking-tight flex items-center gap-1.5 border-b border-slate-700/50 pb-1">
+          <Info size={12} className="text-[var(--color-brand)]" />
+          {title}
+        </span>
+        <span className="text-slate-300 font-medium">{desc}</span>
+        <span
+          className={cn(
+            "absolute bottom-full -mb-[1px] border-4 border-transparent border-b-slate-900/95",
+            align === "left" && "left-2",
+            align === "center" && "left-1/2 -translate-x-1/2",
+            align === "right" && "right-2"
+          )}
+        />
+      </span>
+    </span>
+  );
 }
 
 interface StockAnalysisSectionProps {
@@ -349,15 +391,96 @@ export function StockAnalysisSection({ summary }: StockAnalysisSectionProps) {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)]/50 text-[10.5px] uppercase font-bold text-[var(--color-muted)] tracking-wider">
-                  <th className="py-3 px-4">Hisse & Şirket</th>
-                  <th className="py-3 px-3 text-right">Fiyat</th>
-                  <th className="py-3 px-4 min-w-[200px]">52 Haftalık Aralık (Termometre)</th>
-                  <th className="py-3 px-3 text-right">Zirve İskontosu</th>
-                  <th className="py-3 px-3 text-right">F/K</th>
-                  <th className="py-3 px-3 text-right">PD/DD</th>
-                  <th className="py-3 px-3 text-right">Temettü</th>
-                  <th className="py-3 px-3 text-center">Hacim Durumu</th>
-                  <th className="py-3 px-4 text-right">Portföy Payı</th>
+                  <th className="py-3 px-4">
+                    <span className="inline-flex items-center">
+                      Hisse & Şirket
+                      <ColumnTooltip
+                        title="Hisse & Şirket Bilgisi"
+                        desc="Şirketin borsa kodu, resmi ticari unvanı ve varsa analist konsensüsünün 'Al' değerlendirmesi."
+                        align="left"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    <span className="inline-flex items-center justify-end">
+                      Fiyat
+                      <ColumnTooltip
+                        title="Son Fiyat & Günlük Değişim"
+                        desc="Hissenin piyasadaki anlık işlem fiyatı ve önceki seans kapanışına göre yüzdesel değişimi."
+                        align="right"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-4 min-w-[200px]">
+                    <span className="inline-flex items-center">
+                      52 Haftalık Aralık (Termometre)
+                      <ColumnTooltip
+                        title="52 Haftalık Fiyat Aralığı (Termometre)"
+                        desc="Hissenin son 1 yılda gördüğü en düşük (Dip) ve en yüksek (Zirve) seviyeler arasındaki anlık fiyat konumunu gösterir."
+                        align="center"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    <span className="inline-flex items-center justify-end">
+                      Zirve İskontosu
+                      <ColumnTooltip
+                        title="52 Haftalık Zirve İskontosu"
+                        desc="Hissenin son 1 yılda gördüğü en yüksek fiyata (zirveye) göre yüzde kaç indirimde/düşüşte olduğunu gösterir."
+                        align="right"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    <span className="inline-flex items-center justify-end">
+                      F/K
+                      <ColumnTooltip
+                        title="Fiyat / Kazanç Oranı (F/K - P/E)"
+                        desc="Piyasa fiyatının hisse başına net kâra oranı. Şirketin kârlılığına göre ucuz mu pahalı mı olduğunu ölçmede kullanılır. Düşük F/K hissenin ucuz olduğuna işaret edebilir."
+                        align="right"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    <span className="inline-flex items-center justify-end">
+                      PD/DD
+                      <ColumnTooltip
+                        title="Piyasa / Defter Değeri (PD/DD - P/B)"
+                        desc="Piyasa değerinin şirketin net özkaynaklarına oranı. 1'in altındaki değerler şirketin defter değerinden daha ucuza işlem gördüğünü gösterir."
+                        align="right"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-right">
+                    <span className="inline-flex items-center justify-end">
+                      Temettü
+                      <ColumnTooltip
+                        title="Yıllık Temettü Verimi (% Yield)"
+                        desc="Şirketin son 12 ayda ödediği nakit kâr payının hisse fiyatına oranı. Düzenli getiri arayan temettü yatırımcıları için temel rasyodur."
+                        align="right"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-center">
+                    <span className="inline-flex items-center justify-center">
+                      Hacim Durumu
+                      <ColumnTooltip
+                        title="Göreceli Hacim & İlgi (Relative Volume)"
+                        desc="Günün işlem hacminin 3 aylık günlük ortalama hacme oranı. 1.5 kat ve üzerindeki hacimler hisseye olağandışı piyasa ilgisi/hacim patlaması olduğunu gösterir."
+                        align="center"
+                      />
+                    </span>
+                  </th>
+                  <th className="py-3 px-4 text-right">
+                    <span className="inline-flex items-center justify-end">
+                      Portföy Payı
+                      <ColumnTooltip
+                        title="Portföy Değeri & Ağırlığı"
+                        desc="Hissenin portföyünüzdeki toplam parasal karşılığı ve tüm hisse portföyü içindeki yüzdesel ağırlığı."
+                        align="right"
+                      />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]/50 font-medium">
