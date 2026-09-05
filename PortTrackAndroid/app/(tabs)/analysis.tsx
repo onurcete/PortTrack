@@ -23,22 +23,133 @@ import {
   X,
   Sparkles,
   PieChart,
+  Landmark,
+  Building2,
+  Globe,
+  Target,
+  Percent,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
 import { useThemeStore } from '../../stores/themeStore';
 import { haptic } from '../../utils/haptics';
+import { formatCurrency } from '../../utils/formatters';
 import {
   TefasInvestorSummary,
   TefasFundInvestorStats,
+  StockAnalysisItem,
+  StockAnalysisSummary,
 } from '../../types';
 
+type MainTab = 'TEFAS' | 'BIST' | 'FOREIGN';
 type FundFilter = 'ALL' | 'RISING' | 'FALLING';
+type StockFilter = 'ALL' | 'DISCOUNT' | 'BUY';
 
 // Format number with thousand separators
 function formatCount(val: number | null | undefined): string {
   if (val == null || isNaN(val)) return '0';
   return Math.round(val).toLocaleString('tr-TR');
+}
+
+// 52-Week Range Bar Component for Mobile Stock Cards
+function Stock52WeekBar({
+  price,
+  low52,
+  high52,
+  currency,
+  discountPct,
+  gainFromLowPct,
+  theme,
+}: {
+  price: number;
+  low52: number | null;
+  high52: number | null;
+  currency: string;
+  discountPct: number | null;
+  gainFromLowPct: number | null;
+  theme: any;
+}) {
+  if (low52 == null || high52 == null || high52 <= low52) {
+    return null;
+  }
+
+  const range = high52 - low52;
+  const rawPct = ((price - low52) / range) * 100;
+  const pct = Math.max(3, Math.min(97, rawPct));
+
+  return (
+    <View style={styles.stockRangeContainer}>
+      <View style={styles.stockRangeLabelsRow}>
+        <Text style={[styles.stockRangeLabelText, { color: theme.text.muted }]}>
+          52H Dip: {formatCurrency(low52, currency, 2)}
+        </Text>
+        <Text style={[styles.stockRangeLabelText, { color: theme.text.muted }]}>
+          52H Zirve: {formatCurrency(high52, currency, 2)}
+        </Text>
+      </View>
+
+      <View style={[styles.stockRangeTrack, { backgroundColor: theme.surfaceMuted }]}>
+        <View
+          style={[
+            styles.stockRangeFill,
+            {
+              width: `${pct}%`,
+              backgroundColor: pct > 70 ? '#22c55e' : pct > 35 ? '#818cf8' : '#f59e0b',
+            },
+          ]}
+        />
+        <View
+          style={[
+            styles.stockRangeThumb,
+            {
+              left: `${pct}%`,
+              backgroundColor: theme.surface,
+              borderColor: pct > 70 ? '#22c55e' : pct > 35 ? '#818cf8' : '#f59e0b',
+            },
+          ]}
+        />
+      </View>
+
+      <View style={styles.stockRangeBottomRow}>
+        <Text style={[styles.stockRangeSubText, { color: theme.text.muted }]}>
+          {gainFromLowPct != null ? `Dipten +%${gainFromLowPct.toFixed(1).replace('.', ',')}` : ''}
+        </Text>
+        {discountPct != null && (
+          <View
+            style={[
+              styles.discountBadge,
+              {
+                backgroundColor:
+                  discountPct < -15
+                    ? 'rgba(244, 63, 94, 0.14)'
+                    : discountPct < -5
+                    ? 'rgba(245, 158, 11, 0.14)'
+                    : 'rgba(34, 197, 94, 0.14)',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.discountBadgeText,
+                {
+                  color:
+                    discountPct < -15
+                      ? '#f43f5e'
+                      : discountPct < -5
+                      ? '#f59e0b'
+                      : '#22c55e',
+                },
+              ]}
+            >
+              {discountPct < -0.5
+                ? `-%${Math.abs(discountPct).toFixed(1).replace('.', ',')} İskontolu`
+                : 'Zirveye Yakın'}
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
 }
 
 // Mini Sparkline SVG for trend column
@@ -198,28 +309,47 @@ export default function AnalysisScreen() {
   const { theme } = useThemeStore();
   const { width: screenWidth } = useWindowDimensions();
 
+  const [activeTab, setActiveTab] = useState<MainTab>('TEFAS');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [summary, setSummary] = useState<TefasInvestorSummary | null>(null);
+  const [bistAnalysis, setBistAnalysis] = useState<StockAnalysisSummary | null>(null);
+  const [foreignAnalysis, setForeignAnalysis] = useState<StockAnalysisSummary | null>(null);
   const [filter, setFilter] = useState<FundFilter>('ALL');
+  const [stockFilter, setStockFilter] = useState<StockFilter>('ALL');
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [selectedFund, setSelectedFund] = useState<TefasFundInvestorStats | null>(null);
 
-  const fetchFundAnalysis = useCallback(async () => {
+  const fetchAnalysisData = useCallback(async () => {
     try {
-      const res = await api.get<{
-        ok: boolean;
-        tefasInvestors: TefasInvestorSummary | null;
-        totalFunds: number;
-      }>('/analysis/funds');
+      const [fundsRes, stocksRes] = await Promise.allSettled([
+        api.get<{
+          ok: boolean;
+          tefasInvestors: TefasInvestorSummary | null;
+          totalFunds: number;
+        }>('/analysis/funds'),
+        api.get<{
+          ok: boolean;
+          bistAnalysis: StockAnalysisSummary | null;
+          foreignAnalysis: StockAnalysisSummary | null;
+        }>('/analysis/stocks'),
+      ]);
 
-      if (res.data?.ok && res.data.tefasInvestors) {
-        setSummary(res.data.tefasInvestors);
+      if (fundsRes.status === 'fulfilled' && fundsRes.value.data?.ok && fundsRes.value.data.tefasInvestors) {
+        setSummary(fundsRes.value.data.tefasInvestors);
       } else {
         setSummary(null);
       }
+
+      if (stocksRes.status === 'fulfilled' && stocksRes.value.data?.ok) {
+        setBistAnalysis(stocksRes.value.data.bistAnalysis ?? null);
+        setForeignAnalysis(stocksRes.value.data.foreignAnalysis ?? null);
+      } else {
+        setBistAnalysis(null);
+        setForeignAnalysis(null);
+      }
     } catch (err) {
-      console.error('Fon analiz verisi yüklenemedi:', err);
+      console.error('Analiz verisi yüklenemedi:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -227,16 +357,17 @@ export default function AnalysisScreen() {
   }, []);
 
   useEffect(() => {
-    fetchFundAnalysis();
-  }, [fetchFundAnalysis]);
+    fetchAnalysisData();
+  }, [fetchAnalysisData]);
 
   const onRefresh = useCallback(async () => {
     haptic.medium();
     setRefreshing(true);
-    await fetchFundAnalysis();
+    await fetchAnalysisData();
     haptic.success();
-  }, [fetchFundAnalysis]);
+  }, [fetchAnalysisData]);
 
+  // TEFAS Computations
   const funds = useMemo(() => summary?.funds ?? [], [summary]);
 
   // Filtered funds
@@ -272,14 +403,55 @@ export default function AnalysisScreen() {
     return funds.find((f) => f.symbol === summary.topOutflow?.symbol) ?? null;
   }, [funds, summary?.topOutflow]);
 
+  // Stock Computations (BIST & Foreign)
+  const currentStockSummary = useMemo(() => {
+    return activeTab === 'BIST' ? bistAnalysis : foreignAnalysis;
+  }, [activeTab, bistAnalysis, foreignAnalysis]);
+
+  const currentStocks = useMemo(() => {
+    return currentStockSummary?.stocks ?? [];
+  }, [currentStockSummary]);
+
+  const filteredStocks = useMemo(() => {
+    return currentStocks.filter((s) => {
+      if (stockFilter === 'DISCOUNT') {
+        return s.discountFromHighPct != null && s.discountFromHighPct <= -10;
+      }
+      if (stockFilter === 'BUY') {
+        const rec = s.recommendation?.toLowerCase() ?? '';
+        return rec.includes('buy') || (s.targetUpsidePct != null && s.targetUpsidePct > 15);
+      }
+      return true;
+    });
+  }, [currentStocks, stockFilter]);
+
+  const discountCount = useMemo(() => {
+    return currentStocks.filter((s) => s.discountFromHighPct != null && s.discountFromHighPct <= -10).length;
+  }, [currentStocks]);
+
+  const buyCount = useMemo(() => {
+    return currentStocks.filter((s) => {
+      const rec = s.recommendation?.toLowerCase() ?? '';
+      return rec.includes('buy') || (s.targetUpsidePct != null && s.targetUpsidePct > 15);
+    }).length;
+  }, [currentStocks]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.primary }]} edges={['top']}>
       {/* 1. ÜST BAŞLIK & BİLGİ BUTONU */}
       <View style={styles.topHeader}>
         <View>
-          <Text style={[styles.pageTitle, { color: theme.text.primary }]}>Fon Analiz</Text>
+          <Text style={[styles.pageTitle, { color: theme.text.primary }]}>
+            {activeTab === 'TEFAS'
+              ? 'Fon Analiz'
+              : activeTab === 'BIST'
+              ? 'BIST Hisse Analizi'
+              : 'Yabancı Hisse Analizi'}
+          </Text>
           <Text style={[styles.pageSubtitle, { color: theme.text.muted }]}>
-            Tüm fonların genel görünümü
+            {activeTab === 'TEFAS'
+              ? 'Tüm fonların genel görünümü'
+              : 'Değerleme çarpanları ve 52H fiyat marjları'}
           </Text>
         </View>
         <TouchableOpacity
@@ -294,44 +466,119 @@ export default function AnalysisScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 1.5. ANA KATEGORİ SEKMELERİ */}
+      <View style={[styles.mainTabBar, { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle }]}>
+        <TouchableOpacity
+          style={[
+            styles.mainTabBtn,
+            activeTab === 'TEFAS' && [styles.mainTabBtnActive, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }],
+          ]}
+          onPress={() => {
+            haptic.selection();
+            setActiveTab('TEFAS');
+          }}
+          activeOpacity={0.8}
+        >
+          <Landmark size={14} color={activeTab === 'TEFAS' ? theme.brand.primary : theme.text.muted} />
+          <Text
+            style={[
+              styles.mainTabText,
+              { color: activeTab === 'TEFAS' ? theme.text.primary : theme.text.muted },
+              activeTab === 'TEFAS' && styles.mainTabTextActive,
+            ]}
+          >
+            TEFAS Fonları
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.mainTabBtn,
+            activeTab === 'BIST' && [styles.mainTabBtnActive, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }],
+          ]}
+          onPress={() => {
+            haptic.selection();
+            setActiveTab('BIST');
+          }}
+          activeOpacity={0.8}
+        >
+          <Building2 size={14} color={activeTab === 'BIST' ? '#38bdf8' : theme.text.muted} />
+          <Text
+            style={[
+              styles.mainTabText,
+              { color: activeTab === 'BIST' ? theme.text.primary : theme.text.muted },
+              activeTab === 'BIST' && styles.mainTabTextActive,
+            ]}
+          >
+            BIST Hisseleri
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.mainTabBtn,
+            activeTab === 'FOREIGN' && [styles.mainTabBtnActive, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }],
+          ]}
+          onPress={() => {
+            haptic.selection();
+            setActiveTab('FOREIGN');
+          }}
+          activeOpacity={0.8}
+        >
+          <Globe size={14} color={activeTab === 'FOREIGN' ? '#a855f7' : theme.text.muted} />
+          <Text
+            style={[
+              styles.mainTabText,
+              { color: activeTab === 'FOREIGN' ? theme.text.primary : theme.text.muted },
+              activeTab === 'FOREIGN' && styles.mainTabTextActive,
+            ]}
+          >
+            Yabancı Hisseler
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={theme.brand.primary} />
-          <Text style={[styles.loadingText, { color: theme.text.muted }]}>Fon analiz verileri yükleniyor...</Text>
+          <Text style={[styles.loadingText, { color: theme.text.muted }]}>
+            {activeTab === 'TEFAS' ? 'Fon analiz verileri yükleniyor...' : 'Hisse analiz verileri yükleniyor...'}
+          </Text>
         </View>
-      ) : !summary || funds.length === 0 ? (
-        <ScrollView
-          contentContainerStyle={styles.emptyScroll}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.brand.primary}
-            />
-          }
-        >
-          <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
-            <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
-              <PieChart size={32} color="#818cf8" />
+      ) : activeTab === 'TEFAS' ? (
+        !summary || funds.length === 0 ? (
+          <ScrollView
+            contentContainerStyle={styles.emptyScroll}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.brand.primary}
+              />
+            }
+          >
+            <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+              <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                <PieChart size={32} color="#818cf8" />
+              </View>
+              <Text style={[styles.emptyTitle, { color: theme.text.primary }]}>Portföyde TEFAS Fonu Bulunamadı</Text>
+              <Text style={[styles.emptySubtitle, { color: theme.text.muted }]}>
+                İşlemler sayfasından portföyünüze TEFAS veya Emeklilik (BES) Fonu eklediğinizde haftalık yatırımcı akışları ve talep dinamikleri otomatik olarak burada listelenecektir.
+              </Text>
             </View>
-            <Text style={[styles.emptyTitle, { color: theme.text.primary }]}>Portföyde TEFAS Fonu Bulunamadı</Text>
-            <Text style={[styles.emptySubtitle, { color: theme.text.muted }]}>
-              İşlemler sayfasından portföyünüze TEFAS veya Emeklilik (BES) Fonu eklediğinizde haftalık yatırımcı akışları ve talep dinamikleri otomatik olarak burada listelenecektir.
-            </Text>
-          </View>
-        </ScrollView>
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.brand.primary}
-            />
-          }
-        >
+          </ScrollView>
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.brand.primary}
+              />
+            }
+          >
           {/* 2. GENEL FON TALEP DENGESİ (Üstte Tek Kart / Tam Genişlik) */}
           <View style={[styles.bentoCardFull, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
             <View style={styles.cardHeaderRow}>
@@ -730,6 +977,314 @@ export default function AnalysisScreen() {
             })}
           </View>
         </ScrollView>
+      )
+    ) : (
+        /* BIST VEYA YABANCI HİSSE GÖRÜNÜMÜ */
+        currentStocks.length === 0 ? (
+          <ScrollView
+            contentContainerStyle={styles.emptyScroll}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.brand.primary}
+              />
+            }
+          >
+            <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+              <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                <TrendingUp size={32} color="#818cf8" />
+              </View>
+              <Text style={[styles.emptyTitle, { color: theme.text.primary }]}>
+                {activeTab === 'BIST' ? 'Portföyde BIST Hissesi Bulunamadı' : 'Portföyde Yabancı Hisse Bulunamadı'}
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: theme.text.muted }]}>
+                {`İşlemler sayfasından portföyünüze ${
+                  activeTab === 'BIST' ? 'BIST hissesi' : 'yabancı hisse'
+                } eklediğinizde değerleme çarpanları ve 52 haftalık fiyat marjları otomatik olarak burada listelenecektir.`}
+              </Text>
+            </View>
+          </ScrollView>
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.brand.primary}
+              />
+            }
+          >
+            {/* Bento KPI Satırı: En Yüksek İskonto & Portföy Ortalama F/K */}
+            <View style={styles.bentoRow}>
+              {/* En Yüksek İskonto */}
+              <View style={[styles.bentoCardHalf, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardHeaderLeft}>
+                    <Target size={14} color="#f59e0b" />
+                    <Text style={[styles.cardHeaderLabel, { color: theme.text.muted, fontSize: 9.5 }]}>
+                      EN YÜKSEK İSKONTO
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ marginTop: 8 }}>
+                  <Text style={[styles.kpiSymbolText, { color: theme.text.primary }]}>
+                    {currentStockSummary?.topDiscount?.symbol || '-'}
+                  </Text>
+                  <Text style={[styles.kpiValueText, { color: '#f59e0b' }]}>
+                    {currentStockSummary?.topDiscount?.discountFromHighPct != null
+                      ? `-%${Math.abs(currentStockSummary.topDiscount.discountFromHighPct).toFixed(1).replace('.', ',')}`
+                      : '-'}
+                  </Text>
+                  <Text style={[styles.kpiSubText, { color: theme.text.muted }]}>
+                    52H zirveden en çok gerileyen
+                  </Text>
+                </View>
+              </View>
+
+              {/* Portföy Ortalama F/K */}
+              <View style={[styles.bentoCardHalf, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardHeaderLeft}>
+                    <Percent size={14} color="#818cf8" />
+                    <Text style={[styles.cardHeaderLabel, { color: theme.text.muted, fontSize: 9.5 }]}>
+                      AĞIRLIKLI ORT. F/K
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ marginTop: 8 }}>
+                  <Text style={[styles.kpiValueText, { color: '#818cf8', fontSize: 20 }]}>
+                    {currentStockSummary?.weightedPe != null && currentStockSummary.weightedPe > 0
+                      ? `${currentStockSummary.weightedPe.toFixed(1).replace('.', ',')}x`
+                      : '-'}
+                  </Text>
+                  <Text style={[styles.kpiSubText, { color: theme.text.muted, marginTop: 4 }]}>
+                    Portföy ağırlıklı F/K çarpanı
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Hızlı Filtre Hapları */}
+            <View style={styles.stockFilterRow}>
+              <TouchableOpacity
+                style={[
+                  styles.filterPill,
+                  stockFilter === 'ALL'
+                    ? [styles.filterPillActive, { backgroundColor: theme.surface, borderColor: theme.brand.primary }]
+                    : { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                ]}
+                onPress={() => {
+                  haptic.selection();
+                  setStockFilter('ALL');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    { color: stockFilter === 'ALL' ? theme.text.primary : theme.text.muted },
+                    stockFilter === 'ALL' && styles.filterPillTextActive,
+                  ]}
+                >
+                  Tümü ({currentStocks.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterPill,
+                  stockFilter === 'DISCOUNT'
+                    ? [styles.filterPillActive, { backgroundColor: theme.surface, borderColor: '#f59e0b' }]
+                    : { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                ]}
+                onPress={() => {
+                  haptic.selection();
+                  setStockFilter('DISCOUNT');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    { color: stockFilter === 'DISCOUNT' ? '#f59e0b' : theme.text.muted },
+                    stockFilter === 'DISCOUNT' && styles.filterPillTextActive,
+                  ]}
+                >
+                  🎯 İskontolular ({discountCount})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterPill,
+                  stockFilter === 'BUY'
+                    ? [styles.filterPillActive, { backgroundColor: theme.surface, borderColor: '#22c55e' }]
+                    : { backgroundColor: theme.surfaceMuted, borderColor: theme.borderSubtle },
+                ]}
+                onPress={() => {
+                  haptic.selection();
+                  setStockFilter('BUY');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    { color: stockFilter === 'BUY' ? '#22c55e' : theme.text.muted },
+                    stockFilter === 'BUY' && styles.filterPillTextActive,
+                  ]}
+                >
+                  🚀 Analist &quot;Al&quot; ({buyCount})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Hisse Kartları Listesi */}
+            {filteredStocks.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle, marginTop: 10 }]}>
+                <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                  <Sparkles size={28} color="#818cf8" />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.text.primary }]}>
+                  Seçili Kriterde Hisse Bulunamadı
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: theme.text.muted }]}>
+                  Filtre kriterlerini değiştirerek diğer hisseleri görüntüleyebilirsiniz.
+                </Text>
+              </View>
+            ) : (
+              filteredStocks.map((stock) => (
+                <TouchableOpacity
+                  key={stock.symbol}
+                  style={[styles.stockCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}
+                  onPress={() => {
+                    haptic.selection();
+                    router.push(`/asset/${stock.symbol}` as any);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  {/* Başlık ve Fiyat Satırı */}
+                  <View style={styles.stockCardTopRow}>
+                    <View style={styles.stockCardLeft}>
+                      <Text style={[styles.stockSymbolText, { color: theme.text.primary }]}>
+                        {stock.symbol}
+                      </Text>
+                      <View
+                        style={[
+                          styles.stockTypeBadge,
+                          {
+                            backgroundColor:
+                              stock.assetType === 'BIST'
+                                ? 'rgba(56, 189, 248, 0.15)'
+                                : 'rgba(168, 85, 247, 0.15)',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.stockTypeBadgeText,
+                            { color: stock.assetType === 'BIST' ? '#38bdf8' : '#c084fc' },
+                          ]}
+                        >
+                          {stock.assetType === 'BIST' ? 'BIST' : 'YABANCI'}
+                        </Text>
+                      </View>
+                      {(stock.recommendation === 'buy' || stock.recommendation === 'strong_buy') && (
+                        <View style={styles.analystBuyBadge}>
+                          <Sparkles size={10} color="#22c55e" />
+                          <Text style={styles.analystBuyText}>AL</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.stockCardRight}>
+                      <Text style={[styles.stockPriceText, { color: theme.text.primary }]}>
+                        {formatCurrency(stock.price, stock.currency, 2)}
+                      </Text>
+                      {stock.dailyChangePct != null && (
+                        <View
+                          style={[
+                            styles.stockDailyBadge,
+                            {
+                              backgroundColor:
+                                stock.dailyChangePct >= 0
+                                  ? 'rgba(34, 197, 94, 0.12)'
+                                  : 'rgba(244, 63, 94, 0.12)',
+                            },
+                          ]}
+                        >
+                          {stock.dailyChangePct >= 0 ? (
+                            <ArrowUpRight size={11} color="#22c55e" />
+                          ) : (
+                            <ArrowDownRight size={11} color="#f43f5e" />
+                          )}
+                          <Text
+                            style={[
+                              styles.stockDailyText,
+                              { color: stock.dailyChangePct >= 0 ? '#22c55e' : '#f43f5e' },
+                            ]}
+                          >
+                            {stock.dailyChangePct >= 0 ? '+' : ''}%{stock.dailyChangePct.toFixed(2).replace('.', ',')}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Şirket Adı */}
+                  <Text style={[styles.stockNameText, { color: theme.text.muted }]} numberOfLines={1}>
+                    {stock.name}
+                  </Text>
+
+                  {/* 52 Haftalık Fiyat Aralığı Barı */}
+                  <Stock52WeekBar
+                    price={stock.price}
+                    low52={stock.low52}
+                    high52={stock.high52}
+                    currency={stock.currency}
+                    discountPct={stock.discountFromHighPct}
+                    gainFromLowPct={stock.gainFromLowPct}
+                    theme={theme}
+                  />
+
+                  {/* Değerleme Çarpanları: F/K, PD/DD, Hedef Potansiyel (Temettü/Hacim/Portföy Payı GÖSTERİLMEZ) */}
+                  <View style={styles.stockMultiplesRow}>
+                    <View style={[styles.stockMultipleBox, { backgroundColor: theme.surfaceMuted }]}>
+                      <Text style={[styles.stockMultipleLabel, { color: theme.text.muted }]}>F/K</Text>
+                      <Text style={[styles.stockMultipleValue, { color: theme.text.primary }]}>
+                        {stock.pe != null && stock.pe > 0 ? `${stock.pe.toFixed(1).replace('.', ',')}x` : '-'}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.stockMultipleBox, { backgroundColor: theme.surfaceMuted }]}>
+                      <Text style={[styles.stockMultipleLabel, { color: theme.text.muted }]}>PD/DD</Text>
+                      <Text style={[styles.stockMultipleValue, { color: theme.text.primary }]}>
+                        {stock.pb != null && stock.pb > 0 ? `${stock.pb.toFixed(1).replace('.', ',')}x` : '-'}
+                      </Text>
+                    </View>
+
+                    {stock.targetUpsidePct != null && (
+                      <View style={[styles.stockMultipleBox, { backgroundColor: theme.surfaceMuted }]}>
+                        <Text style={[styles.stockMultipleLabel, { color: theme.text.muted }]}>Hedef Potansiyel</Text>
+                        <Text
+                          style={[
+                            styles.stockMultipleValue,
+                            { color: stock.targetUpsidePct >= 0 ? '#22c55e' : '#f43f5e' },
+                          ]}
+                        >
+                          {stock.targetUpsidePct >= 0 ? '+' : ''}%{stock.targetUpsidePct.toFixed(1).replace('.', ',')}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        )
       )}
 
       {/* DETAY MODALI (Fona Tıklandığında Açılan 28 Günlük Grafikli Pencere) */}
@@ -848,7 +1403,7 @@ export default function AnalysisScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Info size={20} color="#818cf8" />
                 <Text style={[styles.modalTitle, { color: theme.text.primary }]}>
-                  Fon Analizi Rehberi
+                  {activeTab === 'TEFAS' ? 'Fon Analizi Rehberi' : 'Hisse Analizi Rehberi'}
                 </Text>
               </View>
               <TouchableOpacity
@@ -860,32 +1415,83 @@ export default function AnalysisScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
-              <View style={styles.infoSectionBox}>
-                <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
-                  👥 Yatırımcı Sayısı Dinamikleri Nedir?
-                </Text>
-                <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
-                  TEFAS veritabanından alınan yatırımcı adedi değişimleri, fonlara olan kurumsal ve bireysel talep trendini yansıtır. Yatırımcı akışı artan fonlar piyasa ilgisini ve likiditeyi gösterir.
-                </Text>
-              </View>
+              {activeTab === 'TEFAS' ? (
+                <>
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      👥 Yatırımcı Sayısı Dinamikleri Nedir?
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      TEFAS veritabanından alınan yatırımcı adedi değişimleri, fonlara olan kurumsal ve bireysel talep trendini yansıtır. Yatırımcı akışı artan fonlar piyasa ilgisini ve likiditeyi gösterir.
+                    </Text>
+                  </View>
 
-              <View style={styles.infoSectionBox}>
-                <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
-                  📊 4 Haftalık Eğilim Nasıl Hesaplanır?
-                </Text>
-                <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
-                  Fonun son 28 günlük yatırımcı sayısı serisi incelenerek yön tayini yapılır. %0,5 ve üzeri artışlar UP (Yeşil), %0,5 üzeri azalışlar DOWN (Kırmızı) olarak etiketlenir.
-                </Text>
-              </View>
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      📊 4 Haftalık Eğilim Nasıl Hesaplanır?
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      Fonun son 28 günlük yatırımcı sayısı serisi incelenerek yön tayini yapılır. %0,5 ve üzeri artışlar UP (Yeşil), %0,5 üzeri azalışlar DOWN (Kırmızı) olarak etiketlenir.
+                    </Text>
+                  </View>
 
-              <View style={styles.infoSectionBox}>
-                <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
-                  ⚠️ Yasal Bilgilendirme
-                </Text>
-                <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
-                  Bu sayfada yer alan analizler ve istatistiki hesaplamalar kişisel takip amaçlıdır. Yatırım tavsiyesi (YTD) niteliği taşımaz.
-                </Text>
-              </View>
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      ⚠️ Yasal Bilgilendirme
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      Bu sayfada yer alan analizler ve istatistiki hesaplamalar kişisel takip amaçlıdır. Yatırım tavsiyesi (YTD) niteliği taşımaz.
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      🎯 52 Haftalık Zirveden İskonto Nedir?
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      Hissenin son 1 yılda (52 hafta) gördüğü en yüksek fiyata göre ne kadar geride olduğunu gösterir. Örneğin -%25 iskonto, hissenin 1 yıllık zirvesine ulaşması için %33 prim yapması gerektiğini ifade eder.
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      📊 F/K (Fiyat / Kazanç Oranı) Nedir?
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      Hisse fiyatının hisse başına düşen yıllık net kâra oranıdır. Şirkete yatırılan sermayenin mevcut kârlılıkla kaç yılda kendini amorti edeceğini gösterir. Düşük F/K ucuzluk sinyali verebilir.
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      🏢 PD/DD (Piyasa Değeri / Defter Değeri) Nedir?
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      Şirketin piyasa değerinin özkaynaklarına (net defter değerine) oranıdır. 1.0 altındaki değerler şirketin teorik olarak özvarlıklarının altında fiyatlandığını gösterir.
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      🚀 Analist Konsensüsü ve Hedef Fiyat
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      Kurumsal aracı kurumların ve analistlerin hisse için belirlediği ortalama 12 aylık hedef fiyat ve ağırlıklı tavsiyeleridir (Al, Tut, Sat).
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoSectionBox}>
+                    <Text style={[styles.infoSectionTitle, { color: theme.text.primary }]}>
+                      ⚠️ Yasal Bilgilendirme
+                    </Text>
+                    <Text style={[styles.infoSectionBody, { color: theme.text.muted }]}>
+                      Bu sayfada yer alan değerleme çarpanları, hedef fiyatlar ve analizler bilgilendirme amaçlıdır. Yatırım tavsiyesi (YTD) niteliği taşımaz.
+                    </Text>
+                  </View>
+                </>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1273,5 +1879,206 @@ const styles = StyleSheet.create({
   infoSectionBody: {
     fontSize: 11.5,
     lineHeight: 17,
+  },
+  mainTabBar: {
+    flexDirection: 'row',
+    marginHorizontal: 14,
+    marginBottom: 10,
+    padding: 3,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 4,
+  },
+  mainTabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    gap: 5,
+  },
+  mainTabBtnActive: {
+    borderWidth: 1,
+  },
+  mainTabText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  mainTabTextActive: {
+    fontWeight: '800',
+  },
+  filterPillActive: {
+    borderWidth: 1,
+  },
+  filterPillTextActive: {
+    fontWeight: '800',
+  },
+  stockFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 4,
+  },
+  kpiSymbolText: {
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.3,
+  },
+  kpiValueText: {
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  kpiSubText: {
+    fontSize: 9.5,
+    fontWeight: '500',
+    marginTop: 3,
+  },
+  stockCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 13,
+    marginBottom: 10,
+  },
+  stockCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stockCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stockSymbolText: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+  },
+  stockTypeBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  stockTypeBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+  },
+  analystBuyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+  },
+  analystBuyText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#22c55e',
+  },
+  stockCardRight: {
+    alignItems: 'flex-end',
+  },
+  stockPriceText: {
+    fontSize: 14.5,
+    fontWeight: '800',
+  },
+  stockDailyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    marginTop: 2,
+  },
+  stockDailyText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  stockNameText: {
+    fontSize: 11,
+    marginTop: 3,
+    marginBottom: 8,
+  },
+  stockRangeContainer: {
+    marginVertical: 4,
+  },
+  stockRangeLabelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  stockRangeLabelText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  stockRangeTrack: {
+    height: 6,
+    borderRadius: 3,
+    position: 'relative',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  stockRangeFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 3,
+  },
+  stockRangeThumb: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    marginLeft: -6,
+    top: -3,
+  },
+  stockRangeBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  stockRangeSubText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  discountBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  discountBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  stockMultiplesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  stockMultipleBox: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  stockMultipleLabel: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  stockMultipleValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 1,
   },
 });

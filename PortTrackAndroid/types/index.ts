@@ -196,3 +196,51 @@ export interface TefasInvestorSummary {
   topOutflow: { symbol: string; weekDeltaPct: number; weekDelta: number } | null;
   funds: TefasFundInvestorStats[];
 }
+
+export interface StockAnalysisItem {
+  symbol: string;
+  name: string;
+  assetType: 'BIST' | 'FOREIGN';
+  price: number;
+  currency: 'TRY' | 'USD';
+  dailyChangePct: number | null;
+  valueTRY: number;
+  valueUSD: number;
+  weightPct: number;
+  quantity: number;
+  costTRY: number;
+  unrealizedPctTRY: number | null;
+  high52: number | null;
+  low52: number | null;
+  discountFromHighPct: number | null;
+  gainFromLowPct: number | null;
+  pe: number | null;
+  forwardPe: number | null;
+  pb: number | null;
+  dividendYield: number | null;
+  dividendRate: number | null;
+  volume: number | null;
+  avgVolume: number | null;
+  relativeVolume: number | null;
+  isHighVolume: boolean;
+  marketCap: number | null;
+  targetMeanPrice: number | null;
+  targetUpsidePct: number | null;
+  recommendation: string | null;
+  analystCount: number | null;
+}
+
+export interface StockAnalysisSummary {
+  stocks: StockAnalysisItem[];
+  assetType: 'BIST' | 'FOREIGN';
+  totalValueTRY: number;
+  totalValueUSD: number;
+  weightedPe: number | null;
+  weightedPb: number | null;
+  topDiscount: StockAnalysisItem | null;
+  volumeLeader: StockAnalysisItem | null;
+  topDividend: StockAnalysisItem | null;
+  highVolumeCount: number;
+  avgDiscountFromHigh: number | null;
+}
+
