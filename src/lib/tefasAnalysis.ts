@@ -58,25 +58,79 @@ export interface TefasAnalysisSummary {
 }
 
 const ALLOCATION_MAP: Record<string, { label: string; color: string }> = {
-  hs: { label: "Hisse Senedi", color: "#3b82f6" }, // Blue
-  yhs: { label: "Yabancı Hisse", color: "#f59e0b" }, // Amber
-  tr: { label: "Ters Repo", color: "#10b981" }, // Emerald
-  tpp: { label: "Takasbank Para Piyasası", color: "#06b6d4" }, // Cyan
-  dt: { label: "Devlet Tahvili", color: "#6366f1" }, // Indigo
-  fb: { label: "Finansman Bonosu", color: "#8b5cf6" }, // Violet
-  hb: { label: "Hazine Bonosu", color: "#a855f7" }, // Purple
-  ost: { label: "Özel Sektör Tahvili", color: "#d946ef" }, // Fuchsia
-  vmtl: { label: "Vadeli Mevduat (TL)", color: "#14b8a6" }, // Teal
-  vmd: { label: "Vadeli Mevduat (Döviz)", color: "#0284c7" }, // Sky
-  eut: { label: "Eurobond", color: "#f97316" }, // Orange
-  km: { label: "Kıymetli Madenler (Altın)", color: "#eab308" }, // Yellow
-  kmbyf: { label: "Altın Fonu (BYF)", color: "#facc15" },
-  byf: { label: "Borsa Yatırım Fonu", color: "#84cc16" }, // Lime
-  khtl: { label: "Katılma Hesabı (TL)", color: "#22c55e" }, // Green
+  // Hisse Senetleri
+  hs: { label: "Hisse Senedi (BIST)", color: "#3b82f6" },
+  btaa: { label: "Hisse Senedi (BIST)", color: "#3b82f6" },
+  btas: { label: "Hisse Senedi (BIST)", color: "#3b82f6" },
+  yhs: { label: "Yabancı Hisse", color: "#f59e0b" },
+  yyf: { label: "Yabancı Hisse & Fon", color: "#d97706" },
+  ybyf: { label: "Yabancı Hisse & Fon", color: "#d97706" },
+  ymk: { label: "Yabancı Menkul Kıymet", color: "#b45309" },
+
+  // Eurobond & Dış Borçlanma
+  eut: { label: "Eurobond (Dış Borçlanma)", color: "#f97316" },
+  osdb: { label: "Eurobond (Dış Borçlanma)", color: "#f97316" },
+  db: { label: "Eurobond (Dış Borçlanma)", color: "#f97316" },
+  dot: { label: "Eurobond (Dış Borçlanma)", color: "#f97316" },
+  yba: { label: "Eurobond (Dış Borçlanma)", color: "#ea580c" },
+  kba: { label: "Eurobond (Dış Borçlanma)", color: "#c2410c" },
+  ybkb: { label: "Eurobond (Dış Borçlanma)", color: "#ea580c" },
+  ybosb: { label: "Eurobond (Dış Borçlanma)", color: "#c2410c" },
+  oksyd: { label: "Eurobond (Dış Borçlanma)", color: "#f97316" },
+
+  // Para Piyasası & Repo
+  tr: { label: "Ters Repo", color: "#10b981" },
+  r: { label: "Ters Repo", color: "#10b981" },
+  tpp: { label: "Takasbank Para Piyasası", color: "#06b6d4" },
+  bpp: { label: "Borsa Para Piyasası", color: "#0891b2" },
+
+  // Mevduat & Katılma
+  vmtl: { label: "Vadeli Mevduat (TL)", color: "#14b8a6" },
+  vmd: { label: "Döviz Mevduatı", color: "#0284c7" },
+  vdm: { label: "Döviz Mevduatı", color: "#0284c7" },
+  khtl: { label: "Katılma Hesabı (TL)", color: "#22c55e" },
+  khd: { label: "Döviz Katılma Hesabı", color: "#16a34a" },
+  kh: { label: "Katılma Hesabı", color: "#22c55e" },
+  khau: { label: "Altın Katılma Hesabı", color: "#eab308" },
+  vm: { label: "Vadeli Mevduat", color: "#14b8a6" },
+  vmau: { label: "Altın Mevduatı", color: "#eab308" },
+
+  // Tahvil & Bono
+  dt: { label: "Devlet Tahvili", color: "#6366f1" },
+  hb: { label: "Hazine Bonosu", color: "#a855f7" },
+  ost: { label: "Özel Sektör Tahvili", color: "#d946ef" },
+  fb: { label: "Finansman Bonosu", color: "#8b5cf6" },
+  bb: { label: "Banka Bonosu", color: "#8b5cf6" },
+  t: { label: "Devlet Tahvili", color: "#6366f1" },
+  kibd: { label: "İpotek Teminatlı Menkul Kıymet", color: "#64748b" },
+
+  // Kira Sertifikası (Sukuk)
   kkstl: { label: "Kira Sertifikası (Sukuk)", color: "#38bdf8" },
-  vint: { label: "VİOP Teminatı", color: "#ec4899" }, // Pink
-  bpp: { label: "Borsa Para Piyasası", color: "#64748b" },
-  d: { label: "Diğer", color: "#94a3b8" }, // Slate
+  kks: { label: "Kira Sertifikası (Sukuk)", color: "#38bdf8" },
+  kksd: { label: "Kira Sertifikası (Döviz)", color: "#0284c7" },
+  kksyd: { label: "Kira Sertifikası (Döviz)", color: "#0284c7" },
+  osks: { label: "Özel Sektör Kira Sertifikası", color: "#60a5fa" },
+
+  // Kıymetli Madenler (Altın/Gümüş)
+  km: { label: "Kıymetli Madenler (Altın)", color: "#eab308" },
+  kmbyf: { label: "Altın Fonu (BYF)", color: "#facc15" },
+  gas: { label: "Altın Sertifikası (Darphane)", color: "#eab308" },
+  kmkks: { label: "Altın Kira Sertifikası", color: "#ca8a04" },
+  kmkba: { label: "Altın Tahvili/Bonosu", color: "#a16207" },
+
+  // VİOP & Türev
+  vint: { label: "VİOP Teminatı", color: "#ec4899" },
+
+  // Yatırım Fonları & BYF
+  byf: { label: "Borsa Yatırım Fonu (BYF)", color: "#84cc16" },
+  gsykb: { label: "Girişim Sermayesi", color: "#a855f7" },
+  gsyy: { label: "Girişim Sermayesi", color: "#a855f7" },
+  gykb: { label: "Gayrimenkul Yatırım", color: "#6366f1" },
+  gyy: { label: "Gayrimenkul Yatırım", color: "#6366f1" },
+  fkb: { label: "Fon Katılma Belgesi", color: "#84cc16" },
+
+  // Diğer
+  d: { label: "Diğer / Nakit", color: "#94a3b8" },
 };
 
 const UA =
@@ -158,32 +212,59 @@ async function fetchTefasAllocations(symbols: Set<string>): Promise<Map<string, 
       for (const row of rows) {
         const sym = row.fonKodu?.toUpperCase();
         if (symbols.has(sym)) {
-          const slices: FundAllocationSlice[] = [];
+          const labelMap = new Map<string, { label: string; percent: number; color: string; key: string }>();
           let otherPct = 0;
 
-          for (const [key, meta] of Object.entries(ALLOCATION_MAP)) {
-            const val = row[key];
-            if (typeof val === "number" && val > 0.01) {
+          for (const [k, v] of Object.entries(row)) {
+            if (k === "fonKodu" || k === "fonUnvan" || k === "tarih" || k === "bilFiyat") continue;
+            const val = typeof v === "number" ? v : (typeof v === "string" ? parseFloat(v) : 0);
+            if (!val || isNaN(val) || val <= 0.01) continue;
+
+            const meta = ALLOCATION_MAP[k.toLowerCase()];
+            if (meta) {
               if (val >= 0.5) {
-                slices.push({
-                  key,
-                  label: meta.label,
-                  percent: Number(val.toFixed(2)),
-                  color: meta.color,
-                });
+                const existing = labelMap.get(meta.label);
+                if (existing) {
+                  existing.percent += val;
+                } else {
+                  labelMap.set(meta.label, {
+                    key: k,
+                    label: meta.label,
+                    percent: val,
+                    color: meta.color,
+                  });
+                }
               } else {
                 otherPct += val;
               }
+            } else {
+              // Haritada henüz yer almayan diğer TEFAS alt kalemlerini kaybetmeden Diğer'e ekle
+              otherPct += val;
             }
           }
+
+          const slices: FundAllocationSlice[] = Array.from(labelMap.values()).map((item) => ({
+            key: item.key,
+            label: item.label,
+            percent: Number(item.percent.toFixed(2)),
+            color: item.color,
+          }));
 
           if (otherPct > 0.1) {
             slices.push({
               key: "d",
-              label: "Diğer",
+              label: "Diğer / Nakit",
               percent: Number(otherPct.toFixed(2)),
               color: ALLOCATION_MAP.d.color,
             });
+          }
+
+          // Toplamı 100'e normalize et (yuvarlama farklarını gider)
+          const sumPct = slices.reduce((acc, s) => acc + s.percent, 0);
+          if (sumPct > 0 && Math.abs(sumPct - 100) > 0.05) {
+            for (const s of slices) {
+              s.percent = Number(((s.percent / sumPct) * 100).toFixed(2));
+            }
           }
 
           slices.sort((a, b) => b.percent - a.percent);
@@ -425,18 +506,54 @@ export async function buildTefasAnalysisSummary(
         ? metrics.fundSizeTRY / finalInv
         : null;
 
-    // Kümülatif dağılıma katkı
-    if (h.valueTRY > 0 && allocations.length > 0) {
-      for (const slice of allocations) {
-        const sliceVal = (h.valueTRY * slice.percent) / 100;
-        const exist = cumulativeValueMap.get(slice.key);
+    // Kümülatif dağılıma katkı (Aynı varlık sınıflarını tek grupta topla)
+    if (h.valueTRY > 0) {
+      if (allocations.length > 0) {
+        for (const slice of allocations) {
+          const sliceVal = (h.valueTRY * slice.percent) / 100;
+          const groupKey = slice.label;
+          const exist = cumulativeValueMap.get(groupKey);
+          if (exist) {
+            exist.valueTRY += sliceVal;
+          } else {
+            cumulativeValueMap.set(groupKey, {
+              label: slice.label,
+              valueTRY: sliceVal,
+              color: slice.color,
+            });
+          }
+        }
+      } else {
+        // Fonun TEFAS günlük kırılımı yoksa, fon türüne göre genel kategoriye veya diğer'e ata (sermaye kaybı olmadan)
+        const fallbackType = extractFundType(h.name || metrics?.fundUnvan || "");
+        let fallbackLabel = "Diğer / Portföy Fonu";
+        let fallbackColor = "#94a3b8";
+
+        if (fallbackType.includes("Hisse")) {
+          fallbackLabel = "Hisse Senedi (BIST)";
+          fallbackColor = "#3b82f6";
+        } else if (fallbackType.includes("Para Piyasası")) {
+          fallbackLabel = "Ters Repo";
+          fallbackColor = "#10b981";
+        } else if (fallbackType.includes("Eurobond") || fallbackType.includes("Dış Borç")) {
+          fallbackLabel = "Eurobond (Dış Borçlanma)";
+          fallbackColor = "#f97316";
+        } else if (fallbackType.includes("Kıymetli") || fallbackType.includes("Altın")) {
+          fallbackLabel = "Kıymetli Madenler (Altın)";
+          fallbackColor = "#eab308";
+        } else if (fallbackType.includes("Borçlanma") || fallbackType.includes("Tahvil")) {
+          fallbackLabel = "Devlet Tahvili";
+          fallbackColor = "#6366f1";
+        }
+
+        const exist = cumulativeValueMap.get(fallbackLabel);
         if (exist) {
-          exist.valueTRY += sliceVal;
+          exist.valueTRY += h.valueTRY;
         } else {
-          cumulativeValueMap.set(slice.key, {
-            label: slice.label,
-            valueTRY: sliceVal,
-            color: slice.color,
+          cumulativeValueMap.set(fallbackLabel, {
+            label: fallbackLabel,
+            valueTRY: h.valueTRY,
+            color: fallbackColor,
           });
         }
       }
@@ -474,20 +591,50 @@ export async function buildTefasAnalysisSummary(
   // Fonları portföydeki TL büyüklüğüne göre sırala
   funds.sort((a, b) => b.valueTRY - a.valueTRY);
 
-  // Kümülatif dağılım dilimlerini hesapla
+  // Kümülatif dağılım dilimlerini hesapla (100% toplamla net dağılım)
   const cumulativeAllocations: FundAllocationSlice[] = [];
-  if (totalFundValueTRY > 0) {
-    for (const [key, item] of cumulativeValueMap.entries()) {
-      const pct = (item.valueTRY / totalFundValueTRY) * 100;
+  const baseTotalTRY = totalFundValueTRY > 0 ? totalFundValueTRY : 1;
+
+  if (baseTotalTRY > 0) {
+    let otherSumTRY = 0;
+    for (const [groupLabel, item] of cumulativeValueMap.entries()) {
+      const pct = (item.valueTRY / baseTotalTRY) * 100;
       if (pct >= 0.5) {
         cumulativeAllocations.push({
-          key,
+          key: groupLabel,
           label: item.label,
           percent: Number(pct.toFixed(1)),
           color: item.color,
         });
+      } else {
+        otherSumTRY += item.valueTRY;
       }
     }
+
+    if (otherSumTRY > 0) {
+      const otherPct = (otherSumTRY / baseTotalTRY) * 100;
+      const existOther = cumulativeAllocations.find((s) => s.label.includes("Diğer"));
+      if (existOther) {
+        existOther.percent = Number((existOther.percent + otherPct).toFixed(1));
+      } else {
+        cumulativeAllocations.push({
+          key: "d",
+          label: "Diğer / Nakit",
+          percent: Number(otherPct.toFixed(1)),
+          color: "#94a3b8",
+        });
+      }
+    }
+
+    // Yüzdeleri tam 100.0'e normalize et (1 haneli hassasiyet)
+    const currentSum = cumulativeAllocations.reduce((acc, s) => acc + s.percent, 0);
+    if (cumulativeAllocations.length > 0 && Math.abs(currentSum - 100) > 0.01) {
+      const diff = 100 - currentSum;
+      cumulativeAllocations[0].percent = Number(
+        (cumulativeAllocations[0].percent + diff).toFixed(1)
+      );
+    }
+
     cumulativeAllocations.sort((a, b) => b.percent - a.percent);
   }
 

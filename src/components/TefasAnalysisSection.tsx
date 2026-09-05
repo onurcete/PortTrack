@@ -27,6 +27,69 @@ import {
 import type { TefasAnalysisSummary, TefasFundAnalysisItem } from "@/lib/tefasAnalysis";
 import { cn, formatNumber, formatPercent } from "@/lib/utils";
 
+function ColumnTooltip({
+  title,
+  desc,
+  good,
+  bad,
+  align = "center",
+}: {
+  title: string;
+  desc: string;
+  good?: string;
+  bad?: string;
+  align?: "left" | "center" | "right";
+}) {
+  return (
+    <span className="relative inline-flex items-center group/tip ml-1.5 align-middle cursor-help">
+      <span className="h-3.5 w-3.5 rounded-full bg-[var(--color-surface-muted)] border border-[var(--color-border)] flex items-center justify-center text-[9px] font-bold text-[var(--color-muted)] group-hover/tip:text-[var(--color-foreground)] group-hover/tip:border-[var(--color-brand)] group-hover/tip:bg-[var(--color-brand-soft)] transition-colors shadow-2xs">
+        i
+      </span>
+      <span
+        className={cn(
+          "absolute top-full mt-2 hidden group-hover/tip:flex flex-col z-50 w-64 sm:w-72 p-3 rounded-xl",
+          "bg-slate-900/95 dark:bg-slate-900/95 text-slate-100 backdrop-blur-md shadow-2xl border border-slate-700/70 text-[11px] font-normal normal-case leading-relaxed pointer-events-none text-left",
+          align === "left" && "left-0",
+          align === "center" && "left-1/2 -translate-x-1/2",
+          align === "right" && "right-0"
+        )}
+      >
+        <span className="font-extrabold text-[11.5px] text-white mb-1.5 tracking-tight flex items-center gap-1.5 border-b border-slate-700/60 pb-1.5">
+          <Info size={13} className="text-indigo-400 shrink-0" />
+          {title}
+        </span>
+        <span className="text-slate-300 font-medium leading-relaxed">{desc}</span>
+
+        {(good || bad) && (
+          <div className="mt-2 pt-2 border-t border-slate-700/50 space-y-1.5 text-[10.5px]">
+            {good && (
+              <div className="flex items-start gap-1.5 text-emerald-400 font-medium">
+                <span className="font-bold shrink-0">🟢 İyi:</span>
+                <span>{good}</span>
+              </div>
+            )}
+            {bad && (
+              <div className="flex items-start gap-1.5 text-rose-400 font-medium">
+                <span className="font-bold shrink-0">🔴/🟡 Dikkat:</span>
+                <span>{bad}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <span
+          className={cn(
+            "absolute bottom-full -mb-[1px] border-4 border-transparent border-b-slate-900/95",
+            align === "left" && "left-2",
+            align === "center" && "left-1/2 -translate-x-1/2",
+            align === "right" && "right-2"
+          )}
+        />
+      </span>
+    </span>
+  );
+}
+
 interface TefasAnalysisSectionProps {
   tefasAnalysis: TefasAnalysisSummary | null;
   symbolNotes?: Map<string, string>;
@@ -122,7 +185,7 @@ export function TefasAnalysisSection({
                 Fon Portföyü Kümülatif Röntgeni
               </span>
               <h3 className="text-base font-black text-[var(--color-foreground)] mt-0.5">
-                Tüm Fonlarınızın İç Varlık Dağılımı
+                Tüm Fonlarınızın İç Varlık Dağılımı (%100)
               </h3>
             </div>
             <div className="text-right">
@@ -134,8 +197,8 @@ export function TefasAnalysisSection({
           </div>
 
           {/* Görsel Dağılım Barı (Segment Bar) */}
-          <div className="space-y-2">
-            <div className="h-4 w-full rounded-full bg-[var(--color-surface-muted)] overflow-hidden flex shadow-inner">
+          <div className="space-y-2.5">
+            <div className="h-4.5 w-full rounded-full bg-[var(--color-surface-muted)] overflow-hidden flex shadow-inner">
               {cumulativeAllocations.map((slice) => (
                 <div
                   key={slice.key}
@@ -149,17 +212,20 @@ export function TefasAnalysisSection({
               ))}
             </div>
 
-            {/* Dağılım Lejantı */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1">
-              {cumulativeAllocations.slice(0, 6).map((slice) => (
-                <div key={slice.key} className="flex items-center gap-1.5 text-xs">
+            {/* Dağılım Lejantı (Tüm Varlıklar Eksiksiz) */}
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-1">
+              {cumulativeAllocations.map((slice) => (
+                <div
+                  key={slice.key}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/40 text-xs"
+                >
                   <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
                     style={{ backgroundColor: slice.color }}
                   />
-                  <span className="font-medium text-[var(--color-muted)]">{slice.label}</span>
-                  <span className="font-black text-[var(--color-foreground)] tabular-nums">
-                    %{slice.percent}
+                  <span className="font-medium text-[var(--color-muted)] text-[11px]">{slice.label}</span>
+                  <span className="font-black text-[var(--color-foreground)] tabular-nums text-[11.5px]">
+                    %{slice.percent.toFixed(1)}
                   </span>
                 </div>
               ))}
@@ -253,15 +319,114 @@ export function TefasAnalysisSection({
           <table className="w-full text-left text-xs">
             <thead className="bg-[var(--color-surface-muted)]/60 text-[var(--color-muted)] font-extrabold uppercase tracking-wider border-b border-[var(--color-border)]">
               <tr>
-                <th className="py-3 px-3.5">Fon</th>
-                <th className="py-3 px-3 text-right">Portföy Değeri</th>
-                <th className="py-3 px-3.5 min-w-[190px]">Varlık Dağılımı (Röntgen)</th>
-                <th className="py-3 px-3 text-right">Fon Büyüklüğü (AUM)</th>
-                <th className="py-3 px-3 text-right">Toplam Yatırımcı</th>
-                <th className="py-3 px-3 text-right">Haftalık Yatırımcı</th>
-                <th className="py-3 px-3 text-right">Net Para Akışı</th>
-                <th className="py-3 px-3 text-right">Kişi Başı Bakiye</th>
-                <th className="py-3 px-3 text-center">Trend</th>
+                <th className="py-3 px-3.5">
+                  <div className="flex items-center gap-1">
+                    <span>Fon</span>
+                    <ColumnTooltip
+                      title="Fon Kodu & Türü"
+                      desc="Fonun TEFAS kodu, unvanı ve şemsiye fon türü (Hisse, Değişken, Borçlanma vb.)."
+                      good="Portföy risk toleransınıza ve hedeflerinize uygun şemsiye türü seçimi."
+                      bad="Stratejinize uygun olmayan aşırı riskli veya yüksek yönetim giderli fonlar."
+                      align="left"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span>Portföy Değeri</span>
+                    <ColumnTooltip
+                      title="Portföy Değeri & Ağırlık"
+                      desc="Bu fondaki mevcut yatırım tutarınız ve toplam fon sepetiniz içindeki yüzdesel ağırlığı."
+                      good="Dengeli varlık dağılımı (tek bir fona aşırı yığılma olmaması, örn. %40+)."
+                      bad="Aşırı konsantrasyon riski; tek fonun değer kaybının portföye yüksek etkisi."
+                      align="right"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3.5 min-w-[190px]">
+                  <div className="flex items-center gap-1">
+                    <span>Varlık Dağılımı (Röntgen)</span>
+                    <ColumnTooltip
+                      title="Fon İç Varlık Dağılımı (Röntgen)"
+                      desc="Fonun kasasındaki varlıkların resmi TEFAS kırılımı (% Hisse, % Eurobond, % Repo, % Altın vb.)."
+                      good="Fon izahnamesine ve konjonktüre sadık, esnek ve şeffaf varlık yönetimi."
+                      bad="İzahname dışı beklenmedik varlık yığılması veya likidite tuzağı riskleri."
+                      align="left"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span>Fon Büyüklüğü (AUM)</span>
+                    <ColumnTooltip
+                      title="Fon Toplam Büyüklüğü (AUM)"
+                      desc="Fonun kasasında yönettiği toplam net aktif portföy büyüklüğü."
+                      good="Yüksek AUM (₺1 Mr+): Kurumsal güven, derin likidite, emirlerde rahat işlem kabiliyeti."
+                      bad="Çok Düşük AUM (₺50 Mn altı): Likidite kısıtları, yüksek fon yönetim gider oranı ve tasfiye riski."
+                      align="right"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span>Toplam Yatırımcı</span>
+                    <ColumnTooltip
+                      title="Toplam Yatırımcı Sayısı"
+                      desc="Fonda payı bulunan güncel tekil yatırımcı (kişi/kurum) sayısı."
+                      good="Geniş kitlelere yayılmış, popülerliği ve piyasa güveni oturmuş fonlar."
+                      bad="Çok az yatırımcılı fonlarda birkaç büyük yatırımcının ani çıkışı fon yönetimini ve fiyatı sarsabilir."
+                      align="right"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span>Haftalık Yatırımcı</span>
+                    <ColumnTooltip
+                      title="Haftalık Yatırımcı Değişimi"
+                      desc="Son 1 haftada fon yatırımcı sayısındaki net kişi değişimi ve yüzdesel talep oranı."
+                      good="(+ Artış): Fona taze bireysel/kurumsal talep olduğunu ve ilginin güçlendiğini gösterir."
+                      bad="(- Azalış): Yatırımcıların fondan çıkış yaptığını, getiri veya güven kaybı eğilimini gösterir."
+                      align="right"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span>Net Para Akışı</span>
+                    <ColumnTooltip
+                      title="Haftalık Net Sermaye Akışı"
+                      desc="Tedavüldeki katılma payı adet değişimi üzerinden hesaplanan son 1 haftalık net fon nakit girişi/çıkışı."
+                      good="(+ Pozitif Akış): Fona net taze nakit girmesi. Fiyat düşerken para girişi 'akıllı para alımı' sinyalidir."
+                      bad="(- Negatif Akış): Fiyat yükselse dahi fondan net para kaçışı olduğunu gösterir."
+                      align="right"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span>Kişi Başı Bakiye</span>
+                    <ColumnTooltip
+                      title="Ortalama Yatırımcı Bakiyesi"
+                      desc="Toplam Fon Büyüklüğü / Yatırımcı Sayısı (Ortalama Bilet Boyutu)."
+                      good="Yüksek Bakiye (₺250.000+): Kurumsal veya 'akıllı para' ağırlığına işaret eder; panik satışları nadirdir."
+                      bad="Çok Düşük Bakiye (₺20.000 altı): Küçük tasarruf sahibi ağırlığı; piyasa düzeltmelerinde panik satış riski yüksektir."
+                      align="right"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <span>Trend</span>
+                    <ColumnTooltip
+                      title="4 Haftalık Talep Trendi"
+                      desc="Son 4 haftalık periyotta fonun yatırımcı sayısı seyrinin çubuk grafiği."
+                      good="Sürekli yükselen yeşil sütunlar: Fonun istikrarlı olarak yeni yatırımcı çektiği büyüme evresi."
+                      bad="Azalan kırmızı sütunlar: Fonun düzenli kan kaybettiği ve yatırımcı ilgisinin azaldığı evre."
+                      align="right"
+                    />
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]/50 font-medium">
