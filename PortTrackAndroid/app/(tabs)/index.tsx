@@ -454,7 +454,7 @@ export default function DashboardScreen() {
 
     const assetReturns = pReturns?.assetTypeReturns?.[tfKey];
 
-    return portfolio.assetBreakdown.map((item) => {
+    const items = portfolio.assetBreakdown.map((item) => {
       const badge = getAssetTypeBadgeColor(item.type);
       const catVal = isTRY
         ? item.valueTRY
@@ -507,6 +507,15 @@ export default function DashboardScreen() {
         periodPct,
         periodAmt,
       };
+    });
+
+    // BES her zaman en alt satırda olacak şekilde sırala
+    return items.sort((a, b) => {
+      const aIsBes = a.type === 'BES' || a.type === 'BES_FUND';
+      const bIsBes = b.type === 'BES' || b.type === 'BES_FUND';
+      if (aIsBes && !bIsBes) return 1;
+      if (!aIsBes && bIsBes) return -1;
+      return b.percent - a.percent;
     });
   }, [
     portfolio?.assetBreakdown,
@@ -849,20 +858,11 @@ export default function DashboardScreen() {
                           </View>
                         </View>
 
-                        {/* Sağ: Tutar + Dönemlik Kâr/Zarar (İşaretsiz, Sadece Renkle) + Chevron */}
+                        {/* Sağ: Sadece Dönemlik Kâr/Zarar Tutarı ve % (İşaretsiz, Sadece Renkle) + Chevron */}
                         <View style={styles.donutRowRight}>
-                          <View style={styles.donutValueCol}>
-                            {/* Üst: Kategori Toplam Değeri */}
-                            <Text style={[styles.donutItemValText, { color: theme.text.primary }]}>
-                              {showValues ? formatCurrency(item.value, isTRY ? 'TRY' : 'USD', 0) : '••••••'}
-                            </Text>
-
-                            {/* Alt: Seçili Dönemdeki Değişim (Örn: 4.717 ₺ (%2,16) - Asla + ya da - yok) */}
-                            <Text style={[styles.donutItemReturnText, { color: returnColor }]}>
-                              {showValues ? `${amtStr} (${pctStr})` : '••••••'}
-                            </Text>
-                          </View>
-
+                          <Text style={[styles.donutItemReturnText, { color: returnColor }]}>
+                            {showValues ? `${amtStr} (${pctStr})` : '••••••'}
+                          </Text>
                           <ChevronRight size={14} color={theme.text.muted} style={{ opacity: 0.45 }} />
                         </View>
                       </TouchableOpacity>
@@ -1341,12 +1341,12 @@ const styles = StyleSheet.create({
   },
   allocationStripContainer: {
     flexDirection: 'row',
-    height: 12,
+    height: 10,
     borderRadius: 999,
     overflow: 'hidden',
-    gap: 3,
-    padding: 2,
-    marginBottom: 16,
+    gap: 2.5,
+    padding: 1.5,
+    marginBottom: 10,
     borderWidth: 1,
   },
   allocationStripSegment: {
@@ -1358,13 +1358,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   donutListStacked: {
-    gap: 11,
+    gap: 6,
   },
   donutStackedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 2,
+    paddingVertical: 1.5,
   },
   donutRowLeft: {
     flexDirection: 'row',
@@ -1383,7 +1383,7 @@ const styles = StyleSheet.create({
   },
   donutPercentPill: {
     paddingHorizontal: 5,
-    paddingVertical: 1.5,
+    paddingVertical: 1,
     borderRadius: 5,
   },
   donutPercentPillText: {
@@ -1393,19 +1393,11 @@ const styles = StyleSheet.create({
   donutRowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-  },
-  donutValueCol: {
-    alignItems: 'flex-end',
-  },
-  donutItemValText: {
-    fontSize: 12.5,
-    fontWeight: '800',
+    gap: 6,
   },
   donutItemReturnText: {
-    fontSize: 10.5,
+    fontSize: 12,
     fontWeight: '700',
-    marginTop: 1,
   },
   posTabContainer: {
     flexDirection: 'row',
