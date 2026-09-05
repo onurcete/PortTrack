@@ -808,16 +808,6 @@ export default function DashboardScreen() {
 
           {/* 3. VARLIK DAĞILIMI (KOMPAKT YATAY SEGMENT BARI & KATEGORİ LİSTESİ) */}
           <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.borderSubtle }]}>
-            {/* Kart Başlığı: Sol Varlık Dağılımı - Sağ Toplam Değer */}
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: theme.text.primary }]}>
-                Varlık Dağılımı
-              </Text>
-              <Text style={[styles.allocationTotalValText, { color: theme.text.muted }]}>
-                {showValues ? formatCurrency(totalValue, isTRY ? 'TRY' : 'USD', 0) : '••••••'}
-              </Text>
-            </View>
-
             {allocationItems && allocationItems.length > 0 && (
               <View style={styles.donutSectionContainer}>
                 {/* Web Tarzı Yatay Dağılım Segment Barı (Allocation Strip) */}
@@ -1353,10 +1343,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 999,
   },
-  allocationTotalValText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
   donutListStacked: {
     gap: 6,
   },
@@ -1388,7 +1374,7 @@ const styles = StyleSheet.create({
   },
   donutPercentPillText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   donutRowRight: {
     flexDirection: 'row',
@@ -1397,7 +1383,7 @@ const styles = StyleSheet.create({
   },
   donutItemReturnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   posTabContainer: {
     flexDirection: 'row',
