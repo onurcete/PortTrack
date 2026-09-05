@@ -48,10 +48,17 @@ export interface HoldingDTO {
   } | null;
 }
 
+import {
+  buildStockAnalysisSummary,
+  type StockAnalysisSummary,
+} from "./stockAnalysis";
+
 export interface AnalysisPageBundle {
   pulse: AnalysisPulse;
   holdings: HoldingDTO[];
   tefasInvestors: TefasInvestorSummary | null;
+  bistAnalysis: StockAnalysisSummary | null;
+  foreignAnalysis: StockAnalysisSummary | null;
   context: AnalysisContext;
   contextHash: string;
   lastTechnicalDate: string | null;
@@ -180,10 +187,17 @@ export async function loadAnalysisBundle(
     tefasInvestors,
   );
 
+  const [bistAnalysis, foreignAnalysis] = await Promise.all([
+    buildStockAnalysisSummary(holdings, "BIST"),
+    buildStockAnalysisSummary(holdings, "FOREIGN"),
+  ]);
+
   return {
     pulse,
     holdings,
     tefasInvestors,
+    bistAnalysis,
+    foreignAnalysis,
     context,
     contextHash: hashAnalysisContext(context),
     lastTechnicalDate:
