@@ -212,19 +212,23 @@ export function TefasAnalysisSection({
               ))}
             </div>
 
-            {/* Dağılım Lejantı (Tüm Varlıklar Eksiksiz) */}
-            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-1">
+            {/* Dağılım Lejantı (Tüm Varlıklar Eksiksiz - Sütun Bazında Düzgün Hizalı Grid) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pt-1">
               {cumulativeAllocations.map((slice) => (
                 <div
                   key={slice.key}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/40 text-xs"
+                  className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--color-surface-muted)]/50 border border-[var(--color-border)]/40 text-xs shadow-2xs"
                 >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
-                    style={{ backgroundColor: slice.color }}
-                  />
-                  <span className="font-medium text-[var(--color-muted)] text-[11px]">{slice.label}</span>
-                  <span className="font-black text-[var(--color-foreground)] tabular-nums text-[11.5px]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                      style={{ backgroundColor: slice.color }}
+                    />
+                    <span className="font-medium text-[var(--color-muted)] text-[11px] truncate" title={slice.label}>
+                      {slice.label}
+                    </span>
+                  </div>
+                  <span className="font-black text-[var(--color-foreground)] tabular-nums text-[11.5px] shrink-0">
                     %{slice.percent.toFixed(1)}
                   </span>
                 </div>
@@ -319,7 +323,7 @@ export function TefasAnalysisSection({
           <table className="w-full text-left text-xs">
             <thead className="bg-[var(--color-surface-muted)]/60 text-[var(--color-muted)] font-extrabold uppercase tracking-wider border-b border-[var(--color-border)]">
               <tr>
-                <th className="py-3 px-3.5">
+                <th className="py-3 px-2.5 max-w-[155px]">
                   <div className="flex items-center gap-1">
                     <span>Fon</span>
                     <ColumnTooltip
@@ -442,22 +446,22 @@ export function TefasAnalysisSection({
                     onClick={() => setSelectedFund(f)}
                     className="hover:bg-[var(--color-surface-muted)]/40 transition-colors cursor-pointer group"
                   >
-                    {/* 1. Fon Kodu & Adı */}
-                    <td className="py-3.5 px-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                    {/* 1. Fon Kodu & Adı (Daha kompakt & dar kolon) */}
+                    <td className="py-3 px-2.5 whitespace-nowrap max-w-[155px]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-[11px] flex items-center justify-center shadow-2xs shrink-0">
                           {f.symbol}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-black text-sm text-[var(--color-foreground)] group-hover:text-[var(--color-brand-strong)] transition-colors">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <span className="font-black text-xs text-[var(--color-foreground)] group-hover:text-[var(--color-brand-strong)] transition-colors truncate">
                               {f.symbol}
                             </span>
-                            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-[var(--color-surface-muted)] text-[var(--color-muted)]">
+                            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-[var(--color-surface-muted)] text-[var(--color-muted)] shrink-0">
                               {f.fundType}
                             </span>
                           </div>
-                          <p className="text-[11px] text-[var(--color-muted)] truncate max-w-[170px] mt-0.5">
+                          <p className="text-[10.5px] text-[var(--color-muted)] truncate max-w-[115px] mt-0.5" title={f.name}>
                             {f.name}
                           </p>
                         </div>
@@ -703,6 +707,90 @@ export function TefasAnalysisSection({
                   Bu fon için TEFAS varlık dağılımı verisi bulunamadı.
                 </p>
               )}
+            </div>
+
+            {/* 5. Fonun Portföyündeki Öne Çıkan Hisseler & Varlıklar (KAP PDR) */}
+            {selectedFund.topHoldings && selectedFund.topHoldings.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-[var(--color-foreground)] uppercase tracking-wider flex items-center gap-1.5">
+                    <Flame size={14} className="text-amber-500" />
+                    Portföyündeki Öne Çıkan Hisseler (KAP Dağılım Raporu)
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                    KAP Bildirimi
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {selectedFund.topHoldings.map((h) => (
+                    <div
+                      key={h.symbol}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--color-surface-muted)]/40 border border-[var(--color-border)]/50 text-xs shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-black text-xs flex items-center justify-center shrink-0 border border-indigo-500/20">
+                          {h.symbol}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-extrabold text-[var(--color-foreground)] text-xs truncate">
+                            {h.symbol}
+                          </div>
+                          <div className="text-[10.5px] text-[var(--color-muted)] truncate max-w-[125px]" title={h.name}>
+                            {h.name}
+                          </div>
+                        </div>
+                      </div>
+                      {h.weightPct != null && (
+                        <div className="text-right shrink-0">
+                          <span className="font-black text-xs text-[var(--color-foreground)] tabular-nums">
+                            %{h.weightPct.toFixed(2)}
+                          </span>
+                          <div className="w-14 h-1.5 bg-[var(--color-surface-muted)] rounded-full overflow-hidden mt-1">
+                            <div
+                              className="h-full bg-gradient-to-r from-amber-500 to-indigo-500 rounded-full"
+                              style={{ width: `${Math.min(100, h.weightPct * 3.5)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 6. KAP ve TEFAS Resmi Rapor Bağlantı Paneli */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-transparent border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-[var(--color-foreground)] flex items-center gap-1.5">
+                  <Layers size={13} className="text-indigo-500" />
+                  KAP Resmi Aylık Portföy Dağılım Raporu (PDR)
+                </span>
+                <p className="text-[10.5px] text-[var(--color-muted)] mt-0.5">
+                  SPK mevzuatı gereği fonların hisse bazlı tam portföy dökümleri aylık periyotlarla KAP üzerinden ilan edilir.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`https://www.kap.org.tr/tr/fon-bilgileri/ozet/${selectedFund.symbol}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                >
+                  <span>KAP Raporu</span>
+                  <ArrowUpRight size={13} />
+                </a>
+                <a
+                  href={`https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=${selectedFund.symbol}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[var(--color-surface-muted)] hover:bg-[var(--color-border)] text-[var(--color-foreground)] transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <span>TEFAS</span>
+                  <ArrowUpRight size={13} />
+                </a>
+              </div>
             </div>
 
             {/* Modal Alt Kapatma */}

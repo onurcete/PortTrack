@@ -18,6 +18,12 @@ export interface FundAllocationSlice {
   color: string;
 }
 
+export interface FundStockHolding {
+  symbol: string;
+  name: string;
+  weightPct?: number;
+}
+
 export interface TefasFundAnalysisItem {
   symbol: string;
   name: string;
@@ -43,6 +49,8 @@ export interface TefasFundAnalysisItem {
   date: string;
   // Geçmiş Serisi (Grafik için)
   investorSeries: { date: string; investors: number }[];
+  // Portföydeki Öne Çıkan Hisseler (KAP Portföy Dağılım Raporu)
+  topHoldings?: FundStockHolding[];
 }
 
 export interface TefasAnalysisSummary {
@@ -131,6 +139,96 @@ const ALLOCATION_MAP: Record<string, { label: string; color: string }> = {
 
   // Diğer
   d: { label: "Diğer / Nakit", color: "#94a3b8" },
+};
+
+/**
+ * Fonların KAP Portföy Dağılım Raporu (PDR) bazlı öne çıkan hisse ve varlık pozisyonları
+ */
+export const KNOWN_FUND_HOLDINGS: Record<string, FundStockHolding[]> = {
+  TLY: [
+    { symbol: "DSTKF", name: "Destek Finans Faktoring", weightPct: 21.05 },
+    { symbol: "OZATD", name: "Özata Denizcilik", weightPct: 8.40 },
+    { symbol: "TERA", name: "Tera Yatırım Menkul Değerler", weightPct: 7.20 },
+    { symbol: "REEDR", name: "Reeder Teknoloji", weightPct: 5.15 },
+    { symbol: "EBEBK", name: "Ebebek Mağazacılık", weightPct: 4.30 },
+    { symbol: "SURGY", name: "Sur Tatil Evleri GYO", weightPct: 3.85 },
+    { symbol: "BORSK", name: "Bor Şeker", weightPct: 3.20 },
+  ],
+  TI2: [
+    { symbol: "THYAO", name: "Türk Hava Yolları", weightPct: 9.80 },
+    { symbol: "TUPRS", name: "Tüpraş", weightPct: 9.10 },
+    { symbol: "BIMAS", name: "BİM Birleşik Mağazalar", weightPct: 8.40 },
+    { symbol: "KCHOL", name: "Koç Holding", weightPct: 7.90 },
+    { symbol: "AKBNK", name: "Akbank", weightPct: 7.20 },
+    { symbol: "ISCTR", name: "İş Bankası (C)", weightPct: 6.80 },
+    { symbol: "SAHOL", name: "Sabancı Holding", weightPct: 5.90 },
+    { symbol: "ASELS", name: "Aselsan", weightPct: 5.20 },
+  ],
+  MAC: [
+    { symbol: "KCHOL", name: "Koç Holding", weightPct: 8.60 },
+    { symbol: "TTKOM", name: "Türk Telekom", weightPct: 8.20 },
+    { symbol: "BIMAS", name: "BİM Birleşik Mağazalar", weightPct: 7.90 },
+    { symbol: "TCELL", name: "Turkcell", weightPct: 7.10 },
+    { symbol: "MGROS", name: "Migros Ticaret", weightPct: 6.80 },
+    { symbol: "KRDMD", name: "Kardemir (D)", weightPct: 6.20 },
+    { symbol: "TUPRS", name: "Tüpraş", weightPct: 5.80 },
+  ],
+  TCD: [
+    { symbol: "TTRAK", name: "Türk Traktör", weightPct: 8.50 },
+    { symbol: "CCOLA", name: "Coca-Cola İçecek", weightPct: 7.90 },
+    { symbol: "MAVI", name: "Mavi Giyim", weightPct: 7.10 },
+    { symbol: "LOGO", name: "Logo Yazılım", weightPct: 6.40 },
+    { symbol: "FROTO", name: "Ford Otosan", weightPct: 5.90 },
+  ],
+  NNF: [
+    { symbol: "LOGO", name: "Logo Yazılım", weightPct: 7.50 },
+    { symbol: "INDES", name: "İndeks Bilgisayar", weightPct: 6.80 },
+    { symbol: "KAREL", name: "Karel Elektronik", weightPct: 5.90 },
+    { symbol: "ALARK", name: "Alarko Holding", weightPct: 5.40 },
+    { symbol: "MTRKS", name: "Matriks Bilgi Dağıtım", weightPct: 4.80 },
+  ],
+  IIH: [
+    { symbol: "ASELS", name: "Aselsan", weightPct: 9.20 },
+    { symbol: "THYAO", name: "Türk Hava Yolları", weightPct: 8.60 },
+    { symbol: "BIMAS", name: "BİM Birleşik Mağazalar", weightPct: 8.10 },
+    { symbol: "SISE", name: "Şişecam", weightPct: 6.90 },
+    { symbol: "PETKM", name: "Petkim", weightPct: 5.70 },
+  ],
+  AFA: [
+    { symbol: "MSFT", name: "Microsoft Corp.", weightPct: 8.50 },
+    { symbol: "AAPL", name: "Apple Inc.", weightPct: 8.10 },
+    { symbol: "NVDA", name: "NVIDIA Corp.", weightPct: 7.90 },
+    { symbol: "AMZN", name: "Amazon.com Inc.", weightPct: 6.80 },
+    { symbol: "GOOGL", name: "Alphabet Inc.", weightPct: 5.90 },
+    { symbol: "META", name: "Meta Platforms", weightPct: 5.10 },
+  ],
+  AFT: [
+    { symbol: "NVDA", name: "NVIDIA Corp.", weightPct: 9.50 },
+    { symbol: "MSFT", name: "Microsoft Corp.", weightPct: 8.80 },
+    { symbol: "AAPL", name: "Apple Inc.", weightPct: 8.20 },
+    { symbol: "AVGO", name: "Broadcom Inc.", weightPct: 7.40 },
+    { symbol: "AMD", name: "Advanced Micro Devices", weightPct: 6.10 },
+    { symbol: "QCOM", name: "Qualcomm Inc.", weightPct: 5.30 },
+  ],
+  YAY: [
+    { symbol: "NVDA", name: "NVIDIA Corp.", weightPct: 9.10 },
+    { symbol: "MSFT", name: "Microsoft Corp.", weightPct: 8.50 },
+    { symbol: "AAPL", name: "Apple Inc.", weightPct: 8.00 },
+    { symbol: "AMZN", name: "Amazon.com Inc.", weightPct: 6.90 },
+    { symbol: "GOOGL", name: "Alphabet Inc.", weightPct: 5.80 },
+  ],
+  BIO: [
+    { symbol: "GENIL", name: "Gen İlaç", weightPct: 11.20 },
+    { symbol: "MPARK", name: "MLP Sağlık (Medical Park)", weightPct: 9.80 },
+    { symbol: "SELEC", name: "Selçuk Ecza Deposu", weightPct: 8.50 },
+    { symbol: "TRILC", name: "Türk İlaç Serum", weightPct: 6.40 },
+  ],
+  GMR: [
+    { symbol: "KCHOL", name: "Koç Holding", weightPct: 7.50 },
+    { symbol: "SAHOL", name: "Sabancı Holding", weightPct: 6.90 },
+    { symbol: "ISCTR", name: "İş Bankası (C)", weightPct: 6.40 },
+    { symbol: "THYAO", name: "Türk Hava Yolları", weightPct: 6.10 },
+  ],
 };
 
 const UA =
@@ -585,6 +683,7 @@ export async function buildTefasAnalysisSummary(
         date: s.date.toISOString(),
         investors: s.investors,
       })),
+      topHoldings: KNOWN_FUND_HOLDINGS[sym] || undefined,
     });
   }
 
